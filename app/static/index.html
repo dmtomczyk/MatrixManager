@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Matrix Manager</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Matrix Manager</h1>
+        <p>Lightweight staffing + project matrix planner.</p>
+      </div>
+      <nav>
+        <a href="#employees">Employees</a>
+        <a href="#projects">Projects</a>
+        <a href="#assignments">Assignments</a>
+        <a href="#timelines">Timelines</a>
+      </nav>
+    </header>
+
+    <main>
+      <section id="employees" class="card">
+        <div class="section-head">
+          <h2>Employees</h2>
+          <p>Capture each person, their home location, and their available capacity (1.0 = 100%).</p>
+        </div>
+        <div class="layout">
+          <div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Role</th>
+                  <th>Location</th>
+                  <th>Capacity</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="employee-table"></tbody>
+            </table>
+          </div>
+          <form id="employee-form" class="panel">
+            <h3>Add / Update Employee</h3>
+            <input type="hidden" name="entity_id" id="employee-id" />
+            <label>Name<input name="name" required /></label>
+            <label>Role<input name="role" /></label>
+            <label>Location<input name="location" /></label>
+            <label>Capacity<input name="capacity" type="number" step="0.1" min="0.1" value="1" /></label>
+            <button type="submit">Save Employee</button>
+          </form>
+        </div>
+      </section>
+
+      <section id="projects" class="card">
+        <div class="section-head">
+          <h2>Projects</h2>
+          <p>Track active initiatives with optional start + end dates for capacity planning.</p>
+        </div>
+        <div class="layout">
+          <div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Dates</th>
+                  <th>Description</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="project-table"></tbody>
+            </table>
+          </div>
+          <form id="project-form" class="panel">
+            <h3>Add / Update Project</h3>
+            <input type="hidden" name="entity_id" id="project-id" />
+            <label>Name<input name="name" required /></label>
+            <label>Description<textarea name="description" rows="2"></textarea></label>
+            <label>Start Date<input type="date" name="start_date" /></label>
+            <label>End Date<input type="date" name="end_date" /></label>
+            <button type="submit">Save Project</button>
+          </form>
+        </div>
+      </section>
+
+      <section id="assignments" class="card">
+        <div class="section-head">
+          <h2>Assignments</h2>
+          <p>Time-phase people across projects with allocation percentages.</p>
+        </div>
+        <div class="layout">
+          <div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Employee</th>
+                  <th>Project</th>
+                  <th>Dates</th>
+                  <th>Allocation</th>
+                  <th>Notes</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="assignment-table"></tbody>
+            </table>
+          </div>
+          <form id="assignment-form" class="panel">
+            <h3>Create Assignment</h3>
+            <input type="hidden" name="entity_id" id="assignment-id" />
+            <label>Employee<select name="employee_id" id="assignment-employee" required></select></label>
+            <label>Project<select name="project_id" id="assignment-project" required></select></label>
+            <label>Start Date<input type="date" name="start_date" required /></label>
+            <label>End Date<input type="date" name="end_date" required /></label>
+            <label>Allocation (%)<input type="number" name="allocation" min="1" max="100" value="100" required /></label>
+            <label>Notes<textarea name="notes" rows="2"></textarea></label>
+            <button type="submit">Save Assignment</button>
+          </form>
+        </div>
+      </section>
+
+      <section id="timelines" class="card">
+        <div class="section-head">
+          <h2>Quick Timelines</h2>
+          <p>Peek at utilization for a single employee or project.</p>
+        </div>
+        <div class="timelines">
+          <div class="panel">
+            <h3>Employee Schedule</h3>
+            <label>Employee<select id="schedule-employee"></select></label>
+            <ul id="employee-schedule" class="timeline"></ul>
+          </div>
+          <div class="panel">
+            <h3>Project Staffing</h3>
+            <label>Project<select id="schedule-project"></select></label>
+            <ul id="project-schedule" class="timeline"></ul>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div id="toast" role="status" aria-live="polite"></div>
+
+    <script type="module" src="/static/app.js"></script>
+  </body>
+</html>
