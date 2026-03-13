@@ -119,6 +119,17 @@
         </div>
       </section>
 
+      <section id="utilization" class="card">
+        <div class="section-head">
+          <h2>Allocation watchdog</h2>
+          <p>Peak load per employee across the next 4 weeks. Bars &gt; 100% flag overallocations.</p>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="allocation-chart" height="280"></canvas>
+          <div id="allocation-chart-empty" class="muted">Add people and assignments to see this graph.</div>
+        </div>
+      </section>
+
       <section id="timelines" class="card">
         <div class="section-head">
           <h2>Quick Timelines</h2>
@@ -141,6 +152,7 @@
 
     <div id="toast" role="status" aria-live="polite"></div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script type="module" src="/static/app.js"></script>
   </body>
 </html>
