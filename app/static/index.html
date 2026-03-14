@@ -115,6 +115,7 @@
                   <tr>
                     <th>Name</th>
                     <th>Role</th>
+                    <th>Type</th>
                     <th>Organization</th>
                     <th>Manager</th>
                     <th>Location</th>
@@ -130,6 +131,12 @@
               <input type="hidden" name="entity_id" id="employee-id" />
               <label>Name<input name="name" required /></label>
               <label>Role<input name="role" /></label>
+              <label>Type
+                <select name="employee_type" id="employee-type">
+                  <option value="IC">IC</option>
+                  <option value="L">L</option>
+                </select>
+              </label>
               <label>Organization<select name="organization_id" id="employee-organization" required></select></label>
               <label>Manager<select name="manager_id" id="employee-manager"></select></label>
               <label>Location<input name="location" /></label>

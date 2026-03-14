@@ -6,9 +6,6 @@ const modalBody = document.querySelector('#modal-body');
 const modalClose = document.querySelector('#modal-close');
 const resetViewBtn = document.querySelector('#reset-view');
 const toast = document.querySelector('#toast');
-const removeAssignmentBtn = contextMenu?.querySelector('[data-action="remove-assignment"]');
-const editEmployeeBtn = contextMenu?.querySelector('[data-action="edit-employee"]');
-const editProjectBtn = contextMenu?.querySelector('[data-action="edit-project"]');
 const allocationUnitsSelect = document.querySelector('#allocation-units');
 const resourceList = document.querySelector('#resource-list');
 const canvasOrgFilter = document.querySelector('#canvas-org-filter');
@@ -44,6 +41,11 @@ const escapeHtml = (value = '') =>
     '"': '&quot;',
     "'": '&#39;',
   })[char] || char);
+
+const getLeaderEmployees = (currentEmployeeId = null) =>
+  state.employees
+    .filter((emp) => emp.employee_type === 'L' && emp.id !== currentEmployeeId)
+    .sort((a, b) => a.name.localeCompare(b.name));
 
 const toDateValue = (value) => {
   const date = new Date(value);
@@ -121,9 +123,7 @@ const buildOptions = (items, selectedId, placeholder = null) => {
 };
 
 const buildManagerOptions = (selectedId = null, currentEmployeeId = null) => {
-  const options = state.employees
-    .filter((emp) => emp.id !== currentEmployeeId)
-    .sort((a, b) => a.name.localeCompare(b.name))
+  const options = getLeaderEmployees(currentEmployeeId)
     .map((employee) => {
       const suffix = employee.organization_name ? ` · ${employee.organization_name}` : '';
       return `<option value="${employee.id}" ${employee.id === selectedId ? 'selected' : ''}>${escapeHtml(employee.name + suffix)}</option>`;
@@ -268,6 +268,12 @@ const openEmployeeModal = (employeeId = null) => {
     <form id="employee-modal-form">
       <label>Name<input name="name" required /></label>
       <label>Role<input name="role" /></label>
+      <label>Type
+        <select name="employee_type">
+          <option value="IC">IC</option>
+          <option value="L">L</option>
+        </select>
+      </label>
       <label>Manager<select name="manager_id">${buildManagerOptions(null, currentEmployeeId)}</select></label>
       <label>Location<input name="location" /></label>
       <label>Capacity<input type="number" name="capacity" step="0.1" min="0.1" required /></label>
@@ -287,6 +293,7 @@ const openEmployeeModal = (employeeId = null) => {
     currentEmployeeId = id;
     form.elements.name.value = employee.name || '';
     form.elements.role.value = employee.role || '';
+    form.elements.employee_type.value = employee.employee_type || 'IC';
     form.elements.location.value = employee.location || '';
     form.elements.capacity.value = employee.capacity || 1;
     form.elements.manager_id.value = employee.manager_id || '';
@@ -313,6 +320,7 @@ const openEmployeeModal = (employeeId = null) => {
     const payload = {
       name: formData.get('name').trim(),
       role: formData.get('role').trim() || null,
+      employee_type: formData.get('employee_type') || 'IC',
       location: formData.get('location').trim() || null,
       capacity: Number(formData.get('capacity')) || 1,
       manager_id: managerId ? Number(managerId) : null,
@@ -380,7 +388,7 @@ const createResourceItem = (employee, options = {}) => {
 
   const details = document.createElement('div');
   details.className = 'resource-details';
-  const subtitleParts = [employee.role, employee.organization_name].filter(Boolean);
+  const subtitleParts = [employee.role, employee.employee_type, employee.organization_name].filter(Boolean);
   if (employee.manager_name && !nested) subtitleParts.push(`Reports to ${employee.manager_name}`);
   if (hasChildren) subtitleParts.push(`${employee.direct_report_count || 0} direct report${employee.direct_report_count === 1 ? '' : 's'}`);
   details.innerHTML = `<strong>${escapeHtml(employee.name)}</strong><span class="resource-meta">${escapeHtml(subtitleParts.join(' • '))}</span>`;

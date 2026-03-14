@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 from pathlib import Path
-from typing import Dict, Generator, List, Optional, Set
+from typing import Generator, List, Literal, Optional, Set
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,6 +20,8 @@ engine = create_engine(
     DATABASE_URL,
     connect_args={"check_same_thread": False},
 )
+
+EmployeeType = Literal["IC", "L"]
 
 
 class OrganizationBase(SQLModel):
@@ -47,6 +49,7 @@ class OrganizationUpdate(SQLModel):
 class EmployeeBase(SQLModel):
     name: str
     role: Optional[str] = None
+    employee_type: EmployeeType = "IC"
     location: Optional[str] = None
     capacity: float = 1.0
     manager_id: Optional[int] = None
@@ -73,6 +76,7 @@ class EmployeeRead(EmployeeBase):
 class EmployeeUpdate(SQLModel):
     name: Optional[str] = None
     role: Optional[str] = None
+    employee_type: Optional[EmployeeType] = None
     location: Optional[str] = None
     capacity: Optional[float] = None
     organization_id: Optional[int] = None
@@ -162,6 +166,9 @@ def run_migrations() -> None:
         column_names = {row[1] for row in columns}
         if "manager_id" not in column_names:
             connection.exec_driver_sql("ALTER TABLE employee ADD COLUMN manager_id INTEGER")
+        if "employee_type" not in column_names:
+            connection.exec_driver_sql("ALTER TABLE employee ADD COLUMN employee_type TEXT DEFAULT 'IC'")
+        connection.exec_driver_sql("UPDATE employee SET employee_type = 'IC' WHERE employee_type IS NULL OR employee_type = ''")
 
 
 def get_session() -> Generator[Session, None, None]:
@@ -253,7 +260,13 @@ def list_employees(session: Session = Depends(get_session)):
 
 @app.post("/employees", response_model=EmployeeRead, status_code=201)
 def create_employee(employee: EmployeeCreate, session: Session = Depends(get_session)):
-    validate_employee_payload(session, employee.capacity, employee.organization_id, employee.manager_id)
+    validate_employee_payload(
+        session,
+        capacity=employee.capacity,
+        organization_id=employee.organization_id,
+        manager_id=employee.manager_id,
+        employee_type=employee.employee_type,
+    )
     db_employee = Employee.from_orm(employee)
     session.add(db_employee)
     session.commit()
@@ -278,7 +291,15 @@ def update_employee(employee_id: int, update: EmployeeUpdate, session: Session =
     next_capacity = employee_data.get("capacity", employee.capacity)
     next_org_id = employee_data.get("organization_id", employee.organization_id)
     next_manager_id = employee_data.get("manager_id", employee.manager_id)
-    validate_employee_payload(session, next_capacity, next_org_id, next_manager_id, employee_id=employee_id)
+    next_employee_type = employee_data.get("employee_type", employee.employee_type)
+    validate_employee_payload(
+        session,
+        capacity=next_capacity,
+        organization_id=next_org_id,
+        manager_id=next_manager_id,
+        employee_type=next_employee_type,
+        employee_id=employee_id,
+    )
     for key, value in employee_data.items():
         setattr(employee, key, value)
     session.add(employee)
@@ -383,11 +404,18 @@ def ensure_organization(session: Session, organization_id: int) -> Organization:
     return organization
 
 
+def validate_employee_type(employee_type: str) -> EmployeeType:
+    if employee_type not in {"IC", "L"}:
+        raise HTTPException(status_code=400, detail="Employee type must be IC or L")
+    return employee_type  # type: ignore[return-value]
+
+
 def validate_employee_payload(
     session: Session,
     capacity: Optional[float],
     organization_id: Optional[int],
     manager_id: Optional[int],
+    employee_type: Optional[str],
     employee_id: Optional[int] = None,
 ) -> None:
     if capacity is None or capacity <= 0:
@@ -395,12 +423,19 @@ def validate_employee_payload(
     if organization_id is None:
         raise HTTPException(status_code=400, detail="Organization is required")
     ensure_organization(session, organization_id)
+    normalized_type = validate_employee_type(employee_type or "IC")
     if manager_id is not None:
         ensure_valid_manager(session, employee_id=employee_id, manager_id=manager_id)
+    if employee_id is not None and normalized_type != "L":
+        direct_report_exists = session.exec(select(Employee).where(Employee.manager_id == employee_id)).first()
+        if direct_report_exists:
+            raise HTTPException(status_code=400, detail="Employees with direct reports must remain type L")
 
 
 def ensure_valid_manager(session: Session, employee_id: Optional[int], manager_id: int) -> Employee:
     manager = ensure_employee(session, manager_id)
+    if manager.employee_type != "L":
+        raise HTTPException(status_code=400, detail="Only leaders can be assigned as managers")
     if employee_id is not None and manager_id == employee_id:
         raise HTTPException(status_code=400, detail="Employee cannot manage themselves")
     if employee_id is not None and creates_manager_cycle(session, employee_id, manager_id):
@@ -424,15 +459,6 @@ def creates_manager_cycle(session: Session, employee_id: int, manager_id: int) -
     return False
 
 
-def build_direct_report_counts(session: Session) -> Dict[int, int]:
-    counts: Dict[int, int] = {}
-    employees = session.exec(select(Employee)).all()
-    for employee in employees:
-        if employee.manager_id is not None:
-            counts[employee.manager_id] = counts.get(employee.manager_id, 0) + 1
-    return counts
-
-
 def serialize_employee(session: Session, employee: Employee) -> EmployeeRead:
     organization_name = None
     manager_name = None
@@ -448,6 +474,7 @@ def serialize_employee(session: Session, employee: Employee) -> EmployeeRead:
         id=employee.id,
         name=employee.name,
         role=employee.role,
+        employee_type=validate_employee_type(employee.employee_type or "IC"),
         location=employee.location,
         capacity=employee.capacity,
         organization_id=employee.organization_id,

@@ -2,6 +2,7 @@ const organizationTable = document.querySelector('#organization-table');
 const organizationForm = document.querySelector('#organization-form');
 const employeeOrganizationSelect = document.querySelector('#employee-organization');
 const employeeManagerSelect = document.querySelector('#employee-manager');
+const employeeTypeSelect = document.querySelector('#employee-type');
 const employeeTable = document.querySelector('#employee-table');
 const projectTable = document.querySelector('#project-table');
 const assignmentTable = document.querySelector('#assignment-table');
@@ -77,7 +78,13 @@ const resetForm = (form, buttonLabel = 'Save') => {
   const hidden = form.querySelector('input[type="hidden"][name="entity_id"]');
   if (hidden) hidden.value = '';
   form.querySelector('button[type="submit"]').textContent = buttonLabel;
+  if (employeeTypeSelect) employeeTypeSelect.value = 'IC';
 };
+
+const getLeaderEmployees = (currentEmployeeId = null) =>
+  employees
+    .filter((emp) => emp.employee_type === 'L' && emp.id !== currentEmployeeId)
+    .sort((a, b) => a.name.localeCompare(b.name));
 
 const renderEmployees = () => {
   const selectedOrg = employeeOrgFilter?.value || '';
@@ -88,6 +95,7 @@ const renderEmployees = () => {
       <tr>
         <td>${escapeHtml(emp.name)}</td>
         <td>${escapeHtml(emp.role || '')}</td>
+        <td>${escapeHtml(emp.employee_type || 'IC')}</td>
         <td>${escapeHtml(emp.organization_name || '')}</td>
         <td>${escapeHtml(emp.manager_name || '—')}</td>
         <td>${escapeHtml(emp.location || '')}</td>
@@ -99,7 +107,7 @@ const renderEmployees = () => {
       </tr>`
     )
     .join('');
-  employeeTable.innerHTML = rows || '<tr><td colspan="7">No employees match this filter.</td></tr>';
+  employeeTable.innerHTML = rows || '<tr><td colspan="8">No employees match this filter.</td></tr>';
 };
 
 const renderOrganizations = () => {
@@ -156,17 +164,14 @@ const updateManagerSelect = (selectedId = '', currentEmployeeId = null) => {
   if (!employeeManagerSelect) return;
   const options = ['<option value="">No manager</option>']
     .concat(
-      employees
-        .filter((emp) => emp.id !== currentEmployeeId)
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map((emp) => {
-          const suffix = emp.organization_name ? ` · ${emp.organization_name}` : '';
-          return `<option value="${emp.id}">${escapeHtml(emp.name + suffix)}</option>`;
-        })
+      getLeaderEmployees(currentEmployeeId).map((emp) => {
+        const suffix = emp.organization_name ? ` · ${emp.organization_name}` : '';
+        return `<option value="${emp.id}">${escapeHtml(emp.name + suffix)}</option>`;
+      })
     )
     .join('');
   employeeManagerSelect.innerHTML = options;
-  if (selectedId && employees.some((emp) => String(emp.id) === String(selectedId) && emp.id !== currentEmployeeId)) {
+  if (selectedId && getLeaderEmployees(currentEmployeeId).some((emp) => String(emp.id) === String(selectedId))) {
     employeeManagerSelect.value = String(selectedId);
   } else {
     employeeManagerSelect.value = '';
@@ -621,7 +626,7 @@ const loadEmployees = async () => {
   renderEmployees();
   renderOrganizations();
   updateSelectOptions();
-  updateManagerSelect(employeeManagerSelect?.value || '');
+  updateManagerSelect(employeeManagerSelect?.value || '', Number(employeeForm?.querySelector('input[name="entity_id"]')?.value) || null);
 };
 
 const loadProjects = async () => {
@@ -651,6 +656,7 @@ const handleEmployeeSubmit = async (event) => {
   const payload = {
     name: formData.get('name').trim(),
     role: formData.get('role').trim() || null,
+    employee_type: formData.get('employee_type') || 'IC',
     location: formData.get('location').trim() || null,
     capacity: Number(formData.get('capacity')) || 1,
     organization_id: organizationId,
@@ -830,6 +836,7 @@ const populateEmployeeForm = (id) => {
   if (!employee) return;
   employeeForm.name.value = employee.name;
   employeeForm.role.value = employee.role || '';
+  if (employeeTypeSelect) employeeTypeSelect.value = employee.employee_type || 'IC';
   if (employeeOrganizationSelect) {
     employeeOrganizationSelect.value = employee.organization_id || '';
   }
