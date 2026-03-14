@@ -257,13 +257,8 @@ def list_employees(session: Session = Depends(get_session)):
 
 @app.post("/employees", response_model=EmployeeRead, status_code=201)
 def create_employee(employee: EmployeeCreate, session: Session = Depends(get_session)):
-    validate_employee_payload(
-        session,
-        capacity=employee.capacity,
-        organization_id=employee.organization_id,
-        manager_id=employee.manager_id,
-        employee_type=employee.employee_type,
-    )
+    employee_payload = employee.dict()
+    validate_employee_payload(session, employee_payload)
     db_employee = Employee.from_orm(employee)
     session.add(db_employee)
     session.commit()
@@ -286,19 +281,18 @@ def update_employee(employee_id: int, update: EmployeeUpdate, session: Session =
         raise HTTPException(status_code=404, detail="Employee not found")
 
     employee_data = update.dict(exclude_unset=True)
-    next_capacity = update.capacity if update.capacity is not None else employee.capacity
-    next_org_id = update.organization_id if update.organization_id is not None else employee.organization_id
-    next_manager_id = update.manager_id if "manager_id" in employee_data else employee.manager_id
-    next_employee_type = update.employee_type if update.employee_type is not None else employee.employee_type
+    proposed_employee = {
+        "name": employee_data.get("name", employee.name),
+        "role": employee_data.get("role", employee.role),
+        "employee_type": employee_data.get("employee_type", employee.employee_type),
+        "location": employee_data.get("location", employee.location),
+        "capacity": employee_data.get("capacity", employee.capacity),
+        "organization_id": employee_data.get("organization_id", employee.organization_id),
+        "manager_id": employee_data.get("manager_id", employee.manager_id),
+        "employee_id": employee_id,
+    }
 
-    validate_employee_payload(
-        session,
-        capacity=next_capacity,
-        organization_id=next_org_id,
-        manager_id=next_manager_id,
-        employee_type=next_employee_type,
-        employee_id=employee_id,
-    )
+    validate_employee_payload(session, proposed_employee)
     for key, value in employee_data.items():
         setattr(employee, key, value)
     session.add(employee)
@@ -409,14 +403,13 @@ def validate_employee_type(employee_type: str) -> str:
     return employee_type
 
 
-def validate_employee_payload(
-    session: Session,
-    capacity: Optional[float],
-    organization_id: Optional[int],
-    manager_id: Optional[int],
-    employee_type: Optional[str],
-    employee_id: Optional[int] = None,
-) -> None:
+def validate_employee_payload(session: Session, payload: dict) -> None:
+    capacity = payload.get("capacity")
+    organization_id = payload.get("organization_id")
+    manager_id = payload.get("manager_id")
+    employee_type = payload.get("employee_type")
+    employee_id = payload.get("employee_id")
+
     if capacity is None or capacity <= 0:
         raise HTTPException(status_code=400, detail="Capacity must be greater than zero")
     if organization_id is None:
