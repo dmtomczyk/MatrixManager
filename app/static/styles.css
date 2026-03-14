@@ -546,4 +546,18 @@ body.dashboard-page .dashboard-shell > .card:last-of-type .chart-panel.large {
 
 .canvas-area {
   flex: 1 1 0%;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 160px);
+  min-height: calc(100vh - 160px);
+}
+
+body.canvas-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+body.canvas-page .canvas-layout {
+  flex: 1 1 auto;
 }
