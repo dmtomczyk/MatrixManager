@@ -284,11 +284,13 @@ def update_employee(employee_id: int, update: EmployeeUpdate, session: Session =
     employee = session.get(Employee, employee_id)
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
+
     employee_data = update.dict(exclude_unset=True)
-    next_capacity = employee_data.get("capacity", employee.capacity)
-    next_org_id = employee_data.get("organization_id", employee.organization_id)
-    next_manager_id = employee_data.get("manager_id", employee.manager_id)
-    next_employee_type = employee_data.get("employee_type", employee.employee_type)
+    next_capacity = update.capacity if update.capacity is not None else employee.capacity
+    next_org_id = update.organization_id if update.organization_id is not None else employee.organization_id
+    next_manager_id = update.manager_id if "manager_id" in employee_data else employee.manager_id
+    next_employee_type = update.employee_type if update.employee_type is not None else employee.employee_type
+
     validate_employee_payload(
         session,
         capacity=next_capacity,
