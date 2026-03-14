@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Matrix Manager · Org Manager</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body class="org-page">
+    <header>
+      <div>
+        <h1>Organization Manager</h1>
+        <p>Maintain org structures and move employees between them.</p>
+      </div>
+      <nav>
+        <a href="/">Matrix</a>
+        <a href="/canvas">Canvas</a>
+        <a href="/dashboard">Project Dashboard</a>
+        <a href="/orgs">Org Manager</a>
+      </nav>
+    </header>
+
+    <main class="org-shell">
+      <section class="card single-column">
+        <div class="section-head">
+          <h2>Organizations</h2>
+          <p>Create, edit, or retire organizations.</p>
+        </div>
+        <div class="layout">
+          <div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Description</th>
+                  <th>Headcount</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="org-table"></tbody>
+            </table>
+          </div>
+          <form id="org-form" class="panel">
+            <h3>Add / Update Organization</h3>
+            <input type="hidden" name="entity_id" id="org-entity-id" />
+            <label>Name<input name="name" required /></label>
+            <label>Description<textarea name="description" rows="2"></textarea></label>
+            <button type="submit">Save Organization</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="card single-column">
+        <div class="section-head">
+          <h2>Employee roster</h2>
+          <p>Assign each person to an organization. Changes save immediately.</p>
+        </div>
+        <div class="layout">
+          <div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Role</th>
+                  <th>Organization</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="org-roster-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div id="toast" role="status" aria-live="polite"></div>
+
+    <script type="module" src="/static/organizations.js"></script>
+  </body>
+</html>
