@@ -89,6 +89,30 @@ pytest
 The suite lives in `tests/` and exercises core TP-backed API and UI-surface regressions.
 It relies on the versions pinned in `requirements.txt` for FastAPI/TestClient compatibility.
 
+## Running Playwright E2E
+
+Install the Node dependencies and browser once:
+
+```bash
+cd matrixmanager
+npm install
+npx playwright install chromium
+```
+
+Then run:
+
+```bash
+npm run test:e2e
+```
+
+The E2E specs live in `e2e/` and target the highest-value browser workflows.
+
+## TP coverage tracking
+
+- `requirements.csv` — product requirements
+- `requirements_test_plan.csv` — suggested test approaches and scenarios
+- `tp_coverage_matrix.csv` — current automation status per TP
+
 ## Next steps / ideas
 
 - Persist simple auth (or wire it into your existing identity provider).

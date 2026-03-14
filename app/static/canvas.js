@@ -358,9 +358,11 @@ const buildHierarchy = (employees) => {
 };
 
 const createResourceItem = (employee, options = {}) => {
-  const { nested = false, hasChildren = false, expanded = false } = options;
+  const { level = 0, hasChildren = false, expanded = false } = options;
+  const nested = level > 0;
   const item = document.createElement('div');
   item.className = `resource-item${nested ? ' resource-item-nested' : ''}${hasChildren ? ' resource-item-manager' : ''}`;
+  item.style.marginLeft = `${level * 22}px`;
   item.setAttribute('draggable', 'true');
   item.dataset.dragType = 'employee';
   item.dataset.id = employee.id;
@@ -443,17 +445,18 @@ const renderResources = () => {
   }
 
   const { roots, directReports } = buildHierarchy(filtered);
-  roots.forEach((employee) => {
+
+  const appendEmployeeTree = (employee, level = 0) => {
     const children = directReports.get(employee.id) || [];
     const hasChildren = children.length > 0;
     const expanded = hasChildren && state.expandedManagers.has(employee.id);
-    resourceList.appendChild(createResourceItem(employee, { hasChildren, expanded }));
+    resourceList.appendChild(createResourceItem(employee, { level, hasChildren, expanded }));
     if (expanded) {
-      children.forEach((report) => {
-        resourceList.appendChild(createResourceItem(report, { nested: true, hasChildren: false }));
-      });
+      children.forEach((report) => appendEmployeeTree(report, level + 1));
     }
-  });
+  };
+
+  roots.forEach((employee) => appendEmployeeTree(employee, 0));
 };
 
 const openProjectTimeline = (projectId) => {
