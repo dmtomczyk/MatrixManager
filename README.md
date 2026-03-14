@@ -113,6 +113,28 @@ The E2E specs live in `e2e/` and target the highest-value browser workflows.
 - `requirements_test_plan.csv` — suggested test approaches and scenarios
 - `tp_coverage_matrix.csv` — current automation status per TP
 
+## Database reset and sample data
+
+Reset to a fresh empty database:
+
+```bash
+cd matrixmanager
+python scripts/reset_db.py
+# or
+npm run db:reset
+```
+
+Generate a clean sample dataset:
+
+```bash
+cd matrixmanager
+python scripts/seed_sample_data.py
+# or
+npm run db:seed
+```
+
+The sample seeder recreates the database and loads organizations, a multi-level hierarchy, projects, and assignments.
+
 ## Next steps / ideas
 
 - Persist simple auth (or wire it into your existing identity provider).

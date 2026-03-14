@@ -5,7 +5,9 @@
   "scripts": {
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "db:reset": "./.venv/bin/python scripts/reset_db.py",
+    "db:seed": "./.venv/bin/python scripts/seed_sample_data.py"
   },
   "devDependencies": {
     "@playwright/test": "^1.53.2"

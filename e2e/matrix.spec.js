@@ -121,7 +121,7 @@ test('TP-022 TP-027 TP-029 TP-030: create assignment and display in schedule sur
   await expect(page.locator('#project-schedule')).toContainText('TP022 Engineer');
 });
 
-test('TP-032 TP-033: allocation surfaces respond to overallocated data', async ({ page }) => {
+test('TP-028 TP-031 TP-032 TP-033: export and visualization surfaces respond to assignment data', async ({ page }) => {
   const org = await createOrganization(page, { name: 'Engineering' });
   const leader = await createEmployee(page, {
     name: 'TP032 Lead', employee_type: 'L', organization_id: org.id, capacity: 1,
@@ -138,4 +138,16 @@ test('TP-032 TP-033: allocation surfaces respond to overallocated data', async (
   await page.locator('#allocation-preset').selectOption('all');
   await expect(page.locator('#allocation-range-label')).toContainText('Window:');
   await expect(page.locator('#allocation-chart-empty')).toBeHidden();
+  await expect(page.locator('#assignment-graph svg')).toBeVisible();
+  await expect.poll(async () => page.locator('#assignment-graph svg line').count()).toBeGreaterThanOrEqual(2);
+  await expect(page.locator('#assignment-graph')).toContainText('TP032 Engineer');
+  await expect(page.locator('#assignment-table')).toContainText('TP032 Alpha');
+  await expect(page.locator('#assignment-table')).toContainText('TP032 Beta');
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.locator('#assignment-export').click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toContain('assignments_');
+  const csv = await download.path();
+  expect(csv).toBeTruthy();
 });

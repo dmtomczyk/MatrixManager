@@ -1,6 +1,12 @@
 const { test, expect } = require('@playwright/test');
 const { createOrganization, createEmployee, createProject, createAssignment } = require('./helpers');
 
+async function openContextMenuFor(page, locator) {
+  const box = await locator.boundingBox();
+  if (!box) throw new Error('No bounding box available for context menu target');
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2, { button: 'right' });
+}
+
 async function waitForSelectOption(page, selector, value) {
   await expect
     .poll(async () => page.locator(`${selector} option[value="${value}"]`).count())
@@ -36,7 +42,7 @@ test('TP-035 TP-036 TP-038: canvas groups employees under managers and supports 
   await expect(page.locator('#resource-list')).not.toContainText('TP035 Manager');
 });
 
-test('TP-037 TP-042: canvas shows project details and drag source resources', async ({ page }) => {
+test('TP-037 TP-042: canvas shows project details and drag-drop assignment preselection', async ({ page }) => {
   const org = await createOrganization(page, { name: 'Engineering' });
   const leader = await createEmployee(page, { name: 'TP037 Lead', employee_type: 'L', organization_id: org.id, capacity: 1 });
   const engineer = await createEmployee(page, { name: 'TP037 Engineer', employee_type: 'IC', organization_id: org.id, manager_id: leader.id, capacity: 1 });
@@ -49,6 +55,15 @@ test('TP-037 TP-042: canvas shows project details and drag source resources', as
   const leadCard = page.locator('.resource-item').filter({ hasText: 'TP037 Lead' }).first();
   await leadCard.locator('[data-manager-toggle]').click();
   await expect(page.locator('#resource-list')).toContainText('TP037 Engineer');
+
+  await page.evaluate(({ employeeId, projectId }) => {
+    window.__canvasTest.openAssignmentModal({ employeeId, projectId });
+  }, { employeeId: engineer.id, projectId: project.id });
+
+  await expect(page.locator('#canvas-modal')).toBeVisible();
+  await expect(page.locator('#assignment-modal-form select[name="employee_id"]')).toHaveValue(String(engineer.id));
+  await expect(page.locator('#assignment-modal-form select[name="project_id"]')).toHaveValue(String(project.id));
+  await page.locator('#modal-close').click();
 
   await projectBox.locator('.project-details').click();
   await expect(page.locator('#canvas-modal')).toBeVisible();

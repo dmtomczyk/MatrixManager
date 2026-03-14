@@ -924,6 +924,16 @@ const handleResourceClick = (event) => {
   renderResources();
 };
 
+if (typeof window !== 'undefined') {
+  window.__canvasTest = {
+    openAssignmentModal,
+    openEmployeeModal,
+    openProjectEditModal,
+    openAssignmentRemovalModal,
+    getState: () => state,
+  };
+}
+
 const init = () => {
   applyTransform();
   loadData();
