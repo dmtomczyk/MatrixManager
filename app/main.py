@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 from pathlib import Path
-from typing import Generator, List, Literal, Optional, Set
+from typing import Generator, List, Optional, Set
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,9 +20,6 @@ engine = create_engine(
     DATABASE_URL,
     connect_args={"check_same_thread": False},
 )
-
-EmployeeType = Literal["IC", "L"]
-
 
 class OrganizationBase(SQLModel):
     name: str
@@ -49,7 +46,7 @@ class OrganizationUpdate(SQLModel):
 class EmployeeBase(SQLModel):
     name: str
     role: Optional[str] = None
-    employee_type: EmployeeType = "IC"
+    employee_type: str = "IC"
     location: Optional[str] = None
     capacity: float = 1.0
     manager_id: Optional[int] = None
@@ -76,7 +73,7 @@ class EmployeeRead(EmployeeBase):
 class EmployeeUpdate(SQLModel):
     name: Optional[str] = None
     role: Optional[str] = None
-    employee_type: Optional[EmployeeType] = None
+    employee_type: Optional[str] = None
     location: Optional[str] = None
     capacity: Optional[float] = None
     organization_id: Optional[int] = None
@@ -404,10 +401,10 @@ def ensure_organization(session: Session, organization_id: int) -> Organization:
     return organization
 
 
-def validate_employee_type(employee_type: str) -> EmployeeType:
+def validate_employee_type(employee_type: str) -> str:
     if employee_type not in {"IC", "L"}:
         raise HTTPException(status_code=400, detail="Employee type must be IC or L")
-    return employee_type  # type: ignore[return-value]
+    return employee_type
 
 
 def validate_employee_payload(
