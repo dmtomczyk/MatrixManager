@@ -672,11 +672,12 @@ const handleEmployeeSubmit = async (event) => {
     alert('Select an organization for this employee.');
     return;
   }
-  const managerIdRaw = formData.get('manager_id');
+  const managerIdRaw = employeeManagerSelect?.value || formData.get('manager_id');
+  const selectedEmployeeType = employeeTypeSelect?.value || formData.get('employee_type') || 'IC';
   const payload = {
     name: formData.get('name').trim(),
     role: formData.get('role').trim() || null,
-    employee_type: formData.get('employee_type') || 'IC',
+    employee_type: selectedEmployeeType,
     location: formData.get('location').trim() || null,
     capacity: Number(formData.get('capacity')) || 1,
     organization_id: organizationId,
@@ -856,15 +857,17 @@ const populateEmployeeForm = (id) => {
   if (!employee) return;
   employeeForm.name.value = employee.name;
   employeeForm.role.value = employee.role || '';
-  if (employeeTypeSelect) employeeTypeSelect.value = employee.employee_type || 'IC';
   if (employeeOrganizationSelect) {
     employeeOrganizationSelect.value = employee.organization_id || '';
   }
-  updateManagerSelect(employee.manager_id || '', employee.id);
   employeeForm.location.value = employee.location || '';
   employeeForm.capacity.value = employee.capacity || 1;
   employeeForm.querySelector('input[name="entity_id"]').value = employee.id;
   employeeForm.querySelector('button[type="submit"]').textContent = 'Update Employee';
+  updateManagerSelect(employee.manager_id || '', employee.id);
+  if (employeeTypeSelect) {
+    employeeTypeSelect.value = employee.employee_type || 'IC';
+  }
   syncManagerFieldState();
 };
 
