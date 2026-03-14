@@ -79,9 +79,20 @@ const getLeaderEmployees = (currentEmployeeId = null) =>
     .filter((emp) => emp.employee_type === 'L' && emp.id !== currentEmployeeId)
     .sort((a, b) => a.name.localeCompare(b.name));
 
+const getCurrentEmployeeTypeValue = () => {
+  const field = employeeForm?.elements?.namedItem('employee_type');
+  if (field && 'selectedOptions' in field && field.selectedOptions?.length) {
+    return field.selectedOptions[0].value;
+  }
+  if (field && 'value' in field) {
+    return field.value;
+  }
+  return employeeTypeSelect?.value || 'IC';
+};
+
 const syncManagerFieldState = () => {
-  if (!employeeTypeSelect || !employeeManagerSelect) return;
-  const isIc = employeeTypeSelect.value === 'IC';
+  if (!employeeManagerSelect) return;
+  const isIc = getCurrentEmployeeTypeValue() === 'IC';
   employeeManagerSelect.required = isIc;
   if (isIc) {
     employeeManagerSelect.setAttribute('aria-required', 'true');
@@ -673,7 +684,7 @@ const handleEmployeeSubmit = async (event) => {
     return;
   }
   const managerIdRaw = employeeManagerSelect?.value || formData.get('manager_id');
-  const selectedEmployeeType = employeeTypeSelect?.value || formData.get('employee_type') || 'IC';
+  const selectedEmployeeType = getCurrentEmployeeTypeValue();
   const payload = {
     name: formData.get('name').trim(),
     role: formData.get('role').trim() || null,
