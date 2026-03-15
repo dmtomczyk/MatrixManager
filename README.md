@@ -1,137 +1,229 @@
-# Matrix Manager
+# MatrixManager
 
-A lightweight resource planning MVP that lets you keep track of employees, projects, and time-phased assignments ("Alice @ 50% on Project X for 2 weeks"). The backend is FastAPI + SQLite, and the built-in single-page UI uses vanilla JavaScript/Fetch so you can interact with the data immediately.
+MatrixManager is a resource-planning and staffing web app for tracking:
 
-## Features
+- organizations
+- employees and reporting lines
+- projects
+- time-phased assignments
+- utilization / allocation over time
+- audit history
+- database connections and runtime configuration
 
-- **Organizations** – Define top-level groups and assign each employee to exactly one org.
-- **Employees** – CRUD fields for name, role, location, organization, and available capacity (1.0 = 100%).
-- **Projects** – CRUD for initiatives, including optional description + start/end dates.
-- **Assignments** – Capture who is staffed on what with `start_date`, `end_date`, and allocation (in %). Editing + deletion supported.
-- **Assignment graph + CSV** – Visual node graph links employees to projects, and an Export button produces a CSV with employee, project, date, and allocation columns.
-- **Canvas view** – A dedicated `/canvas` page gives you a pan-able spatial canvas with per-project assignment boxes and context-menu shortcuts for creating work.
-- **Timelines** – Quick schedule views per employee or per project powered by `/schedule/*` endpoints.
-- **Allocation watchdog** – A Chart.js line chart overlays time-phased allocation vs. capacity (choose presets or custom ranges) and highlights >100% overloads.
-- **REST API** – FastAPI automatically exposes OpenAPI docs at `/docs` for programmatic integrations.
-- **Login page auth** – The entire site and API are protected behind an app login page backed by env-configured credentials and a signed session cookie.
-- **DB Management** – Admins can manage SQLite and PostgreSQL connection profiles, then activate one as the live app backend from `/db-management`.
-- **SQLite persistence** – Default database lives in `matrixmanager/matrix.db`, making it trivial to back up or inspect.
+The app uses **FastAPI + SQLModel** on the backend and a **vanilla HTML/CSS/JavaScript** frontend. It can run against **SQLite by default** and also supports **PostgreSQL**.
 
-## Project layout
+## What the current app includes
 
-```
+The repository currently includes these major capabilities:
+
+- **Authentication** via login page and signed session cookie
+- **Organizations** CRUD
+- **Employees** CRUD, including manager relationships and capacity
+- **Projects** CRUD with optional dates and descriptions
+- **Assignments** CRUD with time windows, allocation, and notes
+- **Planning views** for staffing and schedule visibility
+- **Canvas view** for spatial/project-centered staffing workflows
+- **Project dashboard** page
+- **Audit log** UI and backend tracking
+- **Database management** UI for managing and activating DB connection profiles
+- **SQLite + PostgreSQL support**
+- **OpenAPI docs** at `/docs`
+- **pytest + Playwright coverage**
+- **Reset and seed scripts** for local development
+- **Docker / docker-compose** runtime support
+
+## Tech stack
+
+- **Backend:** Python, FastAPI, SQLModel
+- **Database:** SQLite by default, PostgreSQL optional
+- **Frontend:** static HTML, CSS, vanilla JavaScript
+- **Tests:** pytest, Playwright
+- **Containerization:** Docker, docker-compose
+
+## Repository layout
+
+```text
 matrixmanager/
 ├── app/
-│   ├── main.py          # FastAPI app + models + routes
-│   └── static/          # Front-end (index.html, app.js, styles.css)
-├── matrix.db            # Created on first run
-├── README.md
-└── requirements.txt
+│   ├── main.py                  # FastAPI app, models, auth, routes
+│   └── static/                  # Frontend pages, styles, and JS
+├── e2e/                         # Playwright end-to-end tests
+├── requirements/                # PRD / test-plan / coverage docs
+├── scripts/                     # reset + seed helpers
+├── tests/                       # pytest suite
+├── .env.example                 # runtime configuration template
+├── Dockerfile
+├── docker-compose.yml
+├── package.json
+├── playwright.config.js
+├── pytest.ini
+├── requirements.txt
+└── README.md
 ```
 
-## Getting started
+## Main UI routes
 
-1. **Install dependencies** (use a virtualenv if desired):
+Once the app is running and you are authenticated, the repo currently exposes these primary pages:
 
-   ```bash
-   cd matrixmanager
-   python3 -m venv .venv && source .venv/bin/activate  # optional but recommended
-   pip install -r requirements.txt
-   ```
+- `/` — app entry / root
+- `/planning` — planning view
+- `/employees` — employee roster and hierarchy management
+- `/assignments` — assignment management and export flows
+- `/organizations` — organization management
+- `/canvas` — visual staffing canvas
+- `/audit` — change history and audit trail
+- `/db-management` — database connection management
+- `/project-dashboard` — project-centric dashboard
+- `/login` — sign-in page
+- `/docs` — FastAPI OpenAPI docs
 
-2. **Set login credentials**:
+> Note: exact navigation behavior may depend on auth state and the active frontend shell.
 
-   ```bash
-   export MATRIX_AUTH_USERNAME=admin
-   export MATRIX_AUTH_PASSWORD='choose-a-strong-password'
-   # optional but recommended for stronger session signing
-   export MATRIX_AUTH_SECRET='another-long-random-secret'
-   ```
+## Quick start (local dev)
 
-3. **Run the dev server**:
-
-   ```bash
-   uvicorn app.main:app --reload
-   ```
-
-   The app listens on `http://127.0.0.1:8000/`. Unauthenticated page requests are redirected to `/login`, where users can sign in with the configured credentials.
-
-3. **Use the UI** – visit the root URL for the planning page, then navigate between:
-   - `/` → demand/planning view (projects, timelines, allocation chart, assignment graph)
-   - `/employees` → employee roster and hierarchy management
-   - `/assignments` → assignment CRUD and CSV export
-   - `/orgs` → organization management
-   - `/canvas` → visual staffing canvas
-   - `/audit` → full change history with filters/export
-   - `/db-management` → admin-only database connection management and activation
-
-For PostgreSQL connectors, install the Python dependencies from `requirements.txt` so the bundled `psycopg` driver is available.
-
-## API cheat sheet
-
-| Method | Endpoint | Description |
-| ------ | -------- | ----------- |
-| GET    | `/organizations` | List organizations |
-| POST   | `/organizations` | Create organization |
-| PUT    | `/organizations/{id}` | Update organization |
-| DELETE | `/organizations/{id}` | Delete organization (must be empty) |
-| GET    | `/employees` | List employees |
-| POST   | `/employees` | Create employee |
-| PUT    | `/employees/{id}` | Update employee |
-| DELETE | `/employees/{id}` | Remove employee + its assignments |
-| GET    | `/projects` | List projects |
-| POST   | `/projects` | Create project |
-| PUT    | `/projects/{id}` | Update project |
-| DELETE | `/projects/{id}` | Remove project + its assignments |
-| GET    | `/assignments` | List assignments (filter via `?employee_id` / `?project_id`) |
-| POST   | `/assignments` | Create assignment |
-| PUT    | `/assignments/{id}` | Update assignment |
-| DELETE | `/assignments/{id}` | Delete assignment |
-| GET    | `/schedule/employee/{id}` | Time-phased assignments for an employee |
-| GET    | `/schedule/project/{id}` | Staffing timeline for a project |
-
-All endpoints return JSON. The UI uses these endpoints via Fetch; you can automate against them as well.
-
-## Running tests
-
-Install test dependencies from `requirements.txt`, then run:
+### 1) Create a virtual environment and install Python deps
 
 ```bash
 cd matrixmanager
-. .venv/bin/activate  # if using the local venv
-pytest
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-The suite lives in `tests/` and exercises core TP-backed API and UI-surface regressions.
-It relies on the versions pinned in `requirements.txt` for FastAPI/TestClient compatibility.
+### 2) Configure environment
 
-## Running Playwright E2E
+Start from `.env.example` or export env vars manually.
 
-Install the Node dependencies and browser once:
+Example minimal local setup:
+
+```bash
+export MATRIX_INSTALL_MODE=sqlite
+export MATRIX_ACTIVE_DB_TYPE=sqlite
+export MATRIX_AUTH_USERNAME=admin
+export MATRIX_AUTH_PASSWORD='change-me-now'
+export MATRIX_AUTH_SECRET='replace-with-a-long-random-secret'
+export MATRIX_APP_PORT=8000
+export MATRIX_BASE_URL='http://127.0.0.1:8000'
+```
+
+If you want file locations to match the deployment-style layout, you can also set:
+
+```bash
+export MATRIX_SQLITE_PATH="$PWD/matrix.db"
+export MATRIX_CONTROL_DB_PATH="$PWD/matrixmanager_control.db"
+```
+
+### 3) Run the app
+
+```bash
+uvicorn app.main:app --reload
+```
+
+Open:
+
+- `http://127.0.0.1:8000/`
+- `http://127.0.0.1:8000/docs`
+
+If auth is enabled, page requests will redirect to `/login` until you sign in.
+
+## Environment variables
+
+The current `.env.example` defines these key settings:
+
+### App/auth/runtime
+
+- `MATRIX_INSTALL_MODE` — `sqlite` or `postgresql`
+- `MATRIX_ACTIVE_DB_TYPE` — active runtime DB type
+- `MATRIX_AUTH_USERNAME`
+- `MATRIX_AUTH_PASSWORD`
+- `MATRIX_AUTH_SECRET`
+- `MATRIX_APP_PORT`
+- `MATRIX_BASE_URL`
+
+### SQLite mode
+
+- `MATRIX_SQLITE_PATH`
+- `MATRIX_CONTROL_DB_PATH`
+
+### PostgreSQL mode
+
+- `POSTGRES_HOST`
+- `POSTGRES_PORT`
+- `POSTGRES_DB`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+- `POSTGRES_SSLMODE`
+
+## Database modes
+
+### SQLite
+
+SQLite is the default and simplest way to run the app locally.
+
+Typical local flow:
 
 ```bash
 cd matrixmanager
-npm install
-npx playwright install chromium
+source .venv/bin/activate
+uvicorn app.main:app --reload
 ```
 
-Then run:
+### PostgreSQL
+
+PostgreSQL is supported via runtime configuration and the included compose file.
+The app can also manage DB connection profiles from the UI via `/db-management`.
+
+## Docker / docker-compose
+
+A container workflow is already included.
+
+### Run app with SQLite-backed volumes
 
 ```bash
-npm run test:e2e
+cd matrixmanager
+docker compose up --build
 ```
 
-The E2E specs live in `e2e/` and target the highest-value browser workflows.
+This uses:
 
-## TP coverage tracking
+- `.env`
+- app container on `${MATRIX_APP_PORT:-8000}`
+- mounted data directories:
+  - `./data/sqlite:/data/sqlite`
+  - `./data/app:/data/app`
 
-- `requirements.csv` — product requirements
-- `requirements_test_plan.csv` — suggested test approaches and scenarios
-- `tp_coverage_matrix.csv` — current automation status per TP
+### Run with PostgreSQL profile enabled
 
-## Database reset and sample data
+```bash
+cd matrixmanager
+docker compose --profile postgres up --build
+```
 
-Reset to a fresh empty database:
+The compose setup also includes:
+
+- app healthcheck on `/health`
+- optional PostgreSQL service with persistent volume
+
+## API overview
+
+FastAPI exposes interactive API docs at:
+
+- `/docs`
+
+The README previously documented these core resource families, which still match the app’s domain model:
+
+- `/organizations`
+- `/employees`
+- `/projects`
+- `/assignments`
+- `/schedule/employee/{id}`
+- `/schedule/project/{id}`
+
+In practice, the current backend also includes auth, audit, and DB-management related behavior surfaced through the app.
+
+## Development scripts
+
+### Reset the database
 
 ```bash
 cd matrixmanager
@@ -140,7 +232,7 @@ python scripts/reset_db.py
 npm run db:reset
 ```
 
-Generate a clean sample dataset:
+### Seed sample data
 
 ```bash
 cd matrixmanager
@@ -149,13 +241,72 @@ python scripts/seed_sample_data.py
 npm run db:seed
 ```
 
-The sample seeder recreates the database and loads organizations, a multi-level hierarchy, projects, and assignments.
+The seeder recreates a clean sample dataset with organizations, hierarchy, projects, and assignments.
 
-## Next steps / ideas
+## Tests
 
-- Wire the login flow into your existing identity provider.
-- Export utilization snapshots (e.g., CSV or calendar feeds).
-- Add scenario planning (what-if allocations, soft bookings vs. confirmed).
-- Integrate with your preferred project tracking tool (Jira, Linear, etc.).
+### pytest
 
-For now, this MVP gives you a clean starting point and clear separation between API + UI so you can grow it as needed.
+```bash
+cd matrixmanager
+source .venv/bin/activate
+pytest
+```
+
+The pytest suite lives in `tests/`.
+
+### Playwright E2E
+
+```bash
+cd matrixmanager
+npm install
+npx playwright install chromium
+npm run test:e2e
+```
+
+Useful variants from `package.json`:
+
+```bash
+npm run test:e2e:headed
+npm run test:e2e:ui
+```
+
+The E2E specs live in `e2e/`.
+
+## Requirements and coverage tracking
+
+The repo also includes product and QA artifacts under `requirements/`:
+
+- `requirements.csv`
+- `requirements_test_plan.csv`
+- `tp_coverage_matrix.csv`
+- phase planning / installer documents
+
+These are useful if you want to understand current scope, delivery planning, and test coverage status.
+
+## Notes for contributors
+
+- The frontend is plain static assets under `app/static/`
+- The backend entrypoint is `app/main.py`
+- SQLite is easiest for local iteration
+- The repo already includes both test and deployment scaffolding, so it is more than a one-file MVP at this point
+
+## Next sensible improvements
+
+A few likely next-step areas, based on the current repo shape:
+
+- tighten README/API docs around auth/admin endpoints
+- document `/project-dashboard` and `/db-management` more deeply
+- add screenshots / workflow walkthroughs
+- document production deployment and backup strategy
+- describe the audit model and database switching behavior in more detail
+
+---
+
+If you are opening this repo fresh, the fastest path is:
+
+1. create `.venv`
+2. install `requirements.txt`
+3. copy `.env.example` to `.env` and adjust credentials
+4. run `uvicorn app.main:app --reload`
+5. sign in and explore `/planning`, `/canvas`, `/audit`, and `/db-management`
