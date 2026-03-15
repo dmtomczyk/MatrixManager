@@ -2538,6 +2538,88 @@ def update_assignment(
     return assignment_read
 
 
+@app.post("/assignments/{assignment_id}/approve", response_model=AssignmentRead)
+def approve_assignment(assignment_id: int, request: Request, session: Session = Depends(get_session)):
+    username = get_request_username(request)
+    assignment = session.get(Assignment, assignment_id)
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    if assignment.status != "in_review":
+        raise HTTPException(status_code=400, detail="Assignment is no longer awaiting review")
+    if not can_review_assignment(username, assignment):
+        raise HTTPException(status_code=403, detail="You are not allowed to review this assignment")
+    before = audit_snapshot_from_model(serialize_assignment(session, assignment, current_username=username))
+    assignment.status = "approved"
+    assignment.approved_by_username = username
+    assignment.denied_by_username = None
+    assignment.reviewed_at = datetime.now(timezone.utc)
+    session.add(assignment)
+    session.commit()
+    session.refresh(assignment)
+    assignment_read = serialize_assignment(session, assignment, current_username=username)
+    with Session(control_engine) as control_session:
+        if assignment.submitted_by_username:
+            add_inbox_notification(
+                control_session,
+                username=assignment.submitted_by_username,
+                title="Assignment request approved",
+                message=f"{username} approved your assignment request for {assignment_read.employee_name or 'employee'} → {assignment_read.project_name or 'project'}.",
+                metadata={"kind": "assignment_review_result", "assignment_id": assignment.id, "result": "approved"},
+            )
+    record_audit_entry(
+        session,
+        actor_username=username,
+        entity_type="assignment",
+        action="approve",
+        entity_id=assignment.id,
+        entity_label=f"{assignment_read.employee_name or assignment.employee_id} → {assignment_read.project_name or assignment.project_id}",
+        before=before,
+        after=audit_snapshot_from_model(assignment_read),
+    )
+    return assignment_read
+
+
+@app.post("/assignments/{assignment_id}/deny", response_model=AssignmentRead)
+def deny_assignment(assignment_id: int, request: Request, session: Session = Depends(get_session)):
+    username = get_request_username(request)
+    assignment = session.get(Assignment, assignment_id)
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    if assignment.status != "in_review":
+        raise HTTPException(status_code=400, detail="Assignment is no longer awaiting review")
+    if not can_review_assignment(username, assignment):
+        raise HTTPException(status_code=403, detail="You are not allowed to review this assignment")
+    before = audit_snapshot_from_model(serialize_assignment(session, assignment, current_username=username))
+    assignment.status = "denied"
+    assignment.denied_by_username = username
+    assignment.approved_by_username = None
+    assignment.reviewed_at = datetime.now(timezone.utc)
+    session.add(assignment)
+    session.commit()
+    session.refresh(assignment)
+    assignment_read = serialize_assignment(session, assignment, current_username=username)
+    with Session(control_engine) as control_session:
+        if assignment.submitted_by_username:
+            add_inbox_notification(
+                control_session,
+                username=assignment.submitted_by_username,
+                title="Assignment request denied",
+                message=f"{username} denied your assignment request for {assignment_read.employee_name or 'employee'} → {assignment_read.project_name or 'project'}.",
+                metadata={"kind": "assignment_review_result", "assignment_id": assignment.id, "result": "denied"},
+            )
+    record_audit_entry(
+        session,
+        actor_username=username,
+        entity_type="assignment",
+        action="deny",
+        entity_id=assignment.id,
+        entity_label=f"{assignment_read.employee_name or assignment.employee_id} → {assignment_read.project_name or assignment.project_id}",
+        before=before,
+        after=audit_snapshot_from_model(assignment_read),
+    )
+    return assignment_read
+
+
 @app.post("/assignments/{assignment_id}/refresh-approvers", response_model=AssignmentRead)
 def refresh_assignment_approvers(assignment_id: int, request: Request, session: Session = Depends(get_session)):
     username = get_request_username(request)

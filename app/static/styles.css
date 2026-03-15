@@ -352,6 +352,11 @@ header nav a,
   background: rgba(15, 23, 42, 0.34);
 }
 
+.account-menu-has-alert .account-menu-trigger {
+  border-color: rgba(251, 191, 36, 0.75);
+  box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.18);
+}
+
 .nav-dropdown-trigger {
   cursor: pointer;
   list-style: none;
@@ -482,6 +487,19 @@ header nav a,
   font-size: 1rem;
   line-height: 1;
   flex-shrink: 0;
+  position: relative;
+}
+
+.account-menu-has-alert .account-icon::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #f59e0b;
+  border: 2px solid #0f172a;
 }
 
 .account-menu-label {
@@ -510,6 +528,28 @@ header nav a,
 
 .account-menu-link:hover {
   background: rgba(59, 130, 246, 0.12);
+}
+
+.account-menu-link[data-alert="unread"]::after,
+.account-menu-link[data-alert="pending"]::after {
+  content: attr(data-alert);
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.account-menu-link[data-alert="unread"]::after {
+  color: #1d4ed8;
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.account-menu-link[data-alert="pending"]::after {
+  color: #92400e;
+  background: rgba(245, 158, 11, 0.18);
 }
 
 .account-menu-meta {
