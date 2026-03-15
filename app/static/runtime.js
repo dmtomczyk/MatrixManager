@@ -92,6 +92,8 @@ const renderOverview = (overview) => {
         <strong>${escapeHtml(service.name)}</strong>
         <span class="badge ${stateBadgeClass(service.state || service.health || '')}">${escapeHtml(service.state || 'unknown')}</span>
         <span>${escapeHtml(service.health || service.status_text || 'No extra status reported')}</span>
+        <span>Uptime: ${escapeHtml(service.uptime || '—')}</span>
+        <span>Restart count: ${escapeHtml(service.restart_count != null ? String(service.restart_count) : '—')}</span>
       </article>
     `).join('');
   }

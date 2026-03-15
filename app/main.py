@@ -321,6 +321,8 @@ class RuntimeServiceStatusRead(SQLModel):
     state: str
     health: Optional[str] = None
     status_text: Optional[str] = None
+    uptime: Optional[str] = None
+    restart_count: Optional[int] = None
 
 
 class RuntimeDbStatusRead(SQLModel):
@@ -1195,6 +1197,36 @@ def probe_db_connection(connection: DBConnectionConfig) -> RuntimeDbStatusRead:
         )
 
 
+def format_timedelta_short(delta: timedelta) -> str:
+    total_seconds = max(0, int(delta.total_seconds()))
+    days, remainder = divmod(total_seconds, 86400)
+    hours, remainder = divmod(remainder, 3600)
+    minutes, _ = divmod(remainder, 60)
+    if days:
+        return f"{days}d {hours}h"
+    if hours:
+        return f"{hours}h {minutes}m"
+    return f"{minutes}m"
+
+
+def inspect_docker_container(container_name: str) -> dict[str, Any]:
+    result = subprocess.run(
+        ["docker", "inspect", container_name],
+        cwd=str(ROOT_DIR),
+        capture_output=True,
+        text=True,
+        timeout=8,
+        check=False,
+    )
+    if result.returncode != 0 or not result.stdout.strip():
+        return {}
+    try:
+        payload = json.loads(result.stdout)
+        return payload[0] if payload else {}
+    except Exception:
+        return {}
+
+
 def get_docker_service_status() -> tuple[bool, Optional[str], list[RuntimeServiceStatusRead]]:
     services: list[RuntimeServiceStatusRead] = []
     docker_error = None
@@ -1213,12 +1245,26 @@ def get_docker_service_status() -> tuple[bool, Optional[str], list[RuntimeServic
             lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
             for line in lines:
                 item = json.loads(line)
+                inspect_target = item.get("Name") or item.get("ID") or item.get("Service")
+                inspect_payload = inspect_docker_container(inspect_target) if inspect_target else {}
+                state_info = inspect_payload.get("State") or {}
+                started_at = state_info.get("StartedAt")
+                uptime = None
+                if started_at and started_at != "0001-01-01T00:00:00Z":
+                    try:
+                        started_dt = datetime.fromisoformat(started_at.replace("Z", "+00:00"))
+                        uptime = format_timedelta_short(datetime.now(timezone.utc) - started_dt)
+                    except Exception:
+                        uptime = None
+                restart_count = inspect_payload.get("RestartCount")
                 services.append(
                     RuntimeServiceStatusRead(
                         name=item.get("Service") or item.get("Name") or "unknown",
                         state=item.get("State") or "unknown",
                         health=item.get("Health"),
                         status_text=item.get("Status") or item.get("Publishers"),
+                        uptime=uptime,
+                        restart_count=restart_count if isinstance(restart_count, int) else None,
                     )
                 )
         else:
