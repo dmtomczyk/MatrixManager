@@ -369,7 +369,8 @@ def get_session_username(cookie_value: Optional[str]) -> Optional[str]:
 
 def render_app_nav(current_path: str, username: str) -> str:
     links = [
-        ("/", "Planning"),
+        ("/", "Home"),
+        ("/planning", "Planning"),
         ("/staffing", "Assignments"),
         ("/canvas", "Canvas"),
         ("/dashboard", "Project Dashboard"),
@@ -382,9 +383,9 @@ def render_app_nav(current_path: str, username: str) -> str:
     admin_links: list[tuple[str, str]] = []
     if is_admin_username(username):
         admin_links = [
-            ("/audit", "Audit"),
             ("/users", "Users"),
-            ("/db-management", "DB Managment"),
+            ("/audit", "Audit"),
+            ("/db-management", "Databases"),
         ]
 
     def render_standard_links(nav_links: list[tuple[str, str]]) -> str:
@@ -498,7 +499,7 @@ def build_login_page(error: str = "", next_path: str = "/") -> str:
 
 def is_html_request(request: Request) -> bool:
     accept = request.headers.get("accept", "")
-    return "text/html" in accept or request.url.path in {"/", "/people", "/staffing", "/orgs", "/job-codes", "/canvas", "/dashboard", "/audit", "/users", "/db-management", "/docs", "/redoc"}
+    return "text/html" in accept or request.url.path in {"/", "/planning", "/people", "/staffing", "/orgs", "/job-codes", "/canvas", "/dashboard", "/audit", "/users", "/db-management", "/docs", "/redoc"}
 
 
 def create_db_and_tables(bind_engine=engine) -> None:
@@ -1130,6 +1131,18 @@ def logout():
 
 
 @app.get("/", response_class=HTMLResponse)
+def serve_home(request: Request) -> str:
+    return serve_html_page(
+        "home.html",
+        {
+            'href="/static/styles.css"': f'href="{static_asset_url("styles.css")}"',
+        },
+        current_path=request.url.path,
+        username=get_session_username(request.cookies.get(SESSION_COOKIE_NAME)),
+    )
+
+
+@app.get("/planning", response_class=HTMLResponse)
 def serve_index(request: Request) -> str:
     return serve_html_page(
         "planning.html",
