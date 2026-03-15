@@ -39,6 +39,25 @@ prompt_with_default() {
   printf '%s' "$value"
 }
 
+prompt_yes_no() {
+  local prompt="$1"
+  local default="$2"
+  local suffix="[y/N]"
+  if [[ "$default" == "yes" ]]; then
+    suffix="[Y/n]"
+  fi
+  local value
+  read -r -p "$prompt $suffix: " value
+  value="$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')"
+  if [[ -z "$value" ]]; then
+    value="$default"
+  fi
+  if [[ "$value" == "y" || "$value" == "yes" ]]; then
+    return 0
+  fi
+  return 1
+}
+
 wait_for_http() {
   local url="$1"
   local attempts="${2:-60}"
@@ -126,6 +145,11 @@ fi
 
 BASE_URL_DEFAULT="http://127.0.0.1:${APP_PORT}"
 MATRIX_BASE_URL="$(prompt_with_default "Base URL" "$BASE_URL_DEFAULT")"
+if prompt_yes_no "Seed starter data (Default Org, Manager/Not Assigned job codes, Example Project, Jane/John Doe)?" "yes"; then
+  SEED_STARTER_DATA="yes"
+else
+  SEED_STARTER_DATA="no"
+fi
 MATRIX_AUTH_SECRET="$(random_secret)"
 MATRIX_SQLITE_PATH="/data/sqlite/matrix.db"
 MATRIX_CONTROL_DB_PATH="/data/app/matrixmanager_control.db"
@@ -243,6 +267,36 @@ if ! wait_for_http "http://127.0.0.1:${APP_PORT}/health" 60 2; then
     echo "  docker compose logs postgres --tail=100" >&2
   fi
   exit 1
+fi
+
+if [[ "$SEED_STARTER_DATA" == "yes" ]]; then
+  echo "Seeding starter data..."
+  COOKIE_JAR="$(mktemp)"
+  cleanup_cookie_jar() {
+    rm -f "$COOKIE_JAR"
+  }
+  trap cleanup_cookie_jar EXIT
+  LOGIN_STATUS="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+    --cookie-jar "$COOKIE_JAR" \
+    --header 'Content-Type: application/x-www-form-urlencoded' \
+    --data-urlencode "username=${ADMIN_USERNAME}" \
+    --data-urlencode "password=${ADMIN_PASSWORD}" \
+    --data-urlencode 'next=/' \
+    "http://127.0.0.1:${APP_PORT}/login")"
+  if [[ "$LOGIN_STATUS" != "302" ]]; then
+    echo "Error: installer could not sign in to seed starter data (HTTP $LOGIN_STATUS)." >&2
+    exit 1
+  fi
+  SEED_STATUS="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+    --cookie "$COOKIE_JAR" \
+    --request POST \
+    "http://127.0.0.1:${APP_PORT}/seed-default-data")"
+  if [[ "$SEED_STATUS" != "200" ]]; then
+    echo "Error: starter data seeding failed (HTTP $SEED_STATUS)." >&2
+    exit 1
+  fi
+  rm -f "$COOKIE_JAR"
+  trap - EXIT
 fi
 
 echo

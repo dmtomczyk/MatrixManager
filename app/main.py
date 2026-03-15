@@ -914,7 +914,6 @@ def on_startup() -> None:
     ensure_default_admin_user()
     active_connection = get_active_db_connection_config()
     get_or_create_data_engine(active_connection)
-    ensure_default_seed_data()
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -1071,6 +1070,13 @@ def ensure_default_seed_data() -> None:
             existing_assignment.project_id = example_project.id
             session.add(existing_assignment)
         session.commit()
+
+
+@app.post("/seed-default-data")
+def seed_default_data(request: Request):
+    require_admin_user(request)
+    ensure_default_seed_data()
+    return {"status": "ok"}
 
 
 @app.post("/login")
