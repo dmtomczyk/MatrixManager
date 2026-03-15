@@ -2,14 +2,17 @@ const runtimeSummary = document.getElementById('runtime-summary');
 const runtimeServices = document.getElementById('runtime-services');
 const runtimeDbTable = document.getElementById('runtime-db-table');
 const runtimeSnapshotTable = document.getElementById('runtime-snapshot-table');
+const runtimeErrorGroupTable = document.getElementById('runtime-error-group-table');
 const runtimeErrorTable = document.getElementById('runtime-error-table');
 const refreshButton = document.getElementById('runtime-refresh');
+const copyDiagnosticsButton = document.getElementById('runtime-copy-diagnostics');
 const pollingButton = document.getElementById('runtime-toggle-polling');
 const lastUpdated = document.getElementById('runtime-last-updated');
 const toast = document.getElementById('toast');
 
 let pollingEnabled = true;
 let pollingHandle = null;
+let latestDiagnostics = null;
 const POLL_MS = 15000;
 
 const apiFetch = async (url, options = {}) => {
@@ -33,34 +36,41 @@ const stateBadgeClass = (state = '') => {
   return '';
 };
 
+const summaryToneClass = (status = '') => {
+  const normalized = status.toLowerCase();
+  if (normalized === 'ok') return 'runtime-summary-ok';
+  if (normalized === 'error') return 'runtime-summary-error';
+  return 'runtime-summary-warn';
+};
+
 const renderOverview = (overview) => {
   runtimeSummary.innerHTML = `
-    <article class="flow-node">
+    <article class="flow-node runtime-summary-card ${summaryToneClass(overview.overall_status)}">
       <span class="flow-kicker">Overall</span>
       <strong><span class="badge ${stateBadgeClass(overview.overall_status)}">${escapeHtml(overview.overall_status)}</span></strong>
       <span>Checked: ${escapeHtml(formatDate(overview.checked_at))}</span>
       <span>Recent runtime errors (1h): ${escapeHtml(String(overview.recent_error_count || 0))}</span>
     </article>
-    <article class="flow-node">
-      <span class="flow-kicker">Environment</span>
-      <strong>${escapeHtml(overview.runtime_environment)}</strong>
-      <span>Install mode: ${escapeHtml(overview.install_mode)}</span>
-      <span>Active DB: ${escapeHtml(overview.active_db_type)}</span>
-    </article>
-    <article class="flow-node">
+    <article class="flow-node runtime-summary-card ${summaryToneClass(overview.control_db_status)}">
       <span class="flow-kicker">Control DB</span>
       <strong><span class="badge ${stateBadgeClass(overview.control_db_status)}">${escapeHtml(overview.control_db_status)}</span></strong>
       <span>${escapeHtml(overview.control_db_detail || 'No detail')}</span>
     </article>
-    <article class="flow-node">
+    <article class="flow-node runtime-summary-card ${summaryToneClass(overview.active_data_db_status)}">
       <span class="flow-kicker">Active Data DB</span>
       <strong><span class="badge ${stateBadgeClass(overview.active_data_db_status)}">${escapeHtml(overview.active_data_db_status)}</span></strong>
       <span>${escapeHtml(overview.active_data_db_detail || 'No detail')}</span>
     </article>
-    <article class="flow-node">
+    <article class="flow-node runtime-summary-card ${summaryToneClass(overview.docker_available ? 'ok' : (overview.docker_error ? 'degraded' : 'unknown'))}">
       <span class="flow-kicker">Docker</span>
       <strong>${overview.docker_available ? 'Available' : 'Unavailable'}</strong>
       <span>${escapeHtml(overview.docker_error || 'Docker Compose status read succeeded')}</span>
+    </article>
+    <article class="flow-node runtime-summary-card runtime-summary-neutral">
+      <span class="flow-kicker">Environment</span>
+      <strong>${escapeHtml(overview.runtime_environment)}</strong>
+      <span>Install mode: ${escapeHtml(overview.install_mode)}</span>
+      <span>Active DB: ${escapeHtml(overview.active_db_type)}</span>
     </article>
   `;
 
@@ -91,7 +101,7 @@ const renderOverview = (overview) => {
       </tr>
     `).join('');
   }
-}
+};
 
 const renderSnapshots = (items) => {
   if (!items.length) {
@@ -106,6 +116,22 @@ const renderSnapshots = (items) => {
       <td><span class="badge ${stateBadgeClass(item.active_data_db_status)}">${escapeHtml(item.active_data_db_status)}</span></td>
       <td><span class="badge ${stateBadgeClass(item.docker_status)}">${escapeHtml(item.docker_status)}</span></td>
       <td>${escapeHtml(String(item.error_count_last_hour || 0))}</td>
+    </tr>
+  `).join('');
+};
+
+const renderErrorGroups = (items) => {
+  if (!items.length) {
+    runtimeErrorGroupTable.innerHTML = '<tr><td colspan="5">No recurring runtime error groups.</td></tr>';
+    return;
+  }
+  runtimeErrorGroupTable.innerHTML = items.map((item) => `
+    <tr>
+      <td><strong>${escapeHtml(item.error_type)}</strong><div class="muted small-text">${escapeHtml(item.message)}</div></td>
+      <td><span class="badge assignment-status-denied">${escapeHtml(String(item.count))}</span></td>
+      <td>${escapeHtml(formatDate(item.last_seen_at))}</td>
+      <td>${escapeHtml(item.sample_path || '—')}</td>
+      <td>${escapeHtml(item.sample_username || '—')}</td>
     </tr>
   `).join('');
 };
@@ -127,13 +153,16 @@ const renderErrors = (items) => {
 };
 
 const loadRuntime = async () => {
-  const [overview, errors, snapshots] = await Promise.all([
+  const [overview, errors, errorGroups, snapshots] = await Promise.all([
     apiFetch('/health/details'),
     apiFetch('/runtime-errors'),
+    apiFetch('/runtime-error-groups'),
     apiFetch('/runtime-health-snapshots'),
   ]);
+  latestDiagnostics = { overview, errors, errorGroups, snapshots, exportedAt: new Date().toISOString() };
   renderOverview(overview);
   renderErrors(errors);
+  renderErrorGroups(errorGroups);
   renderSnapshots(snapshots);
   lastUpdated.textContent = `Last updated ${formatDate(new Date().toISOString())}`;
 };
@@ -145,6 +174,17 @@ const startPolling = () => {
     loadRuntime().catch(() => {});
   }, POLL_MS);
 };
+
+copyDiagnosticsButton.addEventListener('click', async () => {
+  try {
+    if (!latestDiagnostics) await loadRuntime();
+    const text = JSON.stringify(latestDiagnostics, null, 2);
+    await navigator.clipboard.writeText(text);
+    showToast('Diagnostics copied');
+  } catch (err) {
+    alert(err.message || 'Failed to copy diagnostics');
+  }
+});
 
 pollingButton.addEventListener('click', () => {
   pollingEnabled = !pollingEnabled;

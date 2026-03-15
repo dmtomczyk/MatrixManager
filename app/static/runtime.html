@@ -34,6 +34,7 @@
           </div>
           <div class="panel-actions-row">
             <span id="runtime-last-updated" class="muted small-text">Not refreshed yet</span>
+            <button type="button" id="runtime-copy-diagnostics" class="ghost-button">Copy Diagnostics</button>
             <button type="button" id="runtime-toggle-polling" class="ghost-button">Pause Auto-Refresh</button>
             <button type="button" id="runtime-refresh" class="ghost-button">Refresh Now</button>
           </div>
@@ -82,6 +83,27 @@
               </tr>
             </thead>
             <tbody id="runtime-snapshot-table"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card single-column">
+        <div class="section-head">
+          <h2>Grouped Runtime Errors</h2>
+          <p>Repeated failures are rolled up by error type + message so recurring issues stand out quickly.</p>
+        </div>
+        <div class="db-table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>Error</th>
+                <th>Count</th>
+                <th>Last Seen</th>
+                <th>Path</th>
+                <th>User</th>
+              </tr>
+            </thead>
+            <tbody id="runtime-error-group-table"></tbody>
           </table>
         </div>
       </section>

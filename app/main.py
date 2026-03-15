@@ -352,6 +352,15 @@ class RuntimeHealthSnapshotRead(SQLModel):
     details: Optional[dict[str, Any]] = None
 
 
+class RuntimeErrorGroupRead(SQLModel):
+    error_type: str
+    message: str
+    count: int
+    last_seen_at: datetime
+    sample_path: Optional[str] = None
+    sample_username: Optional[str] = None
+
+
 class RuntimeOverviewRead(SQLModel):
     runtime_environment: str
     active_db_type: str
@@ -3048,6 +3057,34 @@ def list_runtime_errors(request: Request, limit: int = 100, session: Session = D
     safe_limit = max(1, min(limit, 500))
     items = session.exec(select(RuntimeErrorLog).order_by(RuntimeErrorLog.occurred_at.desc(), RuntimeErrorLog.id.desc())).all()
     return [serialize_runtime_error(item) for item in items[:safe_limit]]
+
+
+@app.get("/runtime-error-groups", response_model=List[RuntimeErrorGroupRead])
+def list_runtime_error_groups(request: Request, limit: int = 20, session: Session = Depends(get_control_session)):
+    require_admin_user(request)
+    safe_limit = max(1, min(limit, 100))
+    items = session.exec(select(RuntimeErrorLog).order_by(RuntimeErrorLog.occurred_at.desc(), RuntimeErrorLog.id.desc())).all()
+    grouped: dict[tuple[str, str], RuntimeErrorGroupRead] = {}
+    for item in items:
+        key = (item.error_type, item.message)
+        existing = grouped.get(key)
+        if existing:
+            existing.count += 1
+            if item.occurred_at > existing.last_seen_at:
+                existing.last_seen_at = item.occurred_at
+                existing.sample_path = item.path
+                existing.sample_username = item.username
+            continue
+        grouped[key] = RuntimeErrorGroupRead(
+            error_type=item.error_type,
+            message=item.message,
+            count=1,
+            last_seen_at=item.occurred_at,
+            sample_path=item.path,
+            sample_username=item.username,
+        )
+    results = sorted(grouped.values(), key=lambda entry: (entry.count, entry.last_seen_at), reverse=True)
+    return results[:safe_limit]
 
 
 @app.get("/runtime-health-snapshots", response_model=List[RuntimeHealthSnapshotRead])
