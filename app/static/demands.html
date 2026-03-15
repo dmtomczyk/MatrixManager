@@ -53,13 +53,13 @@
           <form id="demand-form" class="panel">
             <h3 id="demand-form-title">Add Demand</h3>
             <input type="hidden" name="entity_id" />
-            <label>Project<select name="project_id" id="demand-project" required></select></label>
-            <label>Demand Title<input name="title" id="demand-title" required placeholder="e.g. Backend SWE - C#" /></label>
+            <label class="required-field">Project<select name="project_id" id="demand-project" required></select></label>
+            <label class="required-field">Demand Title<input name="title" id="demand-title" required placeholder="e.g. Backend SWE - C#" /></label>
             <label>Job Code<select name="job_code_id" id="demand-job-code"></select></label>
             <label>Skillset / Notes<input name="skill_notes" id="demand-skill-notes" placeholder="e.g. C#, .NET, Azure" /></label>
-            <label>Start Date<input type="date" name="start_date" id="demand-start-date" required /></label>
-            <label>End Date<input type="date" name="end_date" id="demand-end-date" required /></label>
-            <label>Required Allocation (FTE)<input type="number" min="0.1" step="0.1" name="required_allocation" id="demand-required-allocation" value="1" required /></label>
+            <label class="required-field">Start Date<input type="date" name="start_date" id="demand-start-date" required /></label>
+            <label class="required-field">End Date<input type="date" name="end_date" id="demand-end-date" required /></label>
+            <label class="required-field">Required Allocation (FTE)<input type="number" min="0.1" step="0.1" name="required_allocation" id="demand-required-allocation" value="1" required /></label>
             <label>Notes<textarea name="notes" id="demand-notes" rows="2"></textarea></label>
             <div class="panel-actions-row">
               <button type="submit">Save Demand</button>

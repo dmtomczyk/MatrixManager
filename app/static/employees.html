@@ -66,15 +66,15 @@
               <h3 id="employee-form-title">Add Employee</h3>
               <p id="employee-form-status" class="muted small-text">Use this form to add a new employee.</p>
               <input type="hidden" name="entity_id" id="employee-id" />
-              <label>Name<input name="name" id="employee-name" required /></label>
-              <label>Job Code
+              <label class="required-field">Name<input name="name" id="employee-name" required /></label>
+              <label class="required-field">Job Code
                 <select name="job_code_id" id="employee-job-code" required></select>
               </label>
               <p id="employee-job-code-help" class="muted small-text">Every employee must have a job code. Leader job codes allow assignment as a manager.</p>
               <label>Type
                 <input id="employee-type" value="IC" readonly />
               </label>
-              <label>Organization<select name="organization_id" id="employee-organization" required></select></label>
+              <label class="required-field">Organization<select name="organization_id" id="employee-organization" required></select></label>
               <label>Manager<select name="manager_id" id="employee-manager"></select></label>
               <p id="employee-manager-help" class="muted small-text">Required for IC job codes. Optional for leader job codes.</p>
               <label>Location<input name="location" id="employee-location" /></label>

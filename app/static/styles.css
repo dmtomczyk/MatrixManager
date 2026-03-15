@@ -739,6 +739,12 @@ label {
   gap: 4px;
 }
 
+.required-field::after {
+  content: " *";
+  color: #dc2626;
+  font-weight: 800;
+}
+
 input,
 select,
 textarea,

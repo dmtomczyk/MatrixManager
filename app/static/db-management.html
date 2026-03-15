@@ -49,23 +49,23 @@
           <form id="db-connection-form" class="panel">
             <h3 id="db-form-title">Add Connection</h3>
             <input type="hidden" name="entity_id" id="db-connection-id" />
-            <label>Name<input name="name" id="db-name" required /></label>
-            <label>Database Type
-              <select name="db_type" id="db-type">
+            <label class="required-field">Name<input name="name" id="db-name" required /></label>
+            <label class="required-field">Database Type
+              <select name="db_type" id="db-type" required>
                 <option value="sqlite">SQLite</option>
                 <option value="postgresql">PostgreSQL</option>
               </select>
             </label>
 
             <div id="sqlite-fields" class="db-type-fields">
-              <label>SQLite File Path<input name="sqlite_path" id="db-sqlite-path" placeholder="matrix.db" /></label>
+              <label id="db-sqlite-path-label">SQLite File Path<input name="sqlite_path" id="db-sqlite-path" placeholder="matrix.db" /></label>
             </div>
 
             <div id="postgres-fields" class="db-type-fields hidden">
-              <label>Host<input name="postgres_host" id="db-postgres-host" placeholder="localhost" /></label>
+              <label id="db-postgres-host-label">Host<input name="postgres_host" id="db-postgres-host" placeholder="localhost" /></label>
               <label>Port<input name="postgres_port" id="db-postgres-port" type="number" value="5432" /></label>
-              <label>Database<input name="postgres_database" id="db-postgres-database" /></label>
-              <label>Username<input name="postgres_username" id="db-postgres-username" /></label>
+              <label id="db-postgres-database-label">Database<input name="postgres_database" id="db-postgres-database" /></label>
+              <label id="db-postgres-username-label">Username<input name="postgres_username" id="db-postgres-username" /></label>
               <label>Password<input name="postgres_password" id="db-postgres-password" type="password" /></label>
               <label>SSL Mode<input name="postgres_sslmode" id="db-postgres-sslmode" value="prefer" /></label>
             </div>

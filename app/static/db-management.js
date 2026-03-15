@@ -34,9 +34,15 @@ const syncTypeFields = () => {
   const type = typeSelect.value;
   sqliteFields.classList.toggle('hidden', type !== 'sqlite');
   postgresFields.classList.toggle('hidden', type !== 'postgresql');
-  document.getElementById('db-sqlite-path').required = type === 'sqlite';
-  ['db-postgres-host', 'db-postgres-database', 'db-postgres-username'].forEach((id) => {
-    document.getElementById(id).required = type === 'postgresql';
+  const sqliteRequired = type === 'sqlite';
+  document.getElementById('db-sqlite-path').required = sqliteRequired;
+  document.getElementById('db-sqlite-path-label').classList.toggle('required-field', sqliteRequired);
+  ['host', 'database', 'username'].forEach((field) => {
+    const input = document.getElementById(`db-postgres-${field}`);
+    const label = document.getElementById(`db-postgres-${field}-label`);
+    const required = type === 'postgresql';
+    input.required = required;
+    label.classList.toggle('required-field', required);
   });
 };
 

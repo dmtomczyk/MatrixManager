@@ -561,8 +561,8 @@ def build_login_page(error: str = "", next_path: str = "/") -> str:
         {error_markup}
         <form method=\"post\" action=\"/login\" class=\"panel\">
           <input type=\"hidden\" name=\"next\" value=\"{safe_next}\" />
-          <label>Username<input name=\"username\" autocomplete=\"username\" required /></label>
-          <label>Password<input name=\"password\" type=\"password\" autocomplete=\"current-password\" required /></label>
+          <label class=\"required-field\">Username<input name=\"username\" autocomplete=\"username\" required /></label>
+          <label class=\"required-field\">Password<input name=\"password\" type=\"password\" autocomplete=\"current-password\" required /></label>
           <button type=\"submit\">Sign in</button>
         </form>
       </section>
