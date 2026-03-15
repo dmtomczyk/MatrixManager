@@ -1286,7 +1286,8 @@ def ensure_default_seed_data() -> None:
     data_engine = get_or_create_data_engine(active_connection)
     start_date = datetime.now().date()
     end_date = date(start_date.year + ((start_date.month + 5) // 12), ((start_date.month + 5) % 12) + 1, min(start_date.day, 28))
-    with Session(data_engine) as session:
+    review_end_date = date(start_date.year, start_date.month, min(start_date.day + 27, 28))
+    with Session(data_engine) as session, Session(control_engine) as control_session:
         not_assigned = session.exec(select(JobCode).where(JobCode.name == "Not Assigned")).first()
         if not not_assigned:
             not_assigned = JobCode(name="Not Assigned", is_leader=False)
@@ -1301,7 +1302,14 @@ def ensure_default_seed_data() -> None:
             session.commit()
             session.refresh(manager_code)
 
-        unassigned_org = get_or_create_unassigned_organization(session)
+        engineer_code = session.exec(select(JobCode).where(JobCode.name == "Software Engineer")) .first()
+        if not engineer_code:
+            engineer_code = JobCode(name="Software Engineer", is_leader=False)
+            session.add(engineer_code)
+            session.commit()
+            session.refresh(engineer_code)
+
+        get_or_create_unassigned_organization(session)
 
         default_org = session.exec(select(Organization).where(Organization.name == "Default Org")).first()
         if not default_org:
@@ -1322,6 +1330,7 @@ def ensure_default_seed_data() -> None:
             session.commit()
             session.refresh(example_project)
         else:
+            example_project.description = "Starter project created during install"
             example_project.start_date = start_date
             example_project.end_date = end_date
             session.add(example_project)
@@ -1337,7 +1346,7 @@ def ensure_default_seed_data() -> None:
                     "job_code_id": manager_code.id,
                     "organization_id": default_org.id,
                     "manager_id": None,
-                    "location": None,
+                    "location": "HQ",
                     "capacity": 1.0,
                 },
             )
@@ -1348,6 +1357,7 @@ def ensure_default_seed_data() -> None:
         else:
             jane.job_code_id = manager_code.id
             jane.organization_id = default_org.id
+            jane.location = "HQ"
             jane.employee_type = "L"
             session.add(jane)
             session.commit()
@@ -1359,10 +1369,10 @@ def ensure_default_seed_data() -> None:
                 session,
                 {
                     "name": "John Doe",
-                    "job_code_id": not_assigned.id,
+                    "job_code_id": engineer_code.id,
                     "organization_id": default_org.id,
                     "manager_id": jane.id,
-                    "location": None,
+                    "location": "Remote",
                     "capacity": 1.0,
                 },
             )
@@ -1371,35 +1381,137 @@ def ensure_default_seed_data() -> None:
             session.commit()
             session.refresh(john)
         else:
-            john.job_code_id = not_assigned.id
+            john.job_code_id = engineer_code.id
             john.organization_id = default_org.id
             john.manager_id = jane.id
+            john.location = "Remote"
             john.employee_type = "IC"
             session.add(john)
             session.commit()
             session.refresh(john)
 
-        existing_assignment = session.exec(
-            select(Assignment).where(Assignment.employee_id == john.id, Assignment.project_id == example_project.id)
+        example_demand = session.exec(
+            select(Demand).where(Demand.project_id == example_project.id, Demand.title == "Example Project Staffing Need")
         ).first()
-        if not existing_assignment:
-            existing_assignment = Assignment(
+        if not example_demand:
+            example_demand = Demand(
+                project_id=example_project.id,
+                title="Example Project Staffing Need",
+                organization_id=default_org.id,
+                job_code_id=engineer_code.id,
+                skill_notes="Backend API and staffing workflow",
+                start_date=start_date,
+                end_date=end_date,
+                required_allocation=1.0,
+                notes="Starter demand used to demonstrate approvals and forecast coverage",
+            )
+            session.add(example_demand)
+            session.commit()
+            session.refresh(example_demand)
+        else:
+            example_demand.organization_id = default_org.id
+            example_demand.job_code_id = engineer_code.id
+            example_demand.skill_notes = "Backend API and staffing workflow"
+            example_demand.start_date = start_date
+            example_demand.end_date = end_date
+            example_demand.required_allocation = 1.0
+            example_demand.notes = "Starter demand used to demonstrate approvals and forecast coverage"
+            session.add(example_demand)
+            session.commit()
+            session.refresh(example_demand)
+
+        approved_assignment = session.exec(
+            select(Assignment).where(Assignment.employee_id == john.id, Assignment.project_id == example_project.id, Assignment.status == "approved")
+        ).first()
+        if not approved_assignment:
+            approved_assignment = Assignment(
                 employee_id=john.id,
                 project_id=example_project.id,
+                demand_id=example_demand.id,
                 start_date=start_date,
                 end_date=end_date,
                 allocation=0.75,
-                notes="Starter example allocation",
+                notes="Starter approved example allocation",
+                status="approved",
+                submitted_by_username=get_auth_username(),
+                approved_by_username=get_auth_username(),
+                reviewed_at=datetime.now(timezone.utc),
             )
-            session.add(existing_assignment)
         else:
-            existing_assignment.allocation = 0.75
-            existing_assignment.employee_id = john.id
-            existing_assignment.project_id = example_project.id
-            existing_assignment.start_date = start_date
-            existing_assignment.end_date = end_date
-            session.add(existing_assignment)
+            approved_assignment.employee_id = john.id
+            approved_assignment.project_id = example_project.id
+            approved_assignment.demand_id = example_demand.id
+            approved_assignment.start_date = start_date
+            approved_assignment.end_date = end_date
+            approved_assignment.allocation = 0.75
+            approved_assignment.notes = "Starter approved example allocation"
+            approved_assignment.status = "approved"
+            approved_assignment.submitted_by_username = get_auth_username()
+            approved_assignment.approved_by_username = get_auth_username()
+            approved_assignment.denied_by_username = None
+            approved_assignment.reviewed_at = datetime.now(timezone.utc)
+        session.add(approved_assignment)
         session.commit()
+        session.refresh(approved_assignment)
+
+        pending_assignment = session.exec(
+            select(Assignment).where(Assignment.employee_id == john.id, Assignment.project_id == example_project.id, Assignment.status == "in_review")
+        ).first()
+        if not pending_assignment:
+            pending_assignment = Assignment(
+                employee_id=john.id,
+                project_id=example_project.id,
+                demand_id=example_demand.id,
+                start_date=start_date,
+                end_date=review_end_date,
+                allocation=0.5,
+                notes="Starter assignment request awaiting approval",
+                status="in_review",
+                submitted_by_username=get_auth_username(),
+            )
+        else:
+            pending_assignment.employee_id = john.id
+            pending_assignment.project_id = example_project.id
+            pending_assignment.demand_id = example_demand.id
+            pending_assignment.start_date = start_date
+            pending_assignment.end_date = review_end_date
+            pending_assignment.allocation = 0.5
+            pending_assignment.notes = "Starter assignment request awaiting approval"
+            pending_assignment.status = "in_review"
+            pending_assignment.submitted_by_username = get_auth_username()
+            pending_assignment.approved_by_username = None
+            pending_assignment.denied_by_username = None
+            pending_assignment.reviewed_at = None
+        session.add(pending_assignment)
+        session.commit()
+        session.refresh(pending_assignment)
+
+        admin_user = control_session.exec(select(UserAccount).where(UserAccount.username == get_auth_username())).first()
+        if admin_user:
+            admin_user.employee_id = jane.id
+            admin_user.is_admin = True
+            admin_user.is_active = True
+            admin_user.updated_at = datetime.now(timezone.utc)
+            control_session.add(admin_user)
+
+        requester_user = control_session.exec(select(UserAccount).where(UserAccount.username == "betauser")).first()
+        if not requester_user:
+            requester_user = UserAccount(
+                username="betauser",
+                password_hash=hash_password("superlongpw"),
+                employee_id=john.id,
+                is_admin=False,
+                is_active=True,
+            )
+        else:
+            requester_user.employee_id = john.id
+            requester_user.is_active = True
+        control_session.add(requester_user)
+        control_session.commit()
+        ensure_inbox_welcome_notification(get_auth_username())
+        ensure_inbox_welcome_notification("betauser")
+        refresh_assignment_reviews_for_employee_link(jane.id, control_session=control_session)
+        ensure_assignment_review_notifications(pending_assignment, control_session=control_session)
 
 
 @app.post("/seed-default-data")
