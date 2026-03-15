@@ -41,12 +41,14 @@ const buildPendingApprovalText = (asg) => {
 const renderAssignments = () => {
   assignmentTable.innerHTML = assignments.map((asg) => {
     const reviewActions = asg.requires_current_user_approval && asg.status === 'in_review'
-      ? `<button type="button" data-action="approve-assignment" data-id="${asg.id}">Approve</button><button type="button" class="secondary" data-action="deny-assignment" data-id="${asg.id}">Deny</button>`
-      : '';
-    const refreshAction = asg.status === 'in_review'
-      ? `<button type="button" class="secondary" data-action="refresh-approvers" data-id="${asg.id}">Refresh Approvers</button>`
-      : '';
-    return `<tr><td>${escapeHtml(asg.employee_name || String(asg.employee_id))}</td><td>${escapeHtml(asg.project_name || String(asg.project_id))}</td><td>${escapeHtml(asg.demand_title || '—')}</td><td>${escapeHtml(`${asg.start_date} → ${asg.end_date}`)}</td><td><span class="badge">${Math.round(asg.allocation * 100)}%</span></td><td>${escapeHtml(asg.status || 'approved')}</td><td>${escapeHtml(buildPendingApprovalText(asg))}</td><td>${escapeHtml(asg.submitted_by_username || '—')}</td><td>${escapeHtml(asg.notes || '')}</td><td class="actions"><button type="button" data-action="edit-assignment" data-id="${asg.id}">Edit</button>${reviewActions}${refreshAction}<button type="button" class="secondary" data-action="delete-assignment" data-id="${asg.id}">Delete</button></td></tr>`;
+      ? `<div class="table-action-stack"><button type="button" class="table-action-button table-action-button-approve" data-action="approve-assignment" data-id="${asg.id}">Approve</button><button type="button" class="table-action-button table-action-button-deny" data-action="deny-assignment" data-id="${asg.id}">Deny</button></div>`
+      : '<span class="muted">—</span>';
+    const rowActions = [`<button type="button" class="table-action-button" data-action="edit-assignment" data-id="${asg.id}">Edit</button>`];
+    if (asg.status === 'in_review') {
+      rowActions.push(`<button type="button" class="table-action-button table-action-button-secondary" data-action="refresh-approvers" data-id="${asg.id}">Refresh</button>`);
+    }
+    rowActions.push(`<button type="button" class="table-action-button table-action-button-secondary" data-action="delete-assignment" data-id="${asg.id}">Delete</button>`);
+    return `<tr><td>${escapeHtml(asg.employee_name || String(asg.employee_id))}</td><td>${escapeHtml(asg.project_name || String(asg.project_id))}</td><td>${escapeHtml(asg.demand_title || '—')}</td><td>${escapeHtml(`${asg.start_date} → ${asg.end_date}`)}</td><td><span class="badge">${Math.round(asg.allocation * 100)}%</span></td><td>${escapeHtml(asg.status || 'approved')}</td><td>${escapeHtml(buildPendingApprovalText(asg))}</td><td>${escapeHtml(asg.submitted_by_username || '—')}</td><td>${reviewActions}</td><td>${escapeHtml(asg.notes || '')}</td><td class="actions"><div class="table-action-stack">${rowActions.join('')}</div></td></tr>`;
   }).join('');
 };
 const resetForm = () => { assignmentForm.reset(); assignmentForm.querySelector('input[name="entity_id"]').value = ''; assignmentForm.querySelector('button[type="submit"]').textContent = 'Save Assignment'; assignmentForm.start_date.value = formatISODate(new Date()); assignmentForm.end_date.value = formatISODate(new Date()); updateDemandOptions(); };

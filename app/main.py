@@ -468,9 +468,9 @@ def render_app_nav(current_path: str, username: str) -> str:
         ("/canvas", "Canvas"),
     ]
     staffing_links = [
+        ("/dashboard", "Forecast"),
         ("/demands", "Demands"),
         ("/staffing", "Assignments"),
-        ("/dashboard", "Forecast"),
     ]
     people_links = [
         ("/orgs", "Organizations"),

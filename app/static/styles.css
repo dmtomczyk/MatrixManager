@@ -1552,6 +1552,35 @@ body.org-page .org-shell {
   border-color: #cbd5e1;
 }
 
+.table-action-button-approve {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #bbf7d0;
+}
+
+.table-action-button-approve:hover {
+  background: #bbf7d0;
+  border-color: #86efac;
+}
+
+.table-action-button-deny {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.table-action-button-deny:hover {
+  background: #fecaca;
+  border-color: #fca5a5;
+}
+
+.table-action-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
 .login-shell {
   width: min(460px, 100%);
 }
