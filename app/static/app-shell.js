@@ -29,6 +29,7 @@ const updateAccountNotificationState = async () => {
   const accountMenu = document.querySelector('details.account-menu');
   const accountTrigger = document.querySelector('.account-menu-trigger');
   const inboxLink = document.querySelector('.account-menu-link[href="/inbox"]');
+  const assignmentNavLinks = document.querySelectorAll('[data-nav-key="assignments"]');
   if (!accountMenu || !accountTrigger) return;
   try {
     const response = await fetch('/inbox-api', { headers: { Accept: 'application/json' } });
@@ -53,6 +54,15 @@ const updateAccountNotificationState = async () => {
     if (inboxLink) {
       inboxLink.dataset.alert = pendingApprovals > 0 ? `pending ${pendingApprovals}` : unreadMessages > 0 ? `unread ${unreadMessages}` : '';
     }
+    assignmentNavLinks.forEach((link) => {
+      link.classList.toggle('nav-link-has-pending-approvals', pendingApprovals > 0);
+      if (pendingApprovals > 0) {
+        link.dataset.pendingApprovals = String(pendingApprovals);
+      } else {
+        delete link.dataset.pendingApprovals;
+      }
+      link.setAttribute('aria-label', pendingApprovals > 0 ? `Assignments with ${pendingApprovals} pending approvals` : 'Assignments');
+    });
   } catch (_) {
     // Non-fatal nav enhancement; ignore fetch failures.
   }

@@ -490,7 +490,8 @@ def render_app_nav(current_path: str, username: str) -> str:
         for href, label in nav_links:
             class_name = "nav-link active" if href == current_path else "nav-link"
             aria_current = ' aria-current="page"' if href == current_path else ""
-            rendered.append(f'<a href="{href}" class="{class_name}"{aria_current}>{label}</a>')
+            nav_meta = ' data-nav-key="assignments"' if href == "/staffing" else ""
+            rendered.append(f'<a href="{href}" class="{class_name}"{aria_current}{nav_meta}>{label}</a>')
         return "".join(rendered)
 
     def render_dropdown(label: str, nav_links: list[tuple[str, str]], mobile: bool = False) -> str:
@@ -500,7 +501,8 @@ def render_app_nav(current_path: str, username: str) -> str:
         for href, item_label in nav_links:
             class_name = "nav-dropdown-link active" if href == current_path else "nav-dropdown-link"
             aria_current = ' aria-current="page"' if href == current_path else ""
-            rendered.append(f'<a href="{href}" class="{class_name}"{aria_current}>{item_label}</a>')
+            nav_meta = ' data-nav-key="assignments"' if href == "/staffing" else ""
+            rendered.append(f'<a href="{href}" class="{class_name}"{aria_current}{nav_meta}>{item_label}</a>')
         panel_class = "nav-dropdown-panel nav-dropdown-panel-mobile" if mobile else "nav-dropdown-panel"
         details_class = "nav-dropdown nav-dropdown-mobile" if mobile else "nav-dropdown"
         trigger_class = "nav-link nav-dropdown-trigger active" if any(href == current_path for href, _ in nav_links) else "nav-link nav-dropdown-trigger"
