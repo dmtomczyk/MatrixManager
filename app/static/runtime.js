@@ -1,5 +1,7 @@
 const runtimeSummary = document.getElementById('runtime-summary');
+const runtimeRecommendations = document.getElementById('runtime-recommendations');
 const runtimeServices = document.getElementById('runtime-services');
+const runtimeVersionsTable = document.getElementById('runtime-versions-table');
 const runtimeDbTable = document.getElementById('runtime-db-table');
 const runtimeSnapshotTable = document.getElementById('runtime-snapshot-table');
 const runtimeErrorGroupTable = document.getElementById('runtime-error-group-table');
@@ -8,6 +10,9 @@ const refreshButton = document.getElementById('runtime-refresh');
 const copyDiagnosticsButton = document.getElementById('runtime-copy-diagnostics');
 const pollingButton = document.getElementById('runtime-toggle-polling');
 const lastUpdated = document.getElementById('runtime-last-updated');
+const snapshotFilter = document.getElementById('runtime-snapshot-filter');
+const errorGroupFilter = document.getElementById('runtime-error-group-filter');
+const errorFilter = document.getElementById('runtime-error-filter');
 const toast = document.getElementById('toast');
 
 let pollingEnabled = true;
@@ -74,6 +79,10 @@ const renderOverview = (overview) => {
     </article>
   `;
 
+  runtimeRecommendations.innerHTML = (overview.recommended_actions || []).length
+    ? `<article class="panel runtime-recommendations-panel"><strong>Recommended Actions</strong><ul>${overview.recommended_actions.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul></article>`
+    : '<article class="panel runtime-recommendations-panel"><strong>Recommended Actions</strong><p class="muted">No immediate action items. Current probes look healthy.</p></article>';
+
   if (!overview.services.length) {
     runtimeServices.innerHTML = '<article class="flow-node"><strong>No service data</strong><span>Docker status was unavailable or no Compose services were returned.</span></article>';
   } else {
@@ -86,6 +95,16 @@ const renderOverview = (overview) => {
       </article>
     `).join('');
   }
+
+  runtimeVersionsTable.innerHTML = (overview.installed_versions || []).length
+    ? overview.installed_versions.map((item) => `
+      <tr>
+        <td>${escapeHtml(item.name)}</td>
+        <td>${escapeHtml(item.version)}</td>
+        <td>${escapeHtml(item.source || '—')}</td>
+      </tr>
+    `).join('')
+    : '<tr><td colspan="3">No version information available.</td></tr>';
 
   if (!overview.db_connections.length) {
     runtimeDbTable.innerHTML = '<tr><td colspan="6">No database connections available.</td></tr>';
@@ -104,11 +123,12 @@ const renderOverview = (overview) => {
 };
 
 const renderSnapshots = (items) => {
-  if (!items.length) {
-    runtimeSnapshotTable.innerHTML = '<tr><td colspan="6">No health snapshots yet.</td></tr>';
+  const filtered = items.filter((item) => snapshotFilter.value === 'all' || item.overall_status === snapshotFilter.value);
+  if (!filtered.length) {
+    runtimeSnapshotTable.innerHTML = '<tr><td colspan="6">No health snapshots match this filter.</td></tr>';
     return;
   }
-  runtimeSnapshotTable.innerHTML = items.map((item) => `
+  runtimeSnapshotTable.innerHTML = filtered.map((item) => `
     <tr>
       <td>${escapeHtml(formatDate(item.occurred_at))}</td>
       <td><span class="badge ${stateBadgeClass(item.overall_status)}">${escapeHtml(item.overall_status)}</span></td>
@@ -121,11 +141,13 @@ const renderSnapshots = (items) => {
 };
 
 const renderErrorGroups = (items) => {
-  if (!items.length) {
-    runtimeErrorGroupTable.innerHTML = '<tr><td colspan="5">No recurring runtime error groups.</td></tr>';
+  const minCount = Number(errorGroupFilter.value || 1);
+  const filtered = items.filter((item) => Number(item.count || 0) >= minCount);
+  if (!filtered.length) {
+    runtimeErrorGroupTable.innerHTML = '<tr><td colspan="5">No recurring runtime error groups match this filter.</td></tr>';
     return;
   }
-  runtimeErrorGroupTable.innerHTML = items.map((item) => `
+  runtimeErrorGroupTable.innerHTML = filtered.map((item) => `
     <tr>
       <td><strong>${escapeHtml(item.error_type)}</strong><div class="muted small-text">${escapeHtml(item.message)}</div></td>
       <td><span class="badge assignment-status-denied">${escapeHtml(String(item.count))}</span></td>
@@ -137,11 +159,13 @@ const renderErrorGroups = (items) => {
 };
 
 const renderErrors = (items) => {
-  if (!items.length) {
-    runtimeErrorTable.innerHTML = '<tr><td colspan="5">No runtime errors captured.</td></tr>';
+  const query = (errorFilter.value || '').trim().toLowerCase();
+  const filtered = !query ? items : items.filter((item) => [item.path, item.username, item.error_type, item.message, item.method].join(' ').toLowerCase().includes(query));
+  if (!filtered.length) {
+    runtimeErrorTable.innerHTML = '<tr><td colspan="5">No runtime errors match this filter.</td></tr>';
     return;
   }
-  runtimeErrorTable.innerHTML = items.map((item) => `
+  runtimeErrorTable.innerHTML = filtered.map((item) => `
     <tr>
       <td>${escapeHtml(formatDate(item.occurred_at))}</td>
       <td>${escapeHtml(item.method || '')} ${escapeHtml(item.path || '—')}</td>
@@ -150,6 +174,13 @@ const renderErrors = (items) => {
       <td><details><summary>${escapeHtml(item.message || '—')}</summary><pre class="small-pre">${escapeHtml(item.traceback_text || '')}</pre></details></td>
     </tr>
   `).join('');
+};
+
+const rerenderTables = () => {
+  if (!latestDiagnostics) return;
+  renderSnapshots(latestDiagnostics.snapshots || []);
+  renderErrorGroups(latestDiagnostics.errorGroups || []);
+  renderErrors(latestDiagnostics.errors || []);
 };
 
 const loadRuntime = async () => {
@@ -161,9 +192,7 @@ const loadRuntime = async () => {
   ]);
   latestDiagnostics = { overview, errors, errorGroups, snapshots, exportedAt: new Date().toISOString() };
   renderOverview(overview);
-  renderErrors(errors);
-  renderErrorGroups(errorGroups);
-  renderSnapshots(snapshots);
+  rerenderTables();
   lastUpdated.textContent = `Last updated ${formatDate(new Date().toISOString())}`;
 };
 
@@ -185,6 +214,10 @@ copyDiagnosticsButton.addEventListener('click', async () => {
     alert(err.message || 'Failed to copy diagnostics');
   }
 });
+
+snapshotFilter.addEventListener('change', rerenderTables);
+errorGroupFilter.addEventListener('change', rerenderTables);
+errorFilter.addEventListener('input', rerenderTables);
 
 pollingButton.addEventListener('click', () => {
   pollingEnabled = !pollingEnabled;

@@ -23,6 +23,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlmodel import Field, Session, SQLModel, create_engine, select
+import fastapi
+import sqlmodel
 
 BASE_DIR = Path(__file__).resolve().parent
 ROOT_DIR = BASE_DIR.parent
@@ -361,6 +363,12 @@ class RuntimeErrorGroupRead(SQLModel):
     sample_username: Optional[str] = None
 
 
+class RuntimeVersionRead(SQLModel):
+    name: str
+    version: str
+    source: Optional[str] = None
+
+
 class RuntimeOverviewRead(SQLModel):
     runtime_environment: str
     active_db_type: str
@@ -376,6 +384,8 @@ class RuntimeOverviewRead(SQLModel):
     recent_error_count: int = 0
     services: list[RuntimeServiceStatusRead] = []
     db_connections: list[RuntimeDbStatusRead] = []
+    recommended_actions: list[str] = []
+    installed_versions: list[RuntimeVersionRead] = []
     latest_snapshot: Optional[RuntimeHealthSnapshotRead] = None
 
 
@@ -1218,6 +1228,34 @@ def get_docker_service_status() -> tuple[bool, Optional[str], list[RuntimeServic
     return docker_available, docker_error, services
 
 
+def get_installed_versions(docker_available: bool) -> list[RuntimeVersionRead]:
+    versions = [
+        RuntimeVersionRead(name="Python", version=os.sys.version.split()[0], source="runtime"),
+        RuntimeVersionRead(name="FastAPI", version=getattr(fastapi, "__version__", "unknown"), source="python package"),
+        RuntimeVersionRead(name="SQLModel", version=getattr(sqlmodel, "__version__", "unknown"), source="python package"),
+        RuntimeVersionRead(name="OpenClaw", version=os.getenv("OPENCLAW_VERSION", "unknown"), source="env/runtime"),
+    ]
+    try:
+        sqlite_version = create_engine("sqlite://", connect_args={"check_same_thread": False}).connect().exec_driver_sql("select sqlite_version()").scalar()
+        versions.append(RuntimeVersionRead(name="SQLite", version=str(sqlite_version), source="sqlite runtime"))
+    except Exception:
+        pass
+    try:
+        node_result = subprocess.run(["node", "--version"], cwd=str(ROOT_DIR), capture_output=True, text=True, timeout=5, check=False)
+        if node_result.returncode == 0:
+            versions.append(RuntimeVersionRead(name="Node.js", version=node_result.stdout.strip().lstrip("v"), source="node runtime"))
+    except Exception:
+        pass
+    if docker_available:
+        try:
+            docker_result = subprocess.run(["docker", "--version"], cwd=str(ROOT_DIR), capture_output=True, text=True, timeout=5, check=False)
+            if docker_result.returncode == 0:
+                versions.append(RuntimeVersionRead(name="Docker", version=docker_result.stdout.strip(), source="docker cli"))
+        except Exception:
+            pass
+    return versions
+
+
 def compute_runtime_overview() -> RuntimeOverviewRead:
     checked_at = datetime.now(timezone.utc)
     docker_available, docker_error, services = get_docker_service_status()
@@ -1243,6 +1281,16 @@ def compute_runtime_overview() -> RuntimeOverviewRead:
         docker_status = "ok" if docker_available else ("degraded" if docker_error else "unknown")
         status_values = [control_db_status, active_data_db_status, docker_status]
         overall_status = "error" if "error" in status_values else "degraded" if "degraded" in status_values else "ok"
+        recommended_actions: list[str] = []
+        if control_db_status != "ok":
+            recommended_actions.append("Control DB probe failed — verify MATRIX_CONTROL_DB_PATH, file permissions, or DB server reachability.")
+        if active_data_db_status != "ok":
+            recommended_actions.append("Active data DB probe failed — review the active DB connection profile and test SQLite/PostgreSQL connectivity.")
+        if docker_error:
+            recommended_actions.append("Docker status is unavailable from the app runtime — mount Docker socket/CLI into the container or treat container visibility as informational only.")
+        if len(recent_errors) > 0:
+            recommended_actions.append("Recent runtime errors were captured — review grouped errors and raw tracebacks below to find recurring failures.")
+        installed_versions = get_installed_versions(docker_available)
         return RuntimeOverviewRead(
             runtime_environment="docker" if Path("/.dockerenv").exists() else "host",
             active_db_type=MATRIX_ACTIVE_DB_TYPE,
@@ -1258,6 +1306,8 @@ def compute_runtime_overview() -> RuntimeOverviewRead:
             recent_error_count=len(recent_errors),
             services=services,
             db_connections=db_connections,
+            recommended_actions=recommended_actions,
+            installed_versions=installed_versions,
             latest_snapshot=serialize_runtime_snapshot(latest_snapshot_entry) if latest_snapshot_entry else None,
         )
 
@@ -1285,6 +1335,10 @@ def record_runtime_health_snapshot() -> Optional[RuntimeHealthSnapshot]:
             session.add(snapshot)
             session.commit()
             session.refresh(snapshot)
+            snapshots = session.exec(select(RuntimeHealthSnapshot).order_by(RuntimeHealthSnapshot.occurred_at.desc(), RuntimeHealthSnapshot.id.desc())).all()
+            for stale in snapshots[500:]:
+                session.delete(stale)
+            session.commit()
             return snapshot
     except Exception:
         return None

@@ -40,7 +40,27 @@
           </div>
         </div>
         <div id="runtime-summary" class="card-grid"></div>
+        <div id="runtime-recommendations" class="panel-stack"></div>
         <div id="runtime-services" class="card-grid"></div>
+      </section>
+
+      <section class="card single-column">
+        <div class="section-head">
+          <h2>Installed Versions</h2>
+          <p>Runtime and package versions visible from the deployed application environment.</p>
+        </div>
+        <div class="db-table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Version</th>
+                <th>Source</th>
+              </tr>
+            </thead>
+            <tbody id="runtime-versions-table"></tbody>
+          </table>
+        </div>
       </section>
 
       <section class="card single-column">
@@ -66,9 +86,21 @@
       </section>
 
       <section class="card single-column">
-        <div class="section-head">
-          <h2>Health Snapshots</h2>
-          <p>Background probe loop history for the most recent runtime checks.</p>
+        <div class="section-head with-actions">
+          <div class="section-copy">
+            <h2>Health Snapshots</h2>
+            <p>Background probe loop history for the most recent runtime checks.</p>
+          </div>
+          <div class="panel-actions-row">
+            <label class="small-text">Status Filter
+              <select id="runtime-snapshot-filter">
+                <option value="all">All</option>
+                <option value="ok">OK</option>
+                <option value="degraded">Degraded</option>
+                <option value="error">Error</option>
+              </select>
+            </label>
+          </div>
         </div>
         <div class="db-table-shell">
           <table>
@@ -88,9 +120,20 @@
       </section>
 
       <section class="card single-column">
-        <div class="section-head">
-          <h2>Grouped Runtime Errors</h2>
-          <p>Repeated failures are rolled up by error type + message so recurring issues stand out quickly.</p>
+        <div class="section-head with-actions">
+          <div class="section-copy">
+            <h2>Grouped Runtime Errors</h2>
+            <p>Repeated failures are rolled up by error type + message so recurring issues stand out quickly.</p>
+          </div>
+          <div class="panel-actions-row">
+            <label class="small-text">Minimum Count
+              <select id="runtime-error-group-filter">
+                <option value="1">1+</option>
+                <option value="2">2+</option>
+                <option value="5">5+</option>
+              </select>
+            </label>
+          </div>
         </div>
         <div class="db-table-shell">
           <table>
@@ -109,9 +152,16 @@
       </section>
 
       <section class="card single-column">
-        <div class="section-head">
-          <h2>Runtime Errors</h2>
-          <p>Read-only list of uncaught runtime errors captured during app execution.</p>
+        <div class="section-head with-actions">
+          <div class="section-copy">
+            <h2>Runtime Errors</h2>
+            <p>Read-only list of uncaught runtime errors captured during app execution.</p>
+          </div>
+          <div class="panel-actions-row">
+            <label class="small-text">Error Filter
+              <input id="runtime-error-filter" type="search" placeholder="Filter by path, user, type, or message" />
+            </label>
+          </div>
         </div>
         <div class="db-table-shell">
           <table>

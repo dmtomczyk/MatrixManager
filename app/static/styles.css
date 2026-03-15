@@ -1128,6 +1128,15 @@ table tbody tr:hover {
   gap: 16px;
 }
 
+.runtime-recommendations-panel ul {
+  margin: 10px 0 0 18px;
+  padding: 0;
+}
+
+.runtime-recommendations-panel li + li {
+  margin-top: 6px;
+}
+
 .panel-actions-row {
   display: flex;
   gap: 10px;
