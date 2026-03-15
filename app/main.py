@@ -350,27 +350,58 @@ def render_app_nav(current_path: str, username: str) -> str:
         ("/orgs", "Organizations"),
         ("/canvas", "Canvas"),
         ("/dashboard", "Project Dashboard"),
-        ("/audit", "Audit"),
     ]
+    admin_links: list[tuple[str, str]] = []
     if is_admin_username(username):
-        links.append(("/users", "Users"))
-        links.append(("/db-management", "DB Management"))
+        admin_links = [
+            ("/audit", "Audit"),
+            ("/users", "Users"),
+            ("/db-management", "DB Managment"),
+        ]
     rendered_links = []
     for href, label in links:
         class_name = "nav-link active" if href == current_path else "nav-link"
         aria_current = ' aria-current="page"' if href == current_path else ""
         rendered_links.append(f'<a href="{href}" class="{class_name}"{aria_current}>{label}</a>')
     link_markup = "".join(rendered_links)
+
+    admin_link_markup = ""
+    mobile_admin_markup = ""
+    if admin_links:
+        admin_rendered_links = []
+        for href, label in admin_links:
+            class_name = "nav-dropdown-link active" if href == current_path else "nav-dropdown-link"
+            aria_current = ' aria-current="page"' if href == current_path else ""
+            admin_rendered_links.append(f'<a href="{href}" class="{class_name}"{aria_current}>{label}</a>')
+        admin_panel_markup = "".join(admin_rendered_links)
+        admin_active = any(href == current_path for href, _ in admin_links)
+        admin_trigger_class = "nav-link nav-dropdown-trigger active" if admin_active else "nav-link nav-dropdown-trigger"
+        admin_link_markup = f'''
+          <details class="nav-dropdown">
+            <summary class="{admin_trigger_class}">Administration</summary>
+            <div class="nav-dropdown-panel">
+              {admin_panel_markup}
+            </div>
+          </details>
+        '''
+        mobile_admin_markup = f'''
+                <details class="nav-dropdown nav-dropdown-mobile">
+                  <summary class="nav-link nav-dropdown-trigger{' active' if admin_active else ''}">Administration</summary>
+                  <div class="nav-dropdown-panel nav-dropdown-panel-mobile">
+                    {admin_panel_markup}
+                  </div>
+                </details>
+        '''
     return f'''<nav class="app-nav" aria-label="Primary">
         <div class="app-nav-main">
-          <div class="nav-links nav-links-desktop">{link_markup}</div>
+          <div class="nav-links nav-links-desktop">{link_markup}{admin_link_markup}</div>
           <details class="hamburger-menu">
             <summary class="hamburger-trigger" aria-label="Open navigation menu">
               <span class="hamburger-icon" aria-hidden="true"></span>
               <span>Menu</span>
             </summary>
             <div class="hamburger-panel">
-              <div class="nav-links nav-links-mobile">{link_markup}</div>
+              <div class="nav-links nav-links-mobile">{link_markup}{mobile_admin_markup}</div>
             </div>
           </details>
         </div>

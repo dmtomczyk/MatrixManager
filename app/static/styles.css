@@ -83,6 +83,10 @@ header nav,
   gap: 6px;
 }
 
+.nav-links-mobile .nav-dropdown {
+  width: 100%;
+}
+
 header nav a,
 .nav-link {
   color: rgba(255, 255, 255, 0.92);
@@ -98,6 +102,10 @@ header nav a,
   border-radius: 999px;
 }
 
+.nav-links-mobile .nav-link {
+  justify-content: flex-start;
+}
+
 .nav-link:hover {
   background: rgba(255, 255, 255, 0.12);
 }
@@ -109,17 +117,20 @@ header nav a,
 }
 
 .hamburger-menu,
-.account-menu {
+.account-menu,
+.nav-dropdown {
   position: relative;
 }
 
 .hamburger-menu summary,
-.account-menu summary {
+.account-menu summary,
+.nav-dropdown summary {
   list-style: none;
 }
 
 .hamburger-menu summary::-webkit-details-marker,
-.account-menu summary::-webkit-details-marker {
+.account-menu summary::-webkit-details-marker,
+.nav-dropdown summary::-webkit-details-marker {
   display: none;
 }
 
@@ -145,6 +156,17 @@ header nav a,
 .account-menu-trigger:hover,
 .account-menu[open] .account-menu-trigger {
   background: rgba(15, 23, 42, 0.34);
+}
+
+.nav-dropdown-trigger {
+  cursor: pointer;
+  list-style: none;
+}
+
+.nav-dropdown[open] .nav-dropdown-trigger {
+  background: rgba(255, 255, 255, 0.18);
+  color: white;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
 }
 
 .hamburger-icon {
@@ -175,7 +197,8 @@ header nav a,
 }
 
 .hamburger-panel,
-.account-menu-panel {
+.account-menu-panel,
+.nav-dropdown-panel {
   position: absolute;
   right: 0;
   top: calc(100% + 10px);
@@ -191,6 +214,33 @@ header nav a,
 
 .hamburger-panel {
   min-width: 250px;
+}
+
+.nav-dropdown-panel {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav-dropdown-link {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.nav-dropdown-link:hover {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.nav-dropdown-link.active {
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
 }
 
 .account-menu-copy {
@@ -309,6 +359,17 @@ main {
   .hamburger-menu {
     display: block;
   }
+}
+
+.nav-dropdown-mobile {
+  width: 100%;
+}
+
+.nav-dropdown-panel-mobile {
+  position: static;
+  min-width: 0;
+  margin-top: 6px;
+  box-shadow: none;
 }
 
 @media (max-width: 960px) {
