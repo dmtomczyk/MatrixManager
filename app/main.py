@@ -914,6 +914,7 @@ def on_startup() -> None:
     ensure_default_admin_user()
     active_connection = get_active_db_connection_config()
     get_or_create_data_engine(active_connection)
+    ensure_default_seed_data()
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -962,6 +963,113 @@ def ensure_default_admin_user() -> None:
                 is_active=True,
             )
         )
+        session.commit()
+
+
+def ensure_default_seed_data() -> None:
+    active_connection = get_active_db_connection_config()
+    data_engine = get_or_create_data_engine(active_connection)
+    with Session(data_engine) as session:
+        not_assigned = session.exec(select(JobCode).where(JobCode.name == "Not Assigned")).first()
+        if not not_assigned:
+            not_assigned = JobCode(name="Not Assigned", is_leader=False)
+            session.add(not_assigned)
+            session.commit()
+            session.refresh(not_assigned)
+
+        manager_code = session.exec(select(JobCode).where(JobCode.name == "Manager")).first()
+        if not manager_code:
+            manager_code = JobCode(name="Manager", is_leader=True)
+            session.add(manager_code)
+            session.commit()
+            session.refresh(manager_code)
+
+        default_org = session.exec(select(Organization).where(Organization.name == "Default Org")).first()
+        if not default_org:
+            default_org = Organization(name="Default Org", description="Default starter organization")
+            session.add(default_org)
+            session.commit()
+            session.refresh(default_org)
+
+        example_project = session.exec(select(Project).where(Project.name == "Example Project")).first()
+        if not example_project:
+            example_project = Project(
+                name="Example Project",
+                description="Starter project created during install",
+            )
+            session.add(example_project)
+            session.commit()
+            session.refresh(example_project)
+
+        jane = session.exec(select(Employee).where(Employee.name == "Jane Doe")).first()
+        if not jane:
+            jane_payload = validate_employee_payload(
+                session,
+                {
+                    "name": "Jane Doe",
+                    "job_code_id": manager_code.id,
+                    "organization_id": default_org.id,
+                    "manager_id": None,
+                    "location": None,
+                    "capacity": 1.0,
+                },
+            )
+            jane = Employee(**jane_payload)
+            session.add(jane)
+            session.commit()
+            session.refresh(jane)
+        else:
+            jane.job_code_id = manager_code.id
+            jane.organization_id = default_org.id
+            jane.employee_type = "L"
+            session.add(jane)
+            session.commit()
+            session.refresh(jane)
+
+        john = session.exec(select(Employee).where(Employee.name == "John Doe")).first()
+        if not john:
+            john_payload = validate_employee_payload(
+                session,
+                {
+                    "name": "John Doe",
+                    "job_code_id": not_assigned.id,
+                    "organization_id": default_org.id,
+                    "manager_id": jane.id,
+                    "location": None,
+                    "capacity": 1.0,
+                },
+            )
+            john = Employee(**john_payload)
+            session.add(john)
+            session.commit()
+            session.refresh(john)
+        else:
+            john.job_code_id = not_assigned.id
+            john.organization_id = default_org.id
+            john.manager_id = jane.id
+            john.employee_type = "IC"
+            session.add(john)
+            session.commit()
+            session.refresh(john)
+
+        existing_assignment = session.exec(
+            select(Assignment).where(Assignment.employee_id == john.id, Assignment.project_id == example_project.id)
+        ).first()
+        if not existing_assignment:
+            existing_assignment = Assignment(
+                employee_id=john.id,
+                project_id=example_project.id,
+                start_date=date.today(),
+                end_date=date.today(),
+                allocation=0.75,
+                notes="Starter example allocation",
+            )
+            session.add(existing_assignment)
+        else:
+            existing_assignment.allocation = 0.75
+            existing_assignment.employee_id = john.id
+            existing_assignment.project_id = example_project.id
+            session.add(existing_assignment)
         session.commit()
 
 
