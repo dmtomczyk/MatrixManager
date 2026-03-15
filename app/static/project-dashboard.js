@@ -215,18 +215,16 @@ const computeWeeklyDatasets = (rangeStart, rangeEnd) => {
       borderWidth: 2.4,
       tension: 0.25,
       pointRadius: 0,
-      fill: {
-        target: '-1',
-        above: 'rgba(34, 197, 94, 0.08)',
-        below: 'rgba(239, 68, 68, 0.18)',
-      },
+      pointHoverRadius: 4,
+      fill: false,
       segment: {
         borderColor: (ctx) => {
           const demandValue = ctx.dataset.demandReference?.[ctx.p1DataIndex] ?? 0;
-          const allocationValue = ctx.p1.parsed.y ?? 0;
+          const allocationValue = ctx.p1?.parsed?.y ?? 0;
           return allocationValue < demandValue ? '#dc2626' : lightenHex(baseColor, 0.45);
         },
       },
+      pointBackgroundColor: allocationSeries.map((value, pointIndex) => value < (demandSeries[pointIndex] ?? 0) ? '#dc2626' : lightenHex(baseColor, 0.45)),
     });
   });
   return { labels, datasets };
@@ -252,14 +250,16 @@ const computeMonthlyDatasets = (rangeStart, rangeEnd) => {
       borderColor: baseColor,
       borderWidth: 1,
     });
+    const monthlyDemandSeries = demandBreakdowns.map((item) => item.total);
+    const monthlyAllocationSeries = allocationBreakdowns.map((item) => item.total);
     datasets.push({
       label: `${project.name} — Allocation`,
       projectName: project.name,
       forecastKind: 'allocation',
-      data: allocationBreakdowns.map((item) => item.total),
+      data: monthlyAllocationSeries,
       tooltipBreakdown: allocationBreakdowns.map((item) => item.lines),
-      backgroundColor: lightenHex(baseColor, 0.45),
-      borderColor: lightenHex(baseColor, 0.45),
+      backgroundColor: monthlyAllocationSeries.map((value, pointIndex) => value < (monthlyDemandSeries[pointIndex] ?? 0) ? 'rgba(220, 38, 38, 0.72)' : lightenHex(baseColor, 0.45)),
+      borderColor: monthlyAllocationSeries.map((value, pointIndex) => value < (monthlyDemandSeries[pointIndex] ?? 0) ? '#dc2626' : lightenHex(baseColor, 0.45)),
       borderWidth: 1,
     });
   });
