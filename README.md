@@ -1,8 +1,8 @@
 # MatrixManager
 
-**Plan people, projects, and allocations in one place — with enough structure for real staffing decisions, but simple enough to run anywhere.**
+**Plan workforce capacity and allocations across flexible hierarchies — focused on staffing and timephasing human capital, not detailed project planning.**
 
-MatrixManager is a staffing and resource-planning web app for tracking organizations, employees, projects, and time-phased assignments. It uses a FastAPI + SQLModel backend with a lightweight browser UI for planning, canvas workflows, audit history, and database management. It runs with SQLite by default and can also be deployed with PostgreSQL.
+MatrixManager is a staffing and resource-planning web app for tracking organizations, employees, projects, and time-phased assignments. It uses a FastAPI + SQLModel backend with a lightweight browser UI for planning, canvas workflows, audit history, and database management. It now runs with PostgreSQL as the default database, with SQLite still available as an alternate runtime mode.
 
 ## Table of contents
 
@@ -50,11 +50,11 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2) Configure a simple local SQLite setup
+### 2) Configure a simple local runtime
 
 ```bash
-export MATRIX_INSTALL_MODE=sqlite
-export MATRIX_ACTIVE_DB_TYPE=sqlite
+export MATRIX_INSTALL_MODE=postgresql
+export MATRIX_ACTIVE_DB_TYPE=postgresql
 export MATRIX_AUTH_USERNAME=admin
 export MATRIX_AUTH_PASSWORD='change-me-now'
 export MATRIX_AUTH_SECRET='replace-with-a-long-random-secret'
@@ -64,7 +64,7 @@ export MATRIX_SQLITE_PATH="$PWD/matrix.db"
 export MATRIX_CONTROL_DB_PATH="$PWD/matrixmanager_control.db"
 ```
 
-Or copy `.env.example` to `.env` and edit it.
+Or copy `.env.example` to `.env` and edit it. If you want a lightweight local-only setup instead, switch both values back to `sqlite` and keep the SQLite path variables.
 
 ### 3) Run the app
 
