@@ -665,6 +665,28 @@ def run_migrations(bind_engine=engine) -> None:
                     assignment_column_names = {row[0] for row in assignment_rows}
                     if "demand_id" not in assignment_column_names:
                         connection.exec_driver_sql("ALTER TABLE assignment ADD COLUMN demand_id INTEGER")
+                    if "status" not in assignment_column_names:
+                        connection.exec_driver_sql("ALTER TABLE assignment ADD COLUMN status TEXT DEFAULT 'approved'")
+                    if "submitted_by_username" not in assignment_column_names:
+                        connection.exec_driver_sql("ALTER TABLE assignment ADD COLUMN submitted_by_username TEXT")
+                    if "approved_by_username" not in assignment_column_names:
+                        connection.exec_driver_sql("ALTER TABLE assignment ADD COLUMN approved_by_username TEXT")
+                    if "denied_by_username" not in assignment_column_names:
+                        connection.exec_driver_sql("ALTER TABLE assignment ADD COLUMN denied_by_username TEXT")
+                    if "reviewed_at" not in assignment_column_names:
+                        connection.exec_driver_sql("ALTER TABLE assignment ADD COLUMN reviewed_at TIMESTAMPTZ")
+                useraccount_exists = connection.exec_driver_sql("SELECT to_regclass('public.useraccount')").scalar()
+                if useraccount_exists:
+                    user_rows = connection.exec_driver_sql("SELECT column_name FROM information_schema.columns WHERE table_name = 'useraccount'").fetchall()
+                    user_column_names = {row[0] for row in user_rows}
+                    if "employee_id" not in user_column_names:
+                        connection.exec_driver_sql("ALTER TABLE useraccount ADD COLUMN employee_id INTEGER")
+                inbox_exists = connection.exec_driver_sql("SELECT to_regclass('public.inboxnotification')").scalar()
+                if inbox_exists:
+                    inbox_rows = connection.exec_driver_sql("SELECT column_name FROM information_schema.columns WHERE table_name = 'inboxnotification'").fetchall()
+                    inbox_column_names = {row[0] for row in inbox_rows}
+                    if "metadata_json" not in inbox_column_names:
+                        connection.exec_driver_sql("ALTER TABLE inboxnotification ADD COLUMN metadata_json TEXT")
                 connection.exec_driver_sql("UPDATE employee SET employee_type = 'IC' WHERE employee_type IS NULL OR employee_type = ''")
         AuditEntry.__table__.create(bind=connection, checkfirst=True)
         DBConnectionConfig.__table__.create(bind=connection, checkfirst=True)
