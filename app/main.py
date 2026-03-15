@@ -440,6 +440,7 @@ def render_app_nav(current_path: str, username: str) -> str:
 def build_login_page(error: str = "", next_path: str = "/") -> str:
     error_markup = f'<p class="login-error">{error}</p>' if error else ""
     styles_href = static_asset_url("styles.css")
+    favicon_href = static_asset_url("images/matrix-manager-favicon.ico")
     safe_next = next_path if next_path.startswith("/") else "/"
     return f"""<!doctype html>
 <html lang=\"en\">
@@ -447,6 +448,7 @@ def build_login_page(error: str = "", next_path: str = "/") -> str:
     <meta charset=\"utf-8\" />
     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
     <title>Matrix Manager · Login</title>
+    <link rel=\"icon\" href=\"{favicon_href}\" sizes=\"any\" />
     <link rel=\"stylesheet\" href=\"{styles_href}\" />
   </head>
   <body class=\"login-page\">
@@ -820,6 +822,14 @@ BASE_NAV_MARKUP = """<nav>
       </nav>"""
 
 
+def build_header_brand_open() -> str:
+    logo_url = static_asset_url("images/matrix-manager-favicon.svg")
+    return f'''<a href="/" class="header-brand" aria-label="Matrix Manager home">
+        <img src="{logo_url}" alt="Matrix Manager" class="header-brand-logo" />
+        <div class="header-brand-copy">
+'''
+
+
 def serve_html_page(
     filename: str,
     replacements: Optional[dict[str, str]] = None,
@@ -828,6 +838,14 @@ def serve_html_page(
 ) -> str:
     html = (STATIC_DIR / filename).read_text(encoding="utf-8")
     replacements = replacements or {}
+    favicon_markup = f'<link rel="icon" href="{static_asset_url("images/matrix-manager-favicon.ico")}" sizes="any" />'
+    if "</head>" in html and favicon_markup not in html:
+        html = html.replace("</head>", f"    {favicon_markup}\n  </head>", 1)
+    if "<header>" in html and '<a href="/" class="header-brand"' not in html:
+        html = html.replace("<header>", "<header class=\"app-header\">", 1)
+        html = html.replace("<header class=\"app-header\">\n      <div>", f"<header class=\"app-header\">\n      {build_header_brand_open()}", 1)
+        html = html.replace("\n        <h1>", "\n          <h1>", 1)
+        html = html.replace("      </div>\n      <nav", "        </div>\n      </a>\n      <nav", 1)
     if current_path and username:
         replacements[BASE_NAV_MARKUP] = render_app_nav(current_path=current_path, username=username)
         replacements["</body>"] = f'    <script src="{static_asset_url("app-shell.js")}"></script>\n  </body>'
