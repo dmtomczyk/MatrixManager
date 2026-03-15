@@ -763,3 +763,36 @@ body.org-page .org-shell {
   color: #1e293b;
   text-decoration: none;
 }
+
+.employee-row-actions {
+  white-space: nowrap;
+}
+
+.table-action-button {
+  padding: 5px 10px;
+  min-height: 28px;
+  border-radius: 8px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.1;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #cfe0ff;
+  box-shadow: none;
+}
+
+.table-action-button:hover {
+  background: #dbeafe;
+  border-color: #bfdbfe;
+}
+
+.table-action-button-secondary {
+  background: #f8fafc;
+  color: #475569;
+  border-color: #e2e8f0;
+}
+
+.table-action-button-secondary:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}

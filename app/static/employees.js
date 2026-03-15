@@ -143,9 +143,9 @@ const renderEmployees = () => {
         <td>${escapeHtml(employee.manager_name || '—')}</td>
         <td>${escapeHtml(employee.location || '')}</td>
         <td>${employee.capacity?.toFixed(1) || '1.0'}</td>
-        <td class="actions">
-          <button type="button" data-action="edit-employee" data-id="${employee.id}">Edit</button>
-          <button type="button" class="secondary" data-action="delete-employee" data-id="${employee.id}">Delete</button>
+        <td class="actions employee-row-actions">
+          <button type="button" class="table-action-button" data-action="edit-employee" data-id="${employee.id}">Edit</button>
+          <button type="button" class="table-action-button table-action-button-secondary" data-action="delete-employee" data-id="${employee.id}">Delete</button>
         </td>
       </tr>`);
     if (expanded) {
