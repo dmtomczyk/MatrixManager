@@ -18,6 +18,13 @@ body {
   background: var(--bg);
 }
 
+body.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
 header {
   display: flex;
   justify-content: space-between;
@@ -795,4 +802,21 @@ body.org-page .org-shell {
 .table-action-button-secondary:hover {
   background: #f1f5f9;
   border-color: #cbd5e1;
+}
+
+.login-shell {
+  width: min(460px, 100%);
+}
+
+.login-card {
+  padding: 28px;
+}
+
+.login-error {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
 }

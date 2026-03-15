@@ -1,15 +1,17 @@
 from __future__ import annotations
 
+import hashlib
+import hmac
 import os
 import secrets
 from datetime import date
 from pathlib import Path
 from typing import Generator, List, Optional, Set
+from urllib.parse import quote
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, Response
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlmodel import Field, Session, SQLModel, create_engine, select
 
@@ -17,13 +19,13 @@ BASE_DIR = Path(__file__).resolve().parent
 ROOT_DIR = BASE_DIR.parent
 DB_PATH = ROOT_DIR / "matrix.db"
 STATIC_DIR = BASE_DIR / "static"
+SESSION_COOKIE_NAME = "matrixmanager_session"
 
 DATABASE_URL = f"sqlite:///{DB_PATH}"
 engine = create_engine(
     DATABASE_URL,
     connect_args={"check_same_thread": False},
 )
-security = HTTPBasic(auto_error=False)
 
 
 class OrganizationBase(SQLModel):
@@ -166,27 +168,60 @@ def get_auth_password() -> str:
     return os.getenv("MATRIX_AUTH_PASSWORD", "changeme")
 
 
-def auth_challenge_response() -> Response:
-    return Response(
-        status_code=401,
-        headers={"WWW-Authenticate": 'Basic realm="Matrix Manager"'},
-    )
+def get_session_secret() -> str:
+    return os.getenv("MATRIX_AUTH_SECRET") or f"{get_auth_username()}:{get_auth_password()}"
 
 
-def verify_basic_auth(credentials: Optional[HTTPBasicCredentials]) -> bool:
-    if credentials is None:
+def sign_session_value(username: str) -> str:
+    secret = get_session_secret().encode("utf-8")
+    payload = username.encode("utf-8")
+    digest = hmac.new(secret, payload, hashlib.sha256).hexdigest()
+    return f"{username}:{digest}"
+
+
+def verify_session_value(cookie_value: Optional[str]) -> bool:
+    if not cookie_value or ":" not in cookie_value:
         return False
-    expected_username = get_auth_username()
-    expected_password = get_auth_password()
-    return secrets.compare_digest(credentials.username, expected_username) and secrets.compare_digest(credentials.password, expected_password)
+    username, provided_sig = cookie_value.split(":", 1)
+    expected = sign_session_value(username)
+    return username == get_auth_username() and secrets.compare_digest(cookie_value, expected) and secrets.compare_digest(provided_sig, expected.split(":", 1)[1])
 
 
-@app.middleware("http")
-async def require_basic_auth(request: Request, call_next):
-    credentials = await security(request)
-    if not verify_basic_auth(credentials):
-        return auth_challenge_response()
-    return await call_next(request)
+def build_login_page(error: str = "", next_path: str = "/") -> str:
+    error_markup = f'<p class="login-error">{error}</p>' if error else ""
+    styles_href = static_asset_url("styles.css")
+    safe_next = next_path if next_path.startswith("/") else "/"
+    return f"""<!doctype html>
+<html lang=\"en\">
+  <head>
+    <meta charset=\"utf-8\" />
+    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
+    <title>Matrix Manager · Login</title>
+    <link rel=\"stylesheet\" href=\"{styles_href}\" />
+  </head>
+  <body class=\"login-page\">
+    <main class=\"login-shell\">
+      <section class=\"card login-card\">
+        <div class=\"section-head\">
+          <h1>Matrix Manager</h1>
+          <p>Sign in to continue.</p>
+        </div>
+        {error_markup}
+        <form method=\"post\" action=\"/login\" class=\"panel\">
+          <input type=\"hidden\" name=\"next\" value=\"{safe_next}\" />
+          <label>Username<input name=\"username\" autocomplete=\"username\" required /></label>
+          <label>Password<input name=\"password\" type=\"password\" autocomplete=\"current-password\" required /></label>
+          <button type=\"submit\">Sign in</button>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>"""
+
+
+def is_html_request(request: Request) -> bool:
+    accept = request.headers.get("accept", "")
+    return "text/html" in accept or request.url.path in {"/", "/people", "/staffing", "/orgs", "/canvas", "/dashboard", "/docs", "/redoc"}
 
 
 def create_db_and_tables() -> None:
@@ -231,6 +266,65 @@ def on_startup() -> None:
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+@app.middleware("http")
+async def require_login(request: Request, call_next):
+    public_paths = {"/login"}
+    if request.url.path in public_paths:
+        return await call_next(request)
+    if request.url.path.startswith("/static/"):
+        return await call_next(request)
+    if verify_session_value(request.cookies.get(SESSION_COOKIE_NAME)):
+        return await call_next(request)
+    if is_html_request(request):
+        return RedirectResponse(url=f"/login?next={quote(str(request.url.path))}", status_code=302)
+    raise HTTPException(status_code=401, detail="Authentication required")
+
+
+@app.get("/login", response_class=HTMLResponse)
+def login_page(request: Request, error: str = "", next: str = "/") -> str:
+    if verify_session_value(request.cookies.get(SESSION_COOKIE_NAME)):
+        return RedirectResponse(url="/", status_code=302)
+    return build_login_page(error=error, next_path=next)
+
+
+@app.post("/login")
+async def login_submit(request: Request):
+    raw_body = (await request.body()).decode("utf-8")
+    fields = {}
+    for pair in raw_body.split("&"):
+        if not pair:
+            continue
+        key, _, value = pair.partition("=")
+        fields[key] = value.replace("+", " ")
+    username = fields.get("username", "")
+    password = fields.get("password", "")
+    next_target = fields.get("next", "/")
+    from urllib.parse import unquote_plus
+    username = unquote_plus(username)
+    password = unquote_plus(password)
+    next_target = unquote_plus(next_target)
+    if not (secrets.compare_digest(username, get_auth_username()) and secrets.compare_digest(password, get_auth_password())):
+        return HTMLResponse(build_login_page(error="Invalid username or password.", next_path=next_target), status_code=401)
+    target = next_target if next_target.startswith("/") else "/"
+    response = RedirectResponse(url=target, status_code=302)
+    response.set_cookie(
+        SESSION_COOKIE_NAME,
+        sign_session_value(username),
+        httponly=True,
+        samesite="lax",
+        secure=False,
+        path="/",
+    )
+    return response
+
+
+@app.post("/logout")
+def logout():
+    response = RedirectResponse(url="/login", status_code=302)
+    response.delete_cookie(SESSION_COOKIE_NAME, path="/")
+    return response
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -299,7 +393,6 @@ def serve_org_manager() -> str:
     )
 
 
-# Organization routes
 @app.get("/organizations", response_model=List[OrganizationRead])
 def list_organizations(session: Session = Depends(get_session)):
     organizations = session.exec(select(Organization).order_by(Organization.name)).all()
@@ -340,7 +433,6 @@ def delete_organization(organization_id: int, session: Session = Depends(get_ses
     session.commit()
 
 
-# Employee routes
 @app.get("/employees", response_model=List[EmployeeRead])
 def list_employees(session: Session = Depends(get_session)):
     employees = session.exec(select(Employee).order_by(Employee.name)).all()
@@ -409,7 +501,6 @@ def delete_employee(employee_id: int, session: Session = Depends(get_session)):
     session.commit()
 
 
-# Project routes
 @app.get("/projects", response_model=List[ProjectRead])
 def list_projects(session: Session = Depends(get_session)):
     projects = session.exec(select(Project).order_by(Project.name)).all()
@@ -460,8 +551,6 @@ def delete_project(project_id: int, session: Session = Depends(get_session)):
     session.delete(project)
     session.commit()
 
-
-# Assignment helpers
 
 def validate_dates(start: Optional[date], end: Optional[date]) -> None:
     if start and end and end < start:
@@ -592,7 +681,6 @@ def serialize_assignment(session: Session, assignment: Assignment) -> Assignment
     )
 
 
-# Assignment routes
 @app.get("/assignments", response_model=List[AssignmentRead])
 def list_assignments(
     employee_id: Optional[int] = None,
