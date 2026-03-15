@@ -13,7 +13,7 @@ Convert the accepted Phase 0 decisions into concrete implementation-ready work i
 - [x] Container strategy chosen
 - [x] DB provisioning strategy chosen
 - [x] Scope exclusions documented
-- [ ] Implementation scaffolding started
+- [x] Implementation scaffolding started
 
 ---
 
@@ -44,18 +44,18 @@ Convert the accepted Phase 0 decisions into concrete implementation-ready work i
 
 ## P0-C — Implementation Handoff
 ### Deliverables
-- [ ] Create file-level implementation plan for:
+- [x] Create file-level implementation plan for:
   - `Dockerfile`
   - `docker-compose.yml` or split Compose files
   - `.env.example`
   - `install.sh`
   - `upgrade.sh`
   - backup helper docs/scripts
-- [ ] Define deployment directory layout
-- [ ] Define environment variable contract for installer-generated config
-- [ ] Define healthcheck strategy for app and PostgreSQL
+- [x] Define deployment directory layout
+- [x] Define environment variable contract for installer-generated config
+- [x] Define healthcheck strategy for app and PostgreSQL
 
-### Suggested Output Artifact
+### Output Artifact
 - `requirements/phase1_beta_installer_file_plan.md`
 
 ---
@@ -68,7 +68,7 @@ Phase 1 implementation should start only when the following are true:
 - [x] Platform target is frozen
 - [x] Installer inputs are frozen
 - [x] Runtime topology is frozen
-- [ ] File-level implementation plan exists
+- [x] File-level implementation plan exists
 - [ ] Initial container/build scaffolding exists
 
 ---
