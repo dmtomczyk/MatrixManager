@@ -439,9 +439,11 @@ def render_app_nav(current_path: str, username: str) -> str:
     links = [
         ("/", "Home"),
         ("/planning", "Projects"),
+        ("/canvas", "Canvas"),
+    ]
+    staffing_links = [
         ("/demands", "Demands"),
         ("/staffing", "Assignments"),
-        ("/canvas", "Canvas"),
         ("/dashboard", "Forecast"),
     ]
     people_links = [
@@ -489,20 +491,22 @@ def render_app_nav(current_path: str, username: str) -> str:
         '''
 
     link_markup = render_standard_links(links)
+    staffing_link_markup = render_dropdown("Staffing", staffing_links)
+    mobile_staffing_markup = render_dropdown("Staffing", staffing_links, mobile=True)
     people_link_markup = render_dropdown("People", people_links)
     mobile_people_markup = render_dropdown("People", people_links, mobile=True)
     admin_link_markup = render_dropdown("Administration", admin_links) if admin_links else ""
     mobile_admin_markup = render_dropdown("Administration", admin_links, mobile=True) if admin_links else ""
     return f'''<nav class="app-nav" aria-label="Primary">
         <div class="app-nav-main">
-          <div class="nav-links nav-links-desktop">{link_markup}{people_link_markup}{admin_link_markup}</div>
+          <div class="nav-links nav-links-desktop">{link_markup}{staffing_link_markup}{people_link_markup}{admin_link_markup}</div>
           <details class="hamburger-menu">
             <summary class="hamburger-trigger" aria-label="Open navigation menu">
               <span class="hamburger-icon" aria-hidden="true"></span>
               <span>Menu</span>
             </summary>
             <div class="hamburger-panel">
-              <div class="nav-links nav-links-mobile">{link_markup}{mobile_people_markup}{mobile_admin_markup}</div>
+              <div class="nav-links nav-links-mobile">{link_markup}{mobile_staffing_markup}{mobile_people_markup}{mobile_admin_markup}</div>
             </div>
           </details>
         </div>
