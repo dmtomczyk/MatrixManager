@@ -7,19 +7,12 @@ MatrixManager is a staffing and resource-planning web app for tracking organizat
 - [Production install](#production-install)
 - [Build from source](#build-from-source)
 - [What the app includes](#what-the-app-includes)
-- [Main UI routes](#main-ui-routes)
-- [Repository layout](#repository-layout)
-- [Configuration](#configuration)
 - [Database modes](#database-modes)
 - [Docker / docker-compose](#docker--docker-compose)
 - [Lifecycle scripts](#lifecycle-scripts)
-- [Tests](#tests)
 - [Development scripts](#development-scripts)
-- [API overview](#api-overview)
-- [Requirements and coverage tracking](#requirements-and-coverage-tracking)
-- [Notes for contributors](#notes-for-contributors)
 - [Dependency manifest](#dependency-manifest)
-- [Suggested next documentation improvements](#suggested-next-documentation-improvements)
+- [Notes for contributors](#notes-for-contributors)
 
 ## Production install
 
@@ -117,79 +110,6 @@ The current repository includes these major capabilities:
 - **Reset and seed scripts** for local development
 - **Docker / docker-compose** runtime support
 
-## Main UI routes
-
-Once the app is running and you are authenticated, these are the main routes to know about:
-
-- `/` — app entry / root
-- `/planning` — planning view
-- `/employees` — employee roster and hierarchy management
-- `/assignments` — assignment management and export flows
-- `/organizations` — organization management
-- `/canvas` — visual staffing canvas
-- `/audit` — change history and audit trail
-- `/db-management` — database connection management
-- `/project-dashboard` — project-centric dashboard
-- `/login` — sign-in page
-- `/docs` — FastAPI OpenAPI docs
-
-> Exact navigation behavior may vary slightly depending on auth state and the active frontend shell.
-
-## Repository layout
-
-```text
-matrixmanager/
-├── app/
-│   ├── main.py                  # FastAPI app, models, auth, routes
-│   └── static/                  # Frontend pages, styles, and JS
-├── e2e/                         # Playwright end-to-end tests
-├── requirements/                # PRD / test-plan / coverage docs
-├── scripts/                     # reset + seed helpers
-├── tests/                       # pytest suite
-├── .env.example                 # runtime configuration template
-├── Dockerfile
-├── docker-compose.yml
-├── install.sh
-├── start.sh
-├── stop.sh
-├── status.sh
-├── reset.sh
-├── uninstall.sh
-├── package.json
-├── playwright.config.js
-├── pytest.ini
-├── requirements.txt
-└── README.md
-```
-
-## Configuration
-
-The current `.env.example` defines these key settings.
-
-### App/auth/runtime
-
-- `MATRIX_INSTALL_MODE` — `sqlite` or `postgresql`
-- `MATRIX_ACTIVE_DB_TYPE` — active runtime DB type
-- `MATRIX_AUTH_USERNAME`
-- `MATRIX_AUTH_PASSWORD`
-- `MATRIX_AUTH_SECRET`
-- `MATRIX_APP_PORT`
-- `MATRIX_BASE_URL`
-
-### SQLite mode
-
-- `MATRIX_SQLITE_PATH`
-- `MATRIX_CONTROL_DB_PATH`
-
-### PostgreSQL mode
-
-- `POSTGRES_HOST`
-- `POSTGRES_PORT`
-- `POSTGRES_DB`
-- `POSTGRES_USER`
-- `POSTGRES_PASSWORD`
-- `POSTGRES_SSLMODE`
-
 ## Database modes
 
 ### SQLite
@@ -262,36 +182,6 @@ Script summary:
 - `reset.sh` — wipe MatrixManager data while keeping config/scripts
 - `uninstall.sh` — remove runtime, with an option to keep or delete data
 
-## Tests
-
-### pytest
-
-```bash
-cd matrixmanager
-source .venv/bin/activate
-pytest
-```
-
-The pytest suite lives in `tests/`.
-
-### Playwright E2E
-
-```bash
-cd matrixmanager
-npm install
-npx playwright install chromium
-npm run test:e2e
-```
-
-Useful variants from `package.json`:
-
-```bash
-npm run test:e2e:headed
-npm run test:e2e:ui
-```
-
-The E2E specs live in `e2e/`.
-
 ## Development scripts
 
 ### Reset the database
@@ -355,16 +245,6 @@ These are useful for understanding scope, delivery planning, and current test co
 - SQLite is the easiest local iteration path
 - Docker/Compose and lifecycle scripts are already included for more deployment-like usage
 - The project now has enough surface area that route-level docs and screenshots would add real value
-
-## Suggested next documentation improvements
-
-Useful follow-on improvements for the docs:
-
-- add screenshots or short workflow walkthroughs
-- document auth/admin behavior in more detail
-- document `/project-dashboard` and `/db-management` more deeply
-- add a production backup/restore section
-- describe database switching behavior and audit model in more detail
 
 ---
 
