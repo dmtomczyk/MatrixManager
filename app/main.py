@@ -187,6 +187,47 @@ def verify_session_value(cookie_value: Optional[str]) -> bool:
     return username == get_auth_username() and secrets.compare_digest(cookie_value, expected) and secrets.compare_digest(provided_sig, expected.split(":", 1)[1])
 
 
+def get_session_username(cookie_value: Optional[str]) -> Optional[str]:
+    if not verify_session_value(cookie_value):
+        return None
+    return cookie_value.split(":", 1)[0]
+
+
+def render_app_nav(current_path: str, username: str) -> str:
+    links = [
+        ("/", "Planning"),
+        ("/people", "Employees"),
+        ("/staffing", "Assignments"),
+        ("/orgs", "Organizations"),
+        ("/canvas", "Canvas"),
+        ("/dashboard", "Project Dashboard"),
+    ]
+    rendered_links = []
+    for href, label in links:
+        class_name = "nav-link active" if href == current_path else "nav-link"
+        aria_current = ' aria-current="page"' if href == current_path else ""
+        rendered_links.append(f'<a href="{href}" class="{class_name}"{aria_current}>{label}</a>')
+    link_markup = "".join(rendered_links)
+    return f'''<nav class="app-nav">
+        <div class="nav-links">{link_markup}</div>
+        <details class="account-menu">
+          <summary class="account-menu-trigger">
+            <span class="account-menu-label">Signed in as</span>
+            <span class="account-menu-username">{username}</span>
+          </summary>
+          <div class="account-menu-panel">
+            <div class="account-menu-meta">
+              <span class="account-menu-label">Signed in as</span>
+              <strong>{username}</strong>
+            </div>
+            <form method="post" action="/logout" class="logout-form">
+              <button type="submit" class="logout-button">Logout</button>
+            </form>
+          </div>
+        </details>
+      </nav>'''
+
+
 def build_login_page(error: str = "", next_path: str = "/") -> str:
     error_markup = f'<p class="login-error">{error}</p>' if error else ""
     styles_href = static_asset_url("styles.css")
@@ -250,9 +291,29 @@ def static_asset_url(relative_path: str) -> str:
     return f"/static/{relative_path}?v={version}"
 
 
-def serve_html_page(filename: str, replacements: Optional[dict[str, str]] = None) -> str:
+BASE_NAV_MARKUP = """<nav>
+        <a href="/">Planning</a>
+        <a href="/people">Employees</a>
+        <a href="/staffing">Assignments</a>
+        <a href="/orgs">Organizations</a>
+        <a href="/canvas">Canvas</a>
+        <a href="/dashboard">Project Dashboard</a>
+        <form method="post" action="/logout" class="logout-form">
+          <button type="submit" class="logout-button">Logout</button>
+        </form>
+      </nav>"""
+
+
+def serve_html_page(
+    filename: str,
+    replacements: Optional[dict[str, str]] = None,
+    current_path: Optional[str] = None,
+    username: Optional[str] = None,
+) -> str:
     html = (STATIC_DIR / filename).read_text(encoding="utf-8")
     replacements = replacements or {}
+    if current_path and username:
+        replacements[BASE_NAV_MARKUP] = render_app_nav(current_path=current_path, username=username)
     for old, new in replacements.items():
         html = html.replace(old, new)
     return html
@@ -328,68 +389,80 @@ def logout():
 
 
 @app.get("/", response_class=HTMLResponse)
-def serve_index() -> str:
+def serve_index(request: Request) -> str:
     return serve_html_page(
         "planning.html",
         {
             'href="/static/styles.css"': f'href="{static_asset_url("styles.css")}"',
             'src="/static/planning.js"': f'src="{static_asset_url("planning.js")}"',
         },
+        current_path=request.url.path,
+        username=get_session_username(request.cookies.get(SESSION_COOKIE_NAME)),
     )
 
 
 @app.get("/people", response_class=HTMLResponse)
-def serve_employees() -> str:
+def serve_employees(request: Request) -> str:
     return serve_html_page(
         "employees.html",
         {
             'href="/static/styles.css"': f'href="{static_asset_url("styles.css")}"',
             'src="/static/employees.js"': f'src="{static_asset_url("employees.js")}"',
         },
+        current_path=request.url.path,
+        username=get_session_username(request.cookies.get(SESSION_COOKIE_NAME)),
     )
 
 
 @app.get("/staffing", response_class=HTMLResponse)
-def serve_assignments() -> str:
+def serve_assignments(request: Request) -> str:
     return serve_html_page(
         "assignments.html",
         {
             'href="/static/styles.css"': f'href="{static_asset_url("styles.css")}"',
             'src="/static/assignments.js"': f'src="{static_asset_url("assignments.js")}"',
         },
+        current_path=request.url.path,
+        username=get_session_username(request.cookies.get(SESSION_COOKIE_NAME)),
     )
 
 
 @app.get("/canvas", response_class=HTMLResponse)
-def serve_canvas() -> str:
+def serve_canvas(request: Request) -> str:
     return serve_html_page(
         "canvas.html",
         {
             'href="/static/styles.css"': f'href="{static_asset_url("styles.css")}"',
             'src="/static/canvas.js"': f'src="{static_asset_url("canvas.js")}"',
         },
+        current_path=request.url.path,
+        username=get_session_username(request.cookies.get(SESSION_COOKIE_NAME)),
     )
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
-def serve_dashboard() -> str:
+def serve_dashboard(request: Request) -> str:
     return serve_html_page(
         "project-dashboard.html",
         {
             'href="/static/styles.css"': f'href="{static_asset_url("styles.css")}"',
             'src="/static/project-dashboard.js"': f'src="{static_asset_url("project-dashboard.js")}"',
         },
+        current_path=request.url.path,
+        username=get_session_username(request.cookies.get(SESSION_COOKIE_NAME)),
     )
 
 
 @app.get("/orgs", response_class=HTMLResponse)
-def serve_org_manager() -> str:
+def serve_org_manager(request: Request) -> str:
     return serve_html_page(
         "organizations.html",
         {
             'href="/static/styles.css"': f'href="{static_asset_url("styles.css")}"',
             'src="/static/organizations.js"': f'src="{static_asset_url("organizations.js")}"',
         },
+        current_path=request.url.path,
+        username=get_session_username(request.cookies.get(SESSION_COOKIE_NAME)),
     )
 
 
