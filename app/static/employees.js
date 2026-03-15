@@ -1,6 +1,8 @@
 const employeeOrganizationSelect = document.querySelector('#employee-organization');
 const employeeManagerSelect = document.querySelector('#employee-manager');
-const employeeTypeSelect = document.querySelector('#employee-type');
+const employeeTypeInput = document.querySelector('#employee-type');
+const employeeJobCodeSelect = document.querySelector('#employee-job-code');
+const employeeJobCodeHelp = document.querySelector('#employee-job-code-help');
 const employeeManagerHelp = document.querySelector('#employee-manager-help');
 const employeeTable = document.querySelector('#employee-table');
 const employeeOrgFilter = document.querySelector('#employee-org-filter');
@@ -10,7 +12,6 @@ const employeeFormStatus = document.querySelector('#employee-form-status');
 const employeeSubmitButton = document.querySelector('#employee-submit-button');
 const employeeFormSecondaryAction = document.querySelector('#employee-form-secondary-action');
 const employeeNameInput = document.querySelector('#employee-name');
-const employeeRoleInput = document.querySelector('#employee-role');
 const employeeLocationInput = document.querySelector('#employee-location');
 const employeeCapacityInput = document.querySelector('#employee-capacity');
 const selectAllEmployeesCheckbox = document.querySelector('#select-all-employees');
@@ -19,6 +20,7 @@ const collapseAllVisibleButton = document.querySelector('#collapse-all-visible')
 const toast = document.querySelector('#toast');
 
 let organizations = [];
+let jobCodes = [];
 let employees = [];
 let expandedEmployees = new Set();
 let selectedEmployees = new Set();
@@ -39,8 +41,10 @@ const showToast = (message) => {
   toast.classList.add('show');
   setTimeout(() => toast.classList.remove('show'), 2200);
 };
+const getJobCodeById = (id) => jobCodes.find((jobCode) => String(jobCode.id) === String(id));
+const getCurrentJobCode = () => getJobCodeById(employeeJobCodeSelect?.value || '');
+const getCurrentEmployeeTypeValue = () => (getCurrentJobCode()?.is_leader ? 'L' : 'IC');
 const getLeaderEmployees = (currentEmployeeId = null) => employees.filter((emp) => emp.employee_type === 'L' && emp.id !== currentEmployeeId).sort((a, b) => a.name.localeCompare(b.name));
-const getCurrentEmployeeTypeValue = () => employeeTypeSelect?.value || 'IC';
 const getVisibleEmployees = () => {
   const selectedOrg = employeeOrgFilter?.value || '';
   return employees.filter((emp) => !selectedOrg || String(emp.organization_id) === selectedOrg);
@@ -50,11 +54,8 @@ const buildHierarchy = (items) => {
   const directReports = new Map(items.map((employee) => [employee.id, []]));
   const roots = [];
   items.forEach((employee) => {
-    if (employee.manager_id && byId.has(employee.manager_id)) {
-      directReports.get(employee.manager_id).push(employee);
-    } else {
-      roots.push(employee);
-    }
+    if (employee.manager_id && byId.has(employee.manager_id)) directReports.get(employee.manager_id).push(employee);
+    else roots.push(employee);
   });
   const sorter = (a, b) => {
     if (a.employee_type !== b.employee_type) return a.employee_type === 'L' ? -1 : 1;
@@ -90,17 +91,9 @@ const getEmployeeFormMode = () => {
   if (getCurrentEmployeeId()) return 'edit';
   return 'create';
 };
-const setEmployeeTypeModeOptions = (mode) => {
-  const previousValue = employeeTypeSelect.value;
-  const options = mode === 'bulk'
-    ? ['<option value="">No change</option>', '<option value="IC">Set to IC</option>', '<option value="L">Set to L</option>']
-    : ['<option value="IC">IC</option>', '<option value="L">L</option>'];
-  employeeTypeSelect.innerHTML = options.join('');
-  if ([...employeeTypeSelect.options].some((option) => option.value === previousValue)) {
-    employeeTypeSelect.value = previousValue;
-  } else {
-    employeeTypeSelect.value = mode === 'bulk' ? '' : 'IC';
-  }
+const updateTypePreview = () => {
+  if (!employeeTypeInput) return;
+  employeeTypeInput.value = getCurrentEmployeeTypeValue();
 };
 const updateOrganizationSelect = () => {
   const options = organizations.map((org) => `<option value="${org.id}">${escapeHtml(org.name)}</option>`).join('');
@@ -111,6 +104,15 @@ const updateOrganizationSelect = () => {
   const previousFilter = employeeOrgFilter.value;
   employeeOrgFilter.innerHTML = ['<option value="">All organizations</option>'].concat(organizations.map((org) => `<option value="${org.id}">${escapeHtml(org.name)}</option>`)).join('');
   if (previousFilter && organizations.some((org) => String(org.id) === previousFilter)) employeeOrgFilter.value = previousFilter;
+};
+const updateJobCodeSelect = () => {
+  const mode = getEmployeeFormMode();
+  const previousValue = employeeJobCodeSelect.value;
+  const options = jobCodes.map((jobCode) => `<option value="${jobCode.id}">${escapeHtml(jobCode.name)}${jobCode.is_leader ? ' · Leader' : ''}</option>`).join('');
+  const placeholder = mode === 'bulk' ? 'No change' : 'Select job code';
+  employeeJobCodeSelect.innerHTML = `<option value="">${placeholder}</option>${options}`;
+  if (previousValue && jobCodes.some((jobCode) => String(jobCode.id) === previousValue)) employeeJobCodeSelect.value = previousValue;
+  updateTypePreview();
 };
 const updateManagerSelect = (selectedId = '', currentEmployeeId = null) => {
   const leaders = getLeaderEmployees(currentEmployeeId);
@@ -126,16 +128,22 @@ const syncManagerFieldState = () => {
   const mode = getEmployeeFormMode();
   const isIc = getCurrentEmployeeTypeValue() === 'IC';
   employeeOrganizationSelect.required = mode !== 'bulk';
+  employeeJobCodeSelect.required = mode !== 'bulk';
   const managerRequired = mode !== 'bulk' && isIc;
   employeeManagerSelect.required = managerRequired;
   if (managerRequired) employeeManagerSelect.setAttribute('aria-required', 'true');
   else employeeManagerSelect.removeAttribute('aria-required');
+  if (employeeJobCodeHelp) {
+    employeeJobCodeHelp.textContent = mode === 'bulk'
+      ? 'Choose a job code to apply to all selected employees, or leave it blank for no change.'
+      : 'Every employee must have a job code. Leader job codes allow assignment as a manager.';
+  }
   if (!employeeManagerHelp) return;
   if (mode === 'bulk') {
     employeeManagerHelp.textContent = 'Choose fields to apply to all selected employees. Leave anything blank for no change.';
     return;
   }
-  employeeManagerHelp.textContent = isIc ? 'Required for ICs. Optional for leaders without reports above them.' : 'Optional for leaders.';
+  employeeManagerHelp.textContent = isIc ? 'Required for IC job codes. Optional for leader job codes.' : 'Optional for leader job codes.';
 };
 const resetEmployeeFormFields = () => {
   employeeForm.reset();
@@ -143,12 +151,11 @@ const resetEmployeeFormFields = () => {
   employeeNameInput.disabled = false;
   employeeNameInput.required = true;
   employeeNameInput.placeholder = '';
-  employeeRoleInput.placeholder = '';
   employeeLocationInput.placeholder = '';
   employeeCapacityInput.placeholder = '';
   employeeCapacityInput.value = '1';
-  setEmployeeTypeModeOptions('create');
   updateOrganizationSelect();
+  updateJobCodeSelect();
   updateManagerSelect();
   syncManagerFieldState();
 };
@@ -169,14 +176,12 @@ const syncEmployeeFormMode = () => {
     employeeNameInput.disabled = true;
     employeeNameInput.required = false;
     employeeNameInput.placeholder = 'Disabled for multi-edit';
-    employeeRoleInput.value = '';
-    employeeRoleInput.placeholder = 'Leave blank for no change';
     employeeLocationInput.value = '';
     employeeLocationInput.placeholder = 'Leave blank for no change';
     employeeCapacityInput.value = '';
     employeeCapacityInput.placeholder = 'Leave blank for no change';
-    setEmployeeTypeModeOptions('bulk');
     updateOrganizationSelect();
+    updateJobCodeSelect();
     updateManagerSelect();
     return;
   }
@@ -188,11 +193,10 @@ const syncEmployeeFormMode = () => {
     employeeNameInput.disabled = false;
     employeeNameInput.required = true;
     employeeNameInput.placeholder = '';
-    employeeRoleInput.placeholder = '';
     employeeLocationInput.placeholder = '';
     employeeCapacityInput.placeholder = '';
-    setEmployeeTypeModeOptions('edit');
     updateOrganizationSelect();
+    updateJobCodeSelect();
     updateManagerSelect(employeeManagerSelect.value || '', getCurrentEmployeeId());
     return;
   }
@@ -203,12 +207,11 @@ const syncEmployeeFormMode = () => {
   employeeNameInput.disabled = false;
   employeeNameInput.required = true;
   employeeNameInput.placeholder = '';
-  employeeRoleInput.placeholder = '';
   employeeLocationInput.placeholder = '';
   employeeCapacityInput.placeholder = '';
   employeeCapacityInput.value = employeeCapacityInput.value || '1';
-  setEmployeeTypeModeOptions('create');
   updateOrganizationSelect();
+  updateJobCodeSelect();
   updateManagerSelect();
 };
 const clearEmployeeForm = () => {
@@ -216,6 +219,7 @@ const clearEmployeeForm = () => {
   employeeForm.querySelector('input[name="entity_id"]').value = '';
   activeEmployeeMode = '';
   syncEmployeeFormMode();
+  updateTypePreview();
 };
 const updateBulkSelectionState = () => {
   const visibleEmployeeIds = new Set(getVisibleEmployees().map((employee) => employee.id));
@@ -261,7 +265,7 @@ const renderEmployees = () => {
             </div>
           </div>
         </td>
-        <td>${escapeHtml(employee.role || '')}</td>
+        <td>${escapeHtml(employee.job_code_name || employee.role || '')}</td>
         <td>${escapeHtml(employee.employee_type || 'IC')}</td>
         <td>${escapeHtml(employee.organization_name || '')}</td>
         <td>${escapeHtml(employee.manager_name || '—')}</td>
@@ -272,9 +276,7 @@ const renderEmployees = () => {
           <button type="button" class="table-action-button table-action-button-secondary" data-action="delete-employee" data-id="${employee.id}">Delete</button>
         </td>
       </tr>`);
-    if (expanded) {
-      children.forEach((child) => appendEmployeeRow(child, level + 1));
-    }
+    if (expanded) children.forEach((child) => appendEmployeeRow(child, level + 1));
   };
   roots.forEach((employee) => appendEmployeeRow(employee, 0));
   employeeTable.innerHTML = rows.join('');
@@ -283,6 +285,10 @@ const renderEmployees = () => {
 const loadOrganizations = async () => {
   organizations = await apiFetch('/organizations');
   updateOrganizationSelect();
+};
+const loadJobCodes = async () => {
+  jobCodes = await apiFetch('/job-codes-api');
+  updateJobCodeSelect();
 };
 const loadEmployees = async () => {
   employees = await apiFetch('/employees');
@@ -304,26 +310,25 @@ const populateEmployeeForm = (id) => {
   if (!employee) return;
   selectedEmployees.clear();
   employeeForm.name.value = employee.name;
-  employeeForm.role.value = employee.role || '';
-  employeeTypeSelect.value = employee.employee_type || 'IC';
+  employeeForm.job_code_id.value = employee.job_code_id || '';
   employeeOrganizationSelect.value = employee.organization_id || '';
   employeeForm.location.value = employee.location || '';
   employeeForm.capacity.value = employee.capacity || 1;
   employeeForm.querySelector('input[name="entity_id"]').value = employee.id;
   activeEmployeeMode = '';
   syncEmployeeFormMode();
+  employeeJobCodeSelect.value = employee.job_code_id || '';
+  updateTypePreview();
   updateManagerSelect(employee.manager_id || '', employee.id);
   syncManagerFieldState();
   renderEmployees();
 };
 const buildBulkUpdatePayload = () => {
   const payload = {};
-  if (employeeTypeSelect.value) payload.employee_type = employeeTypeSelect.value;
   if (employeeOrganizationSelect.value) payload.organization_id = Number(employeeOrganizationSelect.value);
+  if (employeeJobCodeSelect.value) payload.job_code_id = Number(employeeJobCodeSelect.value);
   if (employeeManagerSelect.value === '__CLEAR__') payload.manager_id = null;
   else if (employeeManagerSelect.value) payload.manager_id = Number(employeeManagerSelect.value);
-  const roleValue = employeeRoleInput.value.trim();
-  if (roleValue) payload.role = roleValue;
   const locationValue = employeeLocationInput.value.trim();
   if (locationValue) payload.location = locationValue;
   const capacityValue = employeeCapacityInput.value;
@@ -332,17 +337,15 @@ const buildBulkUpdatePayload = () => {
 };
 employeeForm.addEventListener('submit', async (event) => {
   event.preventDefault();
+  if (!jobCodes.length) {
+    alert('Create at least one job code before adding employees.');
+    return;
+  }
   const mode = getEmployeeFormMode();
   if (mode === 'bulk') {
-    if (selectedEmployees.size < 2) {
-      alert('Select at least two employees to use multi-edit.');
-      return;
-    }
+    if (selectedEmployees.size < 2) return alert('Select at least two employees to use multi-edit.');
     const payload = buildBulkUpdatePayload();
-    if (!Object.keys(payload).length) {
-      alert('Choose at least one field to update.');
-      return;
-    }
+    if (!Object.keys(payload).length) return alert('Choose at least one field to update.');
     try {
       for (const employeeId of selectedEmployees) {
         await apiFetch(`/employees/${employeeId}`, { method: 'PUT', body: JSON.stringify(payload) });
@@ -358,12 +361,13 @@ employeeForm.addEventListener('submit', async (event) => {
   }
   const formData = new FormData(employeeForm);
   const organizationId = Number(formData.get('organization_id'));
+  const jobCodeId = Number(formData.get('job_code_id'));
   if (!organizationId) return alert('Select an organization for this employee.');
+  if (!jobCodeId) return alert('Select a job code for this employee.');
   const payload = {
-    name: formData.get('name').trim(),
-    role: formData.get('role').trim() || null,
-    employee_type: getCurrentEmployeeTypeValue(),
-    location: formData.get('location').trim() || null,
+    name: String(formData.get('name') || '').trim(),
+    job_code_id: jobCodeId,
+    location: String(formData.get('location') || '').trim() || null,
     capacity: Number(formData.get('capacity')) || 1,
     organization_id: organizationId,
     manager_id: employeeManagerSelect.value ? Number(employeeManagerSelect.value) : null,
@@ -457,12 +461,16 @@ collapseAllVisibleButton.addEventListener('click', () => {
   roots.forEach((employee) => collapseEmployeeBranch(employee.id, directReports));
   renderEmployees();
 });
-employeeTypeSelect.addEventListener('change', syncManagerFieldState);
+employeeJobCodeSelect.addEventListener('change', () => {
+  updateTypePreview();
+  syncManagerFieldState();
+});
 employeeOrgFilter.addEventListener('change', () => {
   renderEmployees();
 });
 (async function init() {
   await loadOrganizations();
+  await loadJobCodes();
   clearEmployeeForm();
   await loadEmployees();
   syncManagerFieldState();

@@ -10,7 +10,7 @@
     <header>
       <div>
         <h1>Job Codes</h1>
-        <p>Define the standard people classifications that will support future staffing and reporting flows.</p>
+        <p>Define the job codes employees can be assigned to, including whether each code is a leader role.</p>
       </div>
       <nav>
         <a href="/">Planning</a>
@@ -21,23 +21,33 @@
       <section class="card single-column">
         <div class="section-head">
           <h2>Job code catalog</h2>
-          <p>This page is now part of the People navigation group. Backend CRUD can land next when you are ready to define the model.</p>
+          <p>Every employee must be assigned to one defined job code. The Leader toggle determines whether that code can manage others.</p>
         </div>
-        <div class="card-grid">
-          <article class="panel">
-            <h3>What belongs here</h3>
-            <ul>
-              <li>Job code / role code identifier</li>
-              <li>Display name</li>
-              <li>Job family or discipline</li>
-              <li>Optional level / track metadata</li>
-              <li>Active / inactive status</li>
-            </ul>
-          </article>
-          <article class="panel">
-            <h3>Suggested next step</h3>
-            <p>Add a dedicated JobCode model and CRUD surface, then let employees reference job codes instead of carrying freeform role text everywhere.</p>
-          </article>
+        <div class="layout db-management-layout">
+          <div class="db-table-shell">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Leader?</th>
+                  <th>Assigned employees</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="job-code-table"></tbody>
+            </table>
+          </div>
+          <form id="job-code-form" class="panel">
+            <h3 id="job-code-form-title">Add Job Code</h3>
+            <input type="hidden" name="entity_id" />
+            <label>Name<input name="name" id="job-code-name" required /></label>
+            <label class="checkbox-row"><input name="is_leader" id="job-code-is-leader" type="checkbox" /> Leader?</label>
+            <p class="muted small-text">Leader job codes can be assigned as managers. Individual contributors must still have a manager selected.</p>
+            <div class="panel-actions-row">
+              <button type="submit">Save Job Code</button>
+              <button type="button" class="secondary" id="job-code-form-reset">Clear</button>
+            </div>
+          </form>
         </div>
       </section>
     </main>

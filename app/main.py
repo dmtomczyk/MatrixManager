@@ -70,9 +70,31 @@ class OrganizationUpdate(SQLModel):
     description: Optional[str] = None
 
 
+class JobCodeBase(SQLModel):
+    name: str
+    is_leader: bool = False
+
+
+class JobCode(JobCodeBase, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+
+class JobCodeCreate(JobCodeBase):
+    pass
+
+
+class JobCodeRead(JobCodeBase):
+    id: int
+
+
+class JobCodeUpdate(SQLModel):
+    name: Optional[str] = None
+    is_leader: Optional[bool] = None
+
+
 class EmployeeBase(SQLModel):
     name: str
-    role: Optional[str] = None
+    job_code_id: Optional[int] = Field(default=None, foreign_key="jobcode.id")
     employee_type: str = "IC"
     location: Optional[str] = None
     capacity: float = 1.0
@@ -95,12 +117,14 @@ class EmployeeRead(EmployeeBase):
     organization_name: Optional[str] = None
     manager_name: Optional[str] = None
     direct_report_count: int = 0
+    role: Optional[str] = None
+    job_code_name: Optional[str] = None
+    job_code_is_leader: bool = False
 
 
 class EmployeeUpdate(SQLModel):
     name: Optional[str] = None
-    role: Optional[str] = None
-    employee_type: Optional[str] = None
+    job_code_id: Optional[int] = None
     location: Optional[str] = None
     capacity: Optional[float] = None
     organization_id: Optional[int] = None
@@ -484,17 +508,32 @@ def create_db_and_tables(bind_engine=engine) -> None:
 def run_migrations(bind_engine=engine) -> None:
     engine_url = str(bind_engine.url)
     with bind_engine.begin() as connection:
-        columns = connection.exec_driver_sql("PRAGMA table_info(employee)").fetchall() if engine_url.startswith("sqlite") else []
-        column_names = {row[1] for row in columns}
         if engine_url.startswith("sqlite"):
+            columns = connection.exec_driver_sql("PRAGMA table_info(employee)").fetchall()
+            column_names = {row[1] for row in columns}
             if "manager_id" not in column_names:
                 connection.exec_driver_sql("ALTER TABLE employee ADD COLUMN manager_id INTEGER")
             if "employee_type" not in column_names:
                 connection.exec_driver_sql("ALTER TABLE employee ADD COLUMN employee_type TEXT DEFAULT 'IC'")
+            if "job_code_id" not in column_names:
+                connection.exec_driver_sql("ALTER TABLE employee ADD COLUMN job_code_id INTEGER")
             connection.exec_driver_sql("UPDATE employee SET employee_type = 'IC' WHERE employee_type IS NULL OR employee_type = ''")
+        else:
+            employee_exists = connection.exec_driver_sql("SELECT to_regclass('public.employee')").scalar()
+            if employee_exists:
+                column_rows = connection.exec_driver_sql("SELECT column_name FROM information_schema.columns WHERE table_name = 'employee'").fetchall()
+                column_names = {row[0] for row in column_rows}
+                if "manager_id" not in column_names:
+                    connection.exec_driver_sql("ALTER TABLE employee ADD COLUMN manager_id INTEGER")
+                if "employee_type" not in column_names:
+                    connection.exec_driver_sql("ALTER TABLE employee ADD COLUMN employee_type TEXT DEFAULT 'IC'")
+                if "job_code_id" not in column_names:
+                    connection.exec_driver_sql("ALTER TABLE employee ADD COLUMN job_code_id INTEGER")
+                connection.exec_driver_sql("UPDATE employee SET employee_type = 'IC' WHERE employee_type IS NULL OR employee_type = ''")
         AuditEntry.__table__.create(bind=connection, checkfirst=True)
         DBConnectionConfig.__table__.create(bind=connection, checkfirst=True)
         UserAccount.__table__.create(bind=connection, checkfirst=True)
+        JobCode.__table__.create(bind=connection, checkfirst=True)
 
 
 def get_control_session() -> Generator[Session, None, None]:
@@ -1103,6 +1142,98 @@ def serve_db_management_page(request: Request) -> str:
     )
 
 
+@app.get("/job-codes-api", response_model=List[JobCodeRead])
+def list_job_codes(session: Session = Depends(get_session)):
+    return session.exec(select(JobCode).order_by(JobCode.name)).all()
+
+
+@app.post("/job-codes-api", response_model=JobCodeRead, status_code=201)
+def create_job_code(job_code: JobCodeCreate, request: Request, session: Session = Depends(get_session)):
+    normalized_name = job_code.name.strip()
+    if not normalized_name:
+        raise HTTPException(status_code=400, detail="Job code name is required")
+    existing = session.exec(select(JobCode).where(JobCode.name == normalized_name)).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Job code name must be unique")
+    db_job_code = JobCode(name=normalized_name, is_leader=job_code.is_leader)
+    session.add(db_job_code)
+    session.commit()
+    session.refresh(db_job_code)
+    record_audit_entry(
+        session,
+        actor_username=get_request_username(request),
+        entity_type="job_code",
+        action="create",
+        entity_id=db_job_code.id,
+        entity_label=db_job_code.name,
+        after=audit_snapshot_from_model(db_job_code),
+    )
+    return db_job_code
+
+
+@app.put("/job-codes-api/{job_code_id}", response_model=JobCodeRead)
+def update_job_code(job_code_id: int, update: JobCodeUpdate, request: Request, session: Session = Depends(get_session)):
+    job_code = session.get(JobCode, job_code_id)
+    if not job_code:
+        raise HTTPException(status_code=404, detail="Job code not found")
+    before = audit_snapshot_from_model(job_code)
+    update_data = update.dict(exclude_unset=True)
+    if "name" in update_data:
+        normalized_name = (update_data.get("name") or "").strip()
+        if not normalized_name:
+            raise HTTPException(status_code=400, detail="Job code name is required")
+        existing = session.exec(select(JobCode).where(JobCode.name == normalized_name, JobCode.id != job_code_id)).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Job code name must be unique")
+        update_data["name"] = normalized_name
+    if update_data.get("is_leader") is False:
+        assigned_leader = session.exec(select(Employee).where(Employee.job_code_id == job_code_id, Employee.manager_id.is_not(None))).first()
+        if assigned_leader:
+            raise HTTPException(status_code=400, detail="Cannot mark this job code non-leader while assigned employees still need managers")
+        employees_with_reports = session.exec(select(Employee).where(Employee.job_code_id == job_code_id)).all()
+        for employee in employees_with_reports:
+            if session.exec(select(Employee).where(Employee.manager_id == employee.id)).first():
+                raise HTTPException(status_code=400, detail="Employees with direct reports must remain assigned to a leader job code")
+    for key, value in update_data.items():
+        setattr(job_code, key, value)
+    session.add(job_code)
+    session.commit()
+    session.refresh(job_code)
+    record_audit_entry(
+        session,
+        actor_username=get_request_username(request),
+        entity_type="job_code",
+        action="update",
+        entity_id=job_code.id,
+        entity_label=job_code.name,
+        before=before,
+        after=audit_snapshot_from_model(job_code),
+    )
+    return job_code
+
+
+@app.delete("/job-codes-api/{job_code_id}", status_code=204)
+def delete_job_code(job_code_id: int, request: Request, session: Session = Depends(get_session)):
+    job_code = session.get(JobCode, job_code_id)
+    if not job_code:
+        raise HTTPException(status_code=404, detail="Job code not found")
+    if session.exec(select(Employee).where(Employee.job_code_id == job_code_id)).first():
+        raise HTTPException(status_code=400, detail="Cannot delete a job code that is assigned to employees")
+    before = audit_snapshot_from_model(job_code)
+    label = job_code.name
+    session.delete(job_code)
+    session.commit()
+    record_audit_entry(
+        session,
+        actor_username=get_request_username(request),
+        entity_type="job_code",
+        action="delete",
+        entity_id=job_code_id,
+        entity_label=label,
+        before=before,
+    )
+
+
 @app.get("/organizations", response_model=List[OrganizationRead])
 def list_organizations(session: Session = Depends(get_session)):
     organizations = session.exec(select(Organization).order_by(Organization.name)).all()
@@ -1182,9 +1313,8 @@ def list_employees(session: Session = Depends(get_session)):
 
 @app.post("/employees", response_model=EmployeeRead, status_code=201)
 def create_employee(employee: EmployeeCreate, request: Request, session: Session = Depends(get_session)):
-    employee_payload = employee.dict()
-    validate_employee_payload(session, employee_payload)
-    db_employee = Employee.from_orm(employee)
+    employee_payload = validate_employee_payload(session, employee.dict())
+    db_employee = Employee(**employee_payload)
     session.add(db_employee)
     session.commit()
     session.refresh(db_employee)
@@ -1219,7 +1349,7 @@ def update_employee(employee_id: int, update: EmployeeUpdate, request: Request, 
     employee_data = update.dict(exclude_unset=True)
     proposed_employee = {
         "name": employee_data.get("name", employee.name),
-        "role": employee_data.get("role", employee.role),
+        "job_code_id": employee_data.get("job_code_id", employee.job_code_id),
         "employee_type": employee_data.get("employee_type", employee.employee_type),
         "location": employee_data.get("location", employee.location),
         "capacity": employee_data.get("capacity", employee.capacity),
@@ -1228,9 +1358,10 @@ def update_employee(employee_id: int, update: EmployeeUpdate, request: Request, 
         "employee_id": employee_id,
     }
 
-    validate_employee_payload(session, proposed_employee)
+    validated_employee = validate_employee_payload(session, proposed_employee)
     for key, value in employee_data.items():
         setattr(employee, key, value)
+    employee.employee_type = validated_employee["employee_type"]
     session.add(employee)
     session.commit()
     session.refresh(employee)
@@ -1422,25 +1553,36 @@ def ensure_organization(session: Session, organization_id: int) -> Organization:
     return organization
 
 
+def ensure_job_code(session: Session, job_code_id: int) -> JobCode:
+    job_code = session.get(JobCode, job_code_id)
+    if not job_code:
+        raise HTTPException(status_code=404, detail="Job code not found")
+    return job_code
+
+
 def validate_employee_type(employee_type: str) -> str:
     if employee_type not in {"IC", "L"}:
         raise HTTPException(status_code=400, detail="Employee type must be IC or L")
     return employee_type
 
 
-def validate_employee_payload(session: Session, payload: dict) -> None:
+def validate_employee_payload(session: Session, payload: dict) -> dict[str, Any]:
     capacity = payload.get("capacity")
     organization_id = payload.get("organization_id")
     manager_id = payload.get("manager_id")
-    employee_type = payload.get("employee_type")
     employee_id = payload.get("employee_id")
+    job_code_id = payload.get("job_code_id")
 
     if capacity is None or capacity <= 0:
         raise HTTPException(status_code=400, detail="Capacity must be greater than zero")
     if organization_id is None:
         raise HTTPException(status_code=400, detail="Organization is required")
+    if job_code_id is None:
+        raise HTTPException(status_code=400, detail="Job code is required")
     ensure_organization(session, organization_id)
-    normalized_type = validate_employee_type(employee_type or "IC")
+    job_code = ensure_job_code(session, job_code_id)
+    normalized_type = "L" if job_code.is_leader else "IC"
+    payload["employee_type"] = normalized_type
     if normalized_type == "IC" and manager_id is None:
         raise HTTPException(status_code=400, detail="Individual contributors must have a manager")
     if manager_id is not None:
@@ -1448,7 +1590,8 @@ def validate_employee_payload(session: Session, payload: dict) -> None:
     if employee_id is not None and normalized_type != "L":
         direct_report_exists = session.exec(select(Employee).where(Employee.manager_id == employee_id)).first()
         if direct_report_exists:
-            raise HTTPException(status_code=400, detail="Employees with direct reports must remain type L")
+            raise HTTPException(status_code=400, detail="Employees with direct reports must remain assigned to a leader job code")
+    return payload
 
 
 def ensure_valid_manager(session: Session, employee_id: Optional[int], manager_id: int) -> Employee:
@@ -1482,6 +1625,7 @@ def serialize_employee(session: Session, employee: Employee) -> EmployeeRead:
     organization_name = None
     manager_name = None
     direct_report_count = 0
+    job_code = session.get(JobCode, employee.job_code_id) if employee.job_code_id is not None else None
     if employee.organization_id is not None:
         organization = session.get(Organization, employee.organization_id)
         organization_name = organization.name if organization else None
@@ -1489,11 +1633,15 @@ def serialize_employee(session: Session, employee: Employee) -> EmployeeRead:
         manager = session.get(Employee, employee.manager_id)
         manager_name = manager.name if manager else None
     direct_report_count = len(session.exec(select(Employee).where(Employee.manager_id == employee.id)).all())
+    employee_type = "L" if job_code and job_code.is_leader else validate_employee_type(employee.employee_type or "IC")
     return EmployeeRead(
         id=employee.id,
         name=employee.name,
-        role=employee.role,
-        employee_type=validate_employee_type(employee.employee_type or "IC"),
+        job_code_id=employee.job_code_id,
+        role=job_code.name if job_code else None,
+        job_code_name=job_code.name if job_code else None,
+        job_code_is_leader=bool(job_code and job_code.is_leader),
+        employee_type=employee_type,
         location=employee.location,
         capacity=employee.capacity,
         organization_id=employee.organization_id,

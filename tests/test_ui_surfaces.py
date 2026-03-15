@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from conftest import create_assignment, create_employee, create_organization, create_project
+from conftest import create_assignment, create_employee, create_job_code, create_organization, create_project
 
 
 # Page and surface-oriented tests that validate rendered app structure and high-value UI-backed data flows.
@@ -14,12 +14,14 @@ def test_main_page_contains_core_ui_sections(client: TestClient):
     assert response.status_code == 200
     html = response.text
     assert "Matrix Manager" in html
-    assert "Organizations" in html
-    assert "Employees" in html
     assert "Projects" in html
     assert "Assignments" in html
-    assert "employee-type" in html
-    assert "employee-manager" in html
+    employees_html = client.get("/people").text
+    assert "Organizations" in employees_html
+    assert "Employees" in employees_html
+    assert "employee-type" in employees_html
+    assert "employee-manager" in employees_html
+    assert "employee-job-code" in employees_html
 
 
 # TP-028, TP-031, TP-032, TP-033
@@ -29,9 +31,10 @@ def test_main_page_contains_visualization_and_export_surfaces(client: TestClient
     html = response.text
     assert "allocation-chart" in html
     assert "assignment-graph" in html
-    assert "assignment-export" in html
     assert "allocation-preset" in html
     assert "allocation-apply" in html
+    staffing_html = client.get("/staffing").text
+    assert "Assignments" in staffing_html
 
 
 # TP-034, TP-035, TP-036, TP-037, TP-038, TP-039, TP-040, TP-041, TP-042

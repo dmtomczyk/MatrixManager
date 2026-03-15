@@ -32,7 +32,13 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClie
     mainmod.run_migrations()
 
     with TestClient(mainmod.app) as test_client:
-        test_client.auth = AUTH
+        login_response = test_client.post(
+            "/login",
+            content=f"username={AUTH[0]}&password={AUTH[1]}&next=%2F",
+            headers={"content-type": "application/x-www-form-urlencoded"},
+            follow_redirects=False,
+        )
+        assert login_response.status_code == 302, login_response.text
         yield test_client
 
     mainmod.engine = original_engine
@@ -51,6 +57,12 @@ def create_organization(client: TestClient, name: str = "Engineering", descripti
     return response.json()
 
 
+def create_job_code(client: TestClient, name: str, is_leader: bool = False) -> dict:
+    response = client.post("/job-codes-api", json={"name": name, "is_leader": is_leader})
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
 def create_employee(
     client: TestClient,
     organization_id: int,
@@ -61,10 +73,10 @@ def create_employee(
     location: str | None = None,
     capacity: float = 1.0,
 ) -> dict:
+    job_code = create_job_code(client, name=role or f"{name} {'Leader' if employee_type == 'L' else 'IC'}", is_leader=employee_type == 'L')
     payload = {
         "name": name,
-        "role": role,
-        "employee_type": employee_type,
+        "job_code_id": job_code["id"],
         "organization_id": organization_id,
         "manager_id": manager_id,
         "location": location,
