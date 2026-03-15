@@ -1,0 +1,76 @@
+const inboxList = document.querySelector('#inbox-list');
+const toast = document.querySelector('#toast');
+
+const apiFetch = async (url, options = {}) => {
+  const response = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...options });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.detail || 'Request failed');
+  }
+  if (response.status === 204) return null;
+  return response.json();
+};
+
+const escapeHtml = (value = '') => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char] || char));
+
+const showToast = (message) => {
+  if (!toast) return;
+  toast.textContent = message;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2200);
+};
+
+const formatDate = (value) => {
+  try {
+    return new Date(value).toLocaleString();
+  } catch {
+    return value;
+  }
+};
+
+const renderInbox = (items) => {
+  if (!items.length) {
+    inboxList.innerHTML = '<div class="panel"><p class="muted">No notifications yet.</p></div>';
+    return;
+  }
+  inboxList.innerHTML = items.map((item) => `
+    <article class="panel inbox-item ${item.is_read ? 'inbox-item-read' : 'inbox-item-unread'}">
+      <div class="inbox-item-top">
+        <div>
+          <h3>${escapeHtml(item.title)}</h3>
+          <p class="muted small-text">${escapeHtml(formatDate(item.created_at))}</p>
+        </div>
+        <div class="panel-actions-row">
+          ${item.is_read ? '' : `<button type="button" data-action="mark-read" data-id="${item.id}">Mark read</button>`}
+          <button type="button" class="secondary" data-action="delete" data-id="${item.id}">Delete</button>
+        </div>
+      </div>
+      <p>${escapeHtml(item.message)}</p>
+    </article>
+  `).join('');
+};
+
+const loadInbox = async () => {
+  renderInbox(await apiFetch('/inbox-api'));
+};
+
+inboxList.addEventListener('click', async (event) => {
+  const button = event.target.closest('button[data-action]');
+  if (!button) return;
+  const { action, id } = button.dataset;
+  try {
+    if (action === 'mark-read') {
+      await apiFetch(`/inbox-api/${id}/read`, { method: 'POST' });
+      showToast('Notification marked read');
+    }
+    if (action === 'delete') {
+      await apiFetch(`/inbox-api/${id}`, { method: 'DELETE' });
+      showToast('Notification deleted');
+    }
+    await loadInbox();
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+loadInbox().catch((err) => alert(err.message));

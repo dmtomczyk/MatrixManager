@@ -144,6 +144,35 @@ body.login-page {
   background: linear-gradient(180deg, #93c5fd, #cbd5e1);
 }
 
+.inbox-list {
+  display: grid;
+  gap: 14px;
+}
+
+.inbox-item {
+  border-left: 4px solid transparent;
+}
+
+.inbox-item-unread {
+  border-left-color: var(--primary);
+  background: linear-gradient(180deg, #ffffff, #f8fbff);
+}
+
+.inbox-item-read {
+  opacity: 0.88;
+}
+
+.inbox-item-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.inbox-item-top h3 {
+  margin: 0 0 4px;
+}
+
 header {
   display: flex;
   justify-content: space-between;
@@ -463,6 +492,24 @@ header nav a,
 .account-menu-username {
   color: white;
   font-weight: 700;
+}
+
+.account-menu-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 600;
+  background: rgba(59, 130, 246, 0.06);
+}
+
+.account-menu-link:hover {
+  background: rgba(59, 130, 246, 0.12);
 }
 
 .account-menu-meta {

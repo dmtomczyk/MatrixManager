@@ -292,6 +292,24 @@ class UserAccountRead(SQLModel):
     auth_source: str = "database"
 
 
+class InboxNotification(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    username: str
+    title: str
+    message: str
+    is_read: bool = False
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class InboxNotificationRead(SQLModel):
+    id: int
+    username: str
+    title: str
+    message: str
+    is_read: bool
+    created_at: datetime
+
+
 app = FastAPI(title="Matrix Manager", version="0.1.0")
 
 app.add_middleware(
@@ -455,6 +473,7 @@ def render_app_nav(current_path: str, username: str) -> str:
                 </div>
               </div>
             </div>
+            <a href="/inbox" class="account-menu-link">Inbox</a>
             <form method="post" action="/logout" class="logout-form">
               <button type="submit" class="logout-button">Logout</button>
             </form>
@@ -499,7 +518,7 @@ def build_login_page(error: str = "", next_path: str = "/") -> str:
 
 def is_html_request(request: Request) -> bool:
     accept = request.headers.get("accept", "")
-    return "text/html" in accept or request.url.path in {"/", "/planning", "/people", "/staffing", "/orgs", "/job-codes", "/canvas", "/dashboard", "/audit", "/users", "/db-management", "/docs", "/redoc"}
+    return "text/html" in accept or request.url.path in {"/", "/planning", "/people", "/staffing", "/orgs", "/job-codes", "/canvas", "/dashboard", "/inbox", "/audit", "/users", "/db-management", "/docs", "/redoc"}
 
 
 def create_db_and_tables(bind_engine=engine) -> None:
@@ -534,6 +553,7 @@ def run_migrations(bind_engine=engine) -> None:
         AuditEntry.__table__.create(bind=connection, checkfirst=True)
         DBConnectionConfig.__table__.create(bind=connection, checkfirst=True)
         UserAccount.__table__.create(bind=connection, checkfirst=True)
+        InboxNotification.__table__.create(bind=connection, checkfirst=True)
         JobCode.__table__.create(bind=connection, checkfirst=True)
 
 
@@ -966,6 +986,32 @@ def ensure_default_admin_user() -> None:
         session.commit()
 
 
+def ensure_inbox_welcome_notification(username: str) -> None:
+    with Session(control_engine) as session:
+        existing = session.exec(select(InboxNotification).where(InboxNotification.username == username)).first()
+        if existing:
+            return
+        session.add(
+            InboxNotification(
+                username=username,
+                title="Welcome to Matrix Management",
+                message="This inbox is where user-specific notifications will appear. You can reach it any time from the signed-in account menu.",
+            )
+        )
+        session.commit()
+
+
+def serialize_inbox_notification(notification: InboxNotification) -> InboxNotificationRead:
+    return InboxNotificationRead(
+        id=notification.id,
+        username=notification.username,
+        title=notification.title,
+        message=notification.message,
+        is_read=notification.is_read,
+        created_at=notification.created_at,
+    )
+
+
 def ensure_default_seed_data() -> None:
     active_connection = get_active_db_connection_config()
     data_engine = get_or_create_data_engine(active_connection)
@@ -1110,6 +1156,7 @@ async def login_submit(request: Request):
     next_target = unquote_plus(next_target)
     if not authenticate_username_password(username, password):
         return HTMLResponse(build_login_page(error="Invalid username or password.", next_path=next_target), status_code=401)
+    ensure_inbox_welcome_notification(username)
     target = next_target if next_target.startswith("/") else "/"
     response = RedirectResponse(url=target, status_code=302)
     response.set_cookie(
@@ -1201,6 +1248,19 @@ def serve_dashboard(request: Request) -> str:
         {
             'href="/static/styles.css"': f'href="{static_asset_url("styles.css")}"',
             'src="/static/project-dashboard.js"': f'src="{static_asset_url("project-dashboard.js")}"',
+        },
+        current_path=request.url.path,
+        username=get_session_username(request.cookies.get(SESSION_COOKIE_NAME)),
+    )
+
+
+@app.get("/inbox", response_class=HTMLResponse)
+def serve_inbox(request: Request) -> str:
+    return serve_html_page(
+        "inbox.html",
+        {
+            'href="/static/styles.css"': f'href="{static_asset_url("styles.css")}"',
+            'src="/static/inbox.js"': f'src="{static_asset_url("inbox.js")}"',
         },
         current_path=request.url.path,
         username=get_session_username(request.cookies.get(SESSION_COOKIE_NAME)),
@@ -2002,6 +2062,40 @@ def clear_audit_log(request: Request, session: Session = Depends(get_session)):
     )
 
 
+@app.get("/inbox-api", response_model=List[InboxNotificationRead])
+def list_inbox_notifications(request: Request, session: Session = Depends(get_control_session)):
+    username = get_request_username(request)
+    items = session.exec(
+        select(InboxNotification)
+        .where(InboxNotification.username == username)
+        .order_by(InboxNotification.is_read.asc(), InboxNotification.created_at.desc())
+    ).all()
+    return [serialize_inbox_notification(item) for item in items]
+
+
+@app.post("/inbox-api/{notification_id}/read", response_model=InboxNotificationRead)
+def mark_inbox_notification_read(notification_id: int, request: Request, session: Session = Depends(get_control_session)):
+    username = get_request_username(request)
+    notification = session.get(InboxNotification, notification_id)
+    if not notification or notification.username != username:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    notification.is_read = True
+    session.add(notification)
+    session.commit()
+    session.refresh(notification)
+    return serialize_inbox_notification(notification)
+
+
+@app.delete("/inbox-api/{notification_id}", status_code=204)
+def delete_inbox_notification(notification_id: int, request: Request, session: Session = Depends(get_control_session)):
+    username = get_request_username(request)
+    notification = session.get(InboxNotification, notification_id)
+    if not notification or notification.username != username:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    session.delete(notification)
+    session.commit()
+
+
 @app.get("/users-api", response_model=List[UserAccountRead])
 def list_users(request: Request, session: Session = Depends(get_control_session)):
     require_admin_user(request)
@@ -2028,6 +2122,7 @@ def create_user(user: UserAccountCreate, request: Request, session: Session = De
     session.add(db_user)
     session.commit()
     session.refresh(db_user)
+    ensure_inbox_welcome_notification(db_user.username)
     return serialize_user_account(db_user)
 
 

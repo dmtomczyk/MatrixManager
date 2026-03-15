@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Matrix Manager · Inbox</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Inbox</h1>
+        <p>Notifications and messages intended for the currently signed-in user.</p>
+      </div>
+      <nav>
+        <a href="/planning">Projects</a>
+        <a href="/people">Employees</a>
+        <a href="/staffing">Assignments</a>
+        <a href="/orgs">Organizations</a>
+        <a href="/canvas">Canvas</a>
+        <a href="/dashboard">Forecast</a>
+        <form method="post" action="/logout" class="logout-form">
+          <button type="submit" class="logout-button">Logout</button>
+        </form>
+      </nav>
+    </header>
+
+    <main>
+      <section class="card single-column">
+        <div class="section-head with-actions">
+          <div class="section-copy">
+            <h2>Your Inbox</h2>
+            <p>Unread items stay highlighted until you mark them read or delete them.</p>
+          </div>
+        </div>
+        <div id="inbox-list" class="inbox-list"></div>
+      </section>
+    </main>
+
+    <div id="toast" role="status" aria-live="polite"></div>
+
+    <script type="module" src="/static/inbox.js"></script>
+  </body>
+</html>
