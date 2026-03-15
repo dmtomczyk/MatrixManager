@@ -6,6 +6,7 @@ const projectSearch = document.getElementById('project-search');
 const projectCheckboxes = document.getElementById('project-checkboxes');
 const projectSelectAll = document.getElementById('project-select-all');
 const projectClearBtn = document.getElementById('project-clear');
+const organizationFilter = document.getElementById('dashboard-organization-filter');
 const startInput = document.getElementById('dashboard-start');
 const endInput = document.getElementById('dashboard-end');
 const applyBtn = document.getElementById('apply-range');
@@ -16,6 +17,7 @@ const DAY_MS = 86400000;
 const WEEK_MS = DAY_MS * 7;
 
 let projects = [];
+let organizations = [];
 let demands = [];
 let assignments = [];
 let selectedProjectIds = new Set();
@@ -117,6 +119,7 @@ const renderProjectCheckboxes = (query = '') => {
 
 const renderFilters = () => {
   renderProjectCheckboxes(projectSearch?.value || '');
+  organizationFilter.innerHTML = ['<option value="">All organizations</option>'].concat(organizations.map((org) => `<option value="${org.id}">${org.name}</option>`)).join('');
   updatePickerSummary();
   if (!startInput.value && defaultRange.start) startInput.value = formatISODate(new Date(defaultRange.start));
   if (!endInput.value && defaultRange.end) endInput.value = formatISODate(new Date(defaultRange.end));
@@ -151,8 +154,9 @@ const buildMonthlyBuckets = (rangeStart, rangeEnd) => {
   return buckets;
 };
 
-const projectDemandItems = (projectId) => demands.filter((item) => item.project_id === projectId);
-const projectAssignmentItems = (projectId) => assignments.filter((item) => item.project_id === projectId);
+const selectedOrganizationId = () => organizationFilter?.value || '';
+const projectDemandItems = (projectId) => demands.filter((item) => item.project_id === projectId && (!selectedOrganizationId() || String(item.organization_id || '') === String(selectedOrganizationId())));
+const projectAssignmentItems = (projectId) => assignments.filter((item) => item.project_id === projectId && (!selectedOrganizationId() || String(item.organization_id || '') === String(selectedOrganizationId())));
 
 const buildBreakdownLabel = (items, labelKey, valueKey = 'allocation') => {
   if (!items.length) return ['No contributing records'];
@@ -183,11 +187,13 @@ const computeWeeklyDatasets = (rangeStart, rangeEnd) => {
     const allocationItems = projectAssignmentItems(project.id);
     const demandBreakdowns = buckets.map((bucket) => computeBucketValue(demandItems, bucket, 'title', 'required_allocation'));
     const allocationBreakdowns = buckets.map((bucket) => computeBucketValue(allocationItems, bucket, 'employee_name', 'allocation'));
+    const demandSeries = demandBreakdowns.map((item) => item.total);
+    const allocationSeries = allocationBreakdowns.map((item) => item.total);
     datasets.push({
       label: `${project.name} — Demand`,
       projectName: project.name,
       forecastKind: 'demand',
-      data: demandBreakdowns.map((item) => item.total),
+      data: demandSeries,
       tooltipBreakdown: demandBreakdowns.map((item) => item.lines),
       borderColor: baseColor,
       backgroundColor: baseColor,
@@ -201,14 +207,26 @@ const computeWeeklyDatasets = (rangeStart, rangeEnd) => {
       label: `${project.name} — Allocation`,
       projectName: project.name,
       forecastKind: 'allocation',
-      data: allocationBreakdowns.map((item) => item.total),
+      data: allocationSeries,
       tooltipBreakdown: allocationBreakdowns.map((item) => item.lines),
+      demandReference: demandSeries,
       borderColor: lightenHex(baseColor, 0.45),
       backgroundColor: lightenHex(baseColor, 0.45),
       borderWidth: 2.4,
       tension: 0.25,
       pointRadius: 0,
-      fill: false,
+      fill: {
+        target: '-1',
+        above: 'rgba(34, 197, 94, 0.08)',
+        below: 'rgba(239, 68, 68, 0.18)',
+      },
+      segment: {
+        borderColor: (ctx) => {
+          const demandValue = ctx.dataset.demandReference?.[ctx.p1DataIndex] ?? 0;
+          const allocationValue = ctx.p1.parsed.y ?? 0;
+          return allocationValue < demandValue ? '#dc2626' : lightenHex(baseColor, 0.45);
+        },
+      },
     });
   });
   return { labels, datasets };
@@ -287,8 +305,9 @@ const renderCharts = () => {
 
 const loadData = async () => {
   try {
-    const [projectData, demandData, assignmentData] = await Promise.all([apiFetch('/projects'), apiFetch('/demands-api'), apiFetch('/assignments')]);
+    const [projectData, organizationData, demandData, assignmentData] = await Promise.all([apiFetch('/projects'), apiFetch('/organizations'), apiFetch('/demands-api'), apiFetch('/assignments')]);
     projects = projectData;
+    organizations = organizationData;
     demands = demandData;
     assignments = assignmentData;
     selectedProjectIds = new Set(projects.map((proj) => proj.id));
@@ -328,5 +347,6 @@ projectClearBtn?.addEventListener('click', () => {
   updatePickerSummary();
   renderCharts();
 });
+organizationFilter?.addEventListener('change', () => renderCharts());
 
 loadData();

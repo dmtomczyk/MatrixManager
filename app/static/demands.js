@@ -3,10 +3,12 @@ const demandForm = document.querySelector('#demand-form');
 const demandFormTitle = document.querySelector('#demand-form-title');
 const demandFormReset = document.querySelector('#demand-form-reset');
 const demandProjectSelect = document.querySelector('#demand-project');
+const demandOrganizationSelect = document.querySelector('#demand-organization');
 const demandJobCodeSelect = document.querySelector('#demand-job-code');
 const toast = document.querySelector('#toast');
 
 let projects = [];
+let organizations = [];
 let jobCodes = [];
 let demands = [];
 
@@ -28,6 +30,7 @@ const showToast = (message) => {
 };
 const updateSelects = () => {
   demandProjectSelect.innerHTML = ['<option value="">Select project</option>'].concat(projects.map((item) => `<option value="${item.id}">${escapeHtml(item.name)}</option>`)).join('');
+  demandOrganizationSelect.innerHTML = ['<option value="">Unassigned</option>'].concat(organizations.map((item) => `<option value="${item.id}">${escapeHtml(item.name)}</option>`)).join('');
   demandJobCodeSelect.innerHTML = ['<option value="">Any job code</option>'].concat(jobCodes.map((item) => `<option value="${item.id}">${escapeHtml(item.name)}</option>`)).join('');
 };
 const renderDemands = () => {
@@ -35,6 +38,7 @@ const renderDemands = () => {
     <tr>
       <td>${escapeHtml(item.project_name || '')}</td>
       <td>${escapeHtml(item.title)}</td>
+      <td>${escapeHtml(item.organization_name || 'Unassigned')}</td>
       <td>${escapeHtml(item.job_code_name || 'Any')}</td>
       <td>${escapeHtml(item.skill_notes || '')}</td>
       <td>${escapeHtml(`${item.start_date} → ${item.end_date}`)}</td>
@@ -49,8 +53,9 @@ const renderDemands = () => {
   `).join('');
 };
 const loadData = async () => {
-  [projects, jobCodes, demands] = await Promise.all([
+  [projects, organizations, jobCodes, demands] = await Promise.all([
     apiFetch('/projects'),
+    apiFetch('/organizations'),
     apiFetch('/job-codes-api'),
     apiFetch('/demands-api'),
   ]);
@@ -71,6 +76,7 @@ const populateDemandForm = (id) => {
   if (!demand) return;
   demandForm.querySelector('input[name="entity_id"]').value = demand.id;
   demandProjectSelect.value = demand.project_id;
+  demandOrganizationSelect.value = demand.organization_id || '';
   demandJobCodeSelect.value = demand.job_code_id || '';
   demandForm.title.value = demand.title;
   demandForm.skill_notes.value = demand.skill_notes || '';
@@ -87,6 +93,7 @@ demandForm.addEventListener('submit', async (event) => {
   const payload = {
     project_id: Number(formData.get('project_id')),
     title: String(formData.get('title') || '').trim(),
+    organization_id: formData.get('organization_id') ? Number(formData.get('organization_id')) : null,
     job_code_id: formData.get('job_code_id') ? Number(formData.get('job_code_id')) : null,
     skill_notes: String(formData.get('skill_notes') || '').trim() || null,
     start_date: formData.get('start_date'),

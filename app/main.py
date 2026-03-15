@@ -160,6 +160,7 @@ class ProjectUpdate(SQLModel):
 class DemandBase(SQLModel):
     project_id: int = Field(foreign_key="project.id")
     title: str
+    organization_id: Optional[int] = Field(default=None, foreign_key="organization.id")
     job_code_id: Optional[int] = Field(default=None, foreign_key="jobcode.id")
     skill_notes: Optional[str] = None
     start_date: date
@@ -179,6 +180,7 @@ class DemandCreate(DemandBase):
 class DemandUpdate(SQLModel):
     project_id: Optional[int] = None
     title: Optional[str] = None
+    organization_id: Optional[int] = None
     job_code_id: Optional[int] = None
     skill_notes: Optional[str] = None
     start_date: Optional[date] = None
@@ -192,6 +194,8 @@ class DemandRead(SQLModel):
     project_id: int
     project_name: Optional[str] = None
     title: str
+    organization_id: Optional[int] = None
+    organization_name: Optional[str] = None
     job_code_id: Optional[int] = None
     job_code_name: Optional[str] = None
     skill_notes: Optional[str] = None
@@ -240,6 +244,8 @@ class AssignmentRead(SQLModel):
     notes: Optional[str]
     employee_name: Optional[str]
     project_name: Optional[str]
+    organization_id: Optional[int] = None
+    organization_name: Optional[str] = None
     demand_title: Optional[str] = None
 
 
@@ -592,6 +598,10 @@ def run_migrations(bind_engine=engine) -> None:
                 connection.exec_driver_sql("ALTER TABLE employee ADD COLUMN employee_type TEXT DEFAULT 'IC'")
             if "job_code_id" not in column_names:
                 connection.exec_driver_sql("ALTER TABLE employee ADD COLUMN job_code_id INTEGER")
+            demand_columns = connection.exec_driver_sql("PRAGMA table_info(demand)").fetchall() if connection.exec_driver_sql("SELECT name FROM sqlite_master WHERE type='table' AND name='demand'").fetchone() else []
+            demand_column_names = {row[1] for row in demand_columns}
+            if demand_columns and "organization_id" not in demand_column_names:
+                connection.exec_driver_sql("ALTER TABLE demand ADD COLUMN organization_id INTEGER")
             assignment_columns = connection.exec_driver_sql("PRAGMA table_info(assignment)").fetchall()
             assignment_column_names = {row[1] for row in assignment_columns}
             if "demand_id" not in assignment_column_names:
@@ -608,6 +618,12 @@ def run_migrations(bind_engine=engine) -> None:
                     connection.exec_driver_sql("ALTER TABLE employee ADD COLUMN employee_type TEXT DEFAULT 'IC'")
                 if "job_code_id" not in column_names:
                     connection.exec_driver_sql("ALTER TABLE employee ADD COLUMN job_code_id INTEGER")
+                demand_exists = connection.exec_driver_sql("SELECT to_regclass('public.demand')").scalar()
+                if demand_exists:
+                    demand_rows = connection.exec_driver_sql("SELECT column_name FROM information_schema.columns WHERE table_name = 'demand'").fetchall()
+                    demand_column_names = {row[0] for row in demand_rows}
+                    if "organization_id" not in demand_column_names:
+                        connection.exec_driver_sql("ALTER TABLE demand ADD COLUMN organization_id INTEGER")
                 assignment_exists = connection.exec_driver_sql("SELECT to_regclass('public.assignment')").scalar()
                 if assignment_exists:
                     assignment_rows = connection.exec_driver_sql("SELECT column_name FROM information_schema.columns WHERE table_name = 'assignment'").fetchall()
@@ -1097,6 +1113,8 @@ def ensure_default_seed_data() -> None:
             session.add(manager_code)
             session.commit()
             session.refresh(manager_code)
+
+        unassigned_org = get_or_create_unassigned_organization(session)
 
         default_org = session.exec(select(Organization).where(Organization.name == "Default Org")).first()
         if not default_org:
@@ -1745,6 +1763,7 @@ def update_demand(demand_id: int, update: DemandUpdate, request: Request, sessio
     proposed = {
         "project_id": data.get("project_id", demand.project_id),
         "title": data.get("title", demand.title),
+        "organization_id": data.get("organization_id", demand.organization_id),
         "job_code_id": data.get("job_code_id", demand.job_code_id),
         "skill_notes": data.get("skill_notes", demand.skill_notes),
         "start_date": data.get("start_date", demand.start_date),
@@ -1914,6 +1933,17 @@ def ensure_organization(session: Session, organization_id: int) -> Organization:
     return organization
 
 
+def get_or_create_unassigned_organization(session: Session) -> Organization:
+    organization = session.exec(select(Organization).where(Organization.name == "Unassigned")).first()
+    if organization:
+        return organization
+    organization = Organization(name="Unassigned", description="Default catch-all organization bucket")
+    session.add(organization)
+    session.commit()
+    session.refresh(organization)
+    return organization
+
+
 def ensure_job_code(session: Session, job_code_id: int) -> JobCode:
     job_code = session.get(JobCode, job_code_id)
     if not job_code:
@@ -2002,6 +2032,7 @@ def validate_demand_payload(session: Session, payload: dict[str, Any]) -> dict[s
     required_allocation = payload.get("required_allocation")
     start_date_value = payload.get("start_date")
     end_date_value = payload.get("end_date")
+    organization_id = payload.get("organization_id")
     job_code_id = payload.get("job_code_id")
     if project_id is None:
         raise HTTPException(status_code=400, detail="Project is required")
@@ -2012,6 +2043,10 @@ def validate_demand_payload(session: Session, payload: dict[str, Any]) -> dict[s
         raise HTTPException(status_code=400, detail="Required allocation must be greater than zero")
     if start_date_value is None or end_date_value is None or start_date_value > end_date_value:
         raise HTTPException(status_code=400, detail="Demand start date must be on or before end date")
+    if organization_id is None:
+        payload["organization_id"] = get_or_create_unassigned_organization(session).id
+    else:
+        ensure_organization(session, organization_id)
     if job_code_id is not None:
         ensure_job_code(session, job_code_id)
     payload["title"] = title
@@ -2022,6 +2057,7 @@ def validate_demand_payload(session: Session, payload: dict[str, Any]) -> dict[s
 
 def serialize_demand(session: Session, demand: Demand) -> DemandRead:
     project = session.get(Project, demand.project_id) if demand.project_id is not None else None
+    organization = session.get(Organization, demand.organization_id) if demand.organization_id is not None else None
     job_code = session.get(JobCode, demand.job_code_id) if demand.job_code_id is not None else None
     assignments = session.exec(select(Assignment).where(Assignment.demand_id == demand.id)).all()
     fulfilled_allocation = round(sum(item.allocation for item in assignments), 2)
@@ -2031,6 +2067,8 @@ def serialize_demand(session: Session, demand: Demand) -> DemandRead:
         project_id=demand.project_id,
         project_name=project.name if project else None,
         title=demand.title,
+        organization_id=demand.organization_id,
+        organization_name=organization.name if organization else None,
         job_code_id=demand.job_code_id,
         job_code_name=job_code.name if job_code else None,
         skill_notes=demand.skill_notes,
@@ -2082,6 +2120,7 @@ def ensure_employee_and_project(session: Session, employee_id: int, project_id: 
 def serialize_assignment(session: Session, assignment: Assignment) -> AssignmentRead:
     employee = session.get(Employee, assignment.employee_id)
     project = session.get(Project, assignment.project_id)
+    organization = session.get(Organization, employee.organization_id) if employee and employee.organization_id is not None else None
     demand = session.get(Demand, assignment.demand_id) if assignment.demand_id is not None else None
     return AssignmentRead(
         id=assignment.id,
@@ -2094,6 +2133,8 @@ def serialize_assignment(session: Session, assignment: Assignment) -> Assignment
         notes=assignment.notes,
         employee_name=employee.name if employee else None,
         project_name=project.name if project else None,
+        organization_id=employee.organization_id if employee else None,
+        organization_name=organization.name if organization else None,
         demand_title=demand.title if demand else None,
     )
 

@@ -38,6 +38,7 @@
                 <tr>
                   <th>Project</th>
                   <th>Demand</th>
+                  <th>Organization</th>
                   <th>Job Code</th>
                   <th>Skillset</th>
                   <th>Dates</th>
@@ -55,6 +56,7 @@
             <input type="hidden" name="entity_id" />
             <label><span class="label-text required-field">Project</span><select name="project_id" id="demand-project" required></select></label>
             <label><span class="label-text required-field">Demand Title</span><input name="title" id="demand-title" required placeholder="e.g. Backend SWE - C#" /></label>
+            <label>Organization<select name="organization_id" id="demand-organization"></select></label>
             <label>Job Code<select name="job_code_id" id="demand-job-code"></select></label>
             <label>Skillset / Notes<input name="skill_notes" id="demand-skill-notes" placeholder="e.g. C#, .NET, Azure" /></label>
             <label><span class="label-text required-field">Start Date</span><input type="date" name="start_date" id="demand-start-date" required /></label>
