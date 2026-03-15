@@ -1402,7 +1402,7 @@ def ensure_default_seed_data() -> None:
                 skill_notes="Backend API and staffing workflow",
                 start_date=start_date,
                 end_date=end_date,
-                required_allocation=1.0,
+                required_allocation=1.5,
                 notes="Starter demand used to demonstrate approvals and forecast coverage",
             )
             session.add(example_demand)
@@ -1414,7 +1414,7 @@ def ensure_default_seed_data() -> None:
             example_demand.skill_notes = "Backend API and staffing workflow"
             example_demand.start_date = start_date
             example_demand.end_date = end_date
-            example_demand.required_allocation = 1.0
+            example_demand.required_allocation = 1.5
             example_demand.notes = "Starter demand used to demonstrate approvals and forecast coverage"
             session.add(example_demand)
             session.commit()
@@ -1433,7 +1433,7 @@ def ensure_default_seed_data() -> None:
                 allocation=0.75,
                 notes="Starter approved example allocation",
                 status="approved",
-                submitted_by_username=get_auth_username(),
+                submitted_by_username="betauser",
                 approved_by_username=get_auth_username(),
                 reviewed_at=datetime.now(timezone.utc),
             )
@@ -1446,7 +1446,7 @@ def ensure_default_seed_data() -> None:
             approved_assignment.allocation = 0.75
             approved_assignment.notes = "Starter approved example allocation"
             approved_assignment.status = "approved"
-            approved_assignment.submitted_by_username = get_auth_username()
+            approved_assignment.submitted_by_username = "betauser"
             approved_assignment.approved_by_username = get_auth_username()
             approved_assignment.denied_by_username = None
             approved_assignment.reviewed_at = datetime.now(timezone.utc)
@@ -1467,7 +1467,7 @@ def ensure_default_seed_data() -> None:
                 allocation=0.5,
                 notes="Starter assignment request awaiting approval",
                 status="in_review",
-                submitted_by_username=get_auth_username(),
+                submitted_by_username="betauser",
             )
         else:
             pending_assignment.employee_id = john.id
@@ -1478,7 +1478,7 @@ def ensure_default_seed_data() -> None:
             pending_assignment.allocation = 0.5
             pending_assignment.notes = "Starter assignment request awaiting approval"
             pending_assignment.status = "in_review"
-            pending_assignment.submitted_by_username = get_auth_username()
+            pending_assignment.submitted_by_username = "betauser"
             pending_assignment.approved_by_username = None
             pending_assignment.denied_by_username = None
             pending_assignment.reviewed_at = None
