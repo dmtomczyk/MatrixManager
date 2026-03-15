@@ -185,8 +185,20 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 @app.get("/", response_class=HTMLResponse)
 def serve_index() -> str:
-    index_path = STATIC_DIR / "index.html"
+    index_path = STATIC_DIR / "planning.html"
     return index_path.read_text(encoding="utf-8")
+
+
+@app.get("/employees", response_class=HTMLResponse)
+def serve_employees() -> str:
+    path = STATIC_DIR / "employees.html"
+    return path.read_text(encoding="utf-8")
+
+
+@app.get("/assignments", response_class=HTMLResponse)
+def serve_assignments() -> str:
+    path = STATIC_DIR / "assignments.html"
+    return path.read_text(encoding="utf-8")
 
 
 @app.get("/canvas", response_class=HTMLResponse)

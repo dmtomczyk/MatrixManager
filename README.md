@@ -45,11 +45,12 @@ matrixmanager/
 
    The app listens on `http://127.0.0.1:8000/`. The interactive API docs live at `http://127.0.0.1:8000/docs`.
 
-3. **Use the UI** – visit the root URL to:
-   - add/edit employees and projects
-   - create assignments with allocation percentages (default 100%)
-   - view/delete/edit assignments via the table
-   - inspect per-employee/per-project timelines via the selectors at the bottom
+3. **Use the UI** – visit the root URL for the planning page, then navigate between:
+   - `/` → demand/planning view (projects, timelines, allocation chart, assignment graph)
+   - `/employees` → employee roster and hierarchy management
+   - `/assignments` → assignment CRUD and CSV export
+   - `/orgs` → organization management
+   - `/canvas` → visual staffing canvas
 
 ## API cheat sheet
 

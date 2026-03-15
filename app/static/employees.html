@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Matrix Manager · Employees</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Employee Manager</h1>
+        <p>Maintain your resource roster, reporting lines, and capacity.</p>
+      </div>
+      <nav>
+        <a href="/">Planning</a>
+        <a href="/employees">Employees</a>
+        <a href="/assignments">Assignments</a>
+        <a href="/orgs">Organizations</a>
+        <a href="/canvas">Canvas</a>
+        <a href="/dashboard">Project Dashboard</a>
+      </nav>
+    </header>
+
+    <main class="org-shell">
+      <section id="employees" class="card single-column">
+        <div class="section-head with-actions">
+          <div>
+            <h2>Employees</h2>
+            <p>Capture each person, their org, manager, type, home location, and available capacity.</p>
+          </div>
+          <label class="filter-control">Organization
+            <select id="employee-org-filter">
+              <option value="">All organizations</option>
+            </select>
+          </label>
+        </div>
+        <div class="layout">
+          <div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Role</th>
+                  <th>Type</th>
+                  <th>Organization</th>
+                  <th>Manager</th>
+                  <th>Location</th>
+                  <th>Capacity</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="employee-table"></tbody>
+            </table>
+          </div>
+          <form id="employee-form" class="panel">
+            <h3>Add / Update Employee</h3>
+            <input type="hidden" name="entity_id" id="employee-id" />
+            <label>Name<input name="name" required /></label>
+            <label>Role<input name="role" /></label>
+            <label>Type
+              <select name="employee_type" id="employee-type">
+                <option value="IC">IC</option>
+                <option value="L">L</option>
+              </select>
+            </label>
+            <label>Organization<select name="organization_id" id="employee-organization" required></select></label>
+            <label>Manager<select name="manager_id" id="employee-manager"></select></label>
+            <p id="employee-manager-help" class="muted small-text">Required for ICs. Optional for leaders.</p>
+            <label>Location<input name="location" /></label>
+            <label>Capacity<input name="capacity" type="number" step="0.1" min="0.1" value="1" /></label>
+            <button type="submit">Save Employee</button>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <div id="toast" role="status" aria-live="polite"></div>
+
+    <script type="module" src="/static/employees.js"></script>
+  </body>
+</html>

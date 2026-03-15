@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Matrix Manager · Assignments</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Assignment Manager</h1>
+        <p>Manage project staffing decisions, allocations, and notes in one place.</p>
+      </div>
+      <nav>
+        <a href="/">Planning</a>
+        <a href="/employees">Employees</a>
+        <a href="/assignments">Assignments</a>
+        <a href="/orgs">Organizations</a>
+        <a href="/canvas">Canvas</a>
+        <a href="/dashboard">Project Dashboard</a>
+      </nav>
+    </header>
+
+    <main class="org-shell">
+      <section id="assignments" class="card single-column">
+        <div class="section-head with-actions">
+          <div class="section-copy">
+            <h2>Assignments</h2>
+            <p>Time-phase people across projects with allocation percentages.</p>
+          </div>
+          <button type="button" id="assignment-export" class="ghost-button">Export CSV</button>
+        </div>
+        <div class="layout">
+          <div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Employee</th>
+                  <th>Project</th>
+                  <th>Dates</th>
+                  <th>Allocation</th>
+                  <th>Notes</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="assignment-table"></tbody>
+            </table>
+          </div>
+          <form id="assignment-form" class="panel">
+            <h3>Create Assignment</h3>
+            <input type="hidden" name="entity_id" id="assignment-id" />
+            <label>Employee<select name="employee_id" id="assignment-employee" required></select></label>
+            <label>Project<select name="project_id" id="assignment-project" required></select></label>
+            <label>Start Date<input type="date" name="start_date" required /></label>
+            <label>End Date<input type="date" name="end_date" required /></label>
+            <label>Allocation (%)<input type="number" name="allocation" min="1" max="100" value="100" required /></label>
+            <label>Notes<textarea name="notes" rows="2"></textarea></label>
+            <button type="submit">Save Assignment</button>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <div id="toast" role="status" aria-live="polite"></div>
+
+    <script type="module" src="/static/assignments.js"></script>
+  </body>
+</html>
