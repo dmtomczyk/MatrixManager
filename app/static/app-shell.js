@@ -30,6 +30,7 @@ const updateAccountNotificationState = async () => {
   const accountTrigger = document.querySelector('.account-menu-trigger');
   const inboxLink = document.querySelector('.account-menu-link[href="/inbox"]');
   const assignmentNavLinks = document.querySelectorAll('[data-nav-key="assignments"]');
+  const staffingTriggers = document.querySelectorAll('[data-nav-key="staffing-trigger"]');
   if (!accountMenu || !accountTrigger) return;
   try {
     const response = await fetch('/inbox-api', { headers: { Accept: 'application/json' } });
@@ -62,6 +63,15 @@ const updateAccountNotificationState = async () => {
         delete link.dataset.pendingApprovals;
       }
       link.setAttribute('aria-label', pendingApprovals > 0 ? `Assignments with ${pendingApprovals} pending approvals` : 'Assignments');
+    });
+    staffingTriggers.forEach((trigger) => {
+      trigger.classList.toggle('nav-link-has-pending-approvals', pendingApprovals > 0);
+      if (pendingApprovals > 0) {
+        trigger.dataset.pendingApprovals = String(pendingApprovals);
+      } else {
+        delete trigger.dataset.pendingApprovals;
+      }
+      trigger.setAttribute('aria-label', pendingApprovals > 0 ? `Staffing menu with ${pendingApprovals} pending approvals` : 'Staffing menu');
     });
   } catch (_) {
     // Non-fatal nav enhancement; ignore fetch failures.

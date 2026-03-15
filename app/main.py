@@ -506,9 +506,10 @@ def render_app_nav(current_path: str, username: str) -> str:
         panel_class = "nav-dropdown-panel nav-dropdown-panel-mobile" if mobile else "nav-dropdown-panel"
         details_class = "nav-dropdown nav-dropdown-mobile" if mobile else "nav-dropdown"
         trigger_class = "nav-link nav-dropdown-trigger active" if any(href == current_path for href, _ in nav_links) else "nav-link nav-dropdown-trigger"
+        trigger_meta = ' data-nav-key="staffing-trigger"' if label == "Staffing" else ""
         return f'''
           <details class="{details_class}">
-            <summary class="{trigger_class}">
+            <summary class="{trigger_class}"{trigger_meta}>
               <span>{label}</span>
               <span class="nav-dropdown-caret" aria-hidden="true">▾</span>
             </summary>
