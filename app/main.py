@@ -40,6 +40,7 @@ POSTGRES_DB = os.getenv("POSTGRES_DB", "matrixmanager")
 POSTGRES_USER = os.getenv("POSTGRES_USER", "matrixmanager")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "")
 POSTGRES_SSLMODE = os.getenv("POSTGRES_SSLMODE", "prefer")
+MATRIXMANAGER_VERSION = os.getenv("MATRIXMANAGER_VERSION", "dev")
 
 DATABASE_URL = f"sqlite:///{DB_PATH}"
 CONTROL_DATABASE_URL = f"sqlite:///{CONTROL_DB_PATH}"
@@ -323,6 +324,7 @@ class RuntimeServiceStatusRead(SQLModel):
     status_text: Optional[str] = None
     uptime: Optional[str] = None
     restart_count: Optional[int] = None
+    image: Optional[str] = None
 
 
 class RuntimeDbStatusRead(SQLModel):
@@ -1257,6 +1259,7 @@ def get_docker_service_status() -> tuple[bool, Optional[str], list[RuntimeServic
                     except Exception:
                         uptime = None
                 restart_count = inspect_payload.get("RestartCount")
+                image_name = (inspect_payload.get("Config") or {}).get("Image") or item.get("Image")
                 services.append(
                     RuntimeServiceStatusRead(
                         name=item.get("Service") or item.get("Name") or "unknown",
@@ -1265,6 +1268,7 @@ def get_docker_service_status() -> tuple[bool, Optional[str], list[RuntimeServic
                         status_text=item.get("Status") or item.get("Publishers"),
                         uptime=uptime,
                         restart_count=restart_count if isinstance(restart_count, int) else None,
+                        image=image_name,
                     )
                 )
         else:
@@ -1276,6 +1280,7 @@ def get_docker_service_status() -> tuple[bool, Optional[str], list[RuntimeServic
 
 def get_installed_versions(docker_available: bool) -> list[RuntimeVersionRead]:
     versions = [
+        RuntimeVersionRead(name="Matrix Management", version=MATRIXMANAGER_VERSION, source="env/runtime"),
         RuntimeVersionRead(name="Python", version=os.sys.version.split()[0], source="runtime"),
         RuntimeVersionRead(name="FastAPI", version=getattr(fastapi, "__version__", "unknown"), source="python package"),
         RuntimeVersionRead(name="SQLModel", version=getattr(sqlmodel, "__version__", "unknown"), source="python package"),

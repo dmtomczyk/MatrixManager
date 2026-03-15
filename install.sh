@@ -97,6 +97,14 @@ existing_postgres_volume_name() {
   docker volume ls --format '{{.Name}}' | grep -E "^${project_name}_postgres_data$" | head -n 1 || true
 }
 
+get_matrixmanager_version() {
+  if command -v git >/dev/null 2>&1 && git -C "$ROOT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    git -C "$ROOT_DIR" describe --tags --always --dirty 2>/dev/null || git -C "$ROOT_DIR" rev-parse --short HEAD 2>/dev/null || printf 'dev'
+    return 0
+  fi
+  printf 'dev'
+}
+
 require_command docker
 require_command curl
 require_command python3
@@ -145,6 +153,7 @@ fi
 
 BASE_URL_DEFAULT="http://127.0.0.1:${APP_PORT}"
 MATRIX_BASE_URL="$(prompt_with_default "Base URL" "$BASE_URL_DEFAULT")"
+MATRIXMANAGER_VERSION="$(get_matrixmanager_version)"
 if prompt_yes_no "Seed starter data (Default Org, Manager/Not Assigned job codes, Example Project, Jane/John Doe)?" "yes"; then
   SEED_STARTER_DATA="yes"
 else
@@ -230,6 +239,7 @@ MATRIX_AUTH_PASSWORD=${ADMIN_PASSWORD}
 MATRIX_AUTH_SECRET=${MATRIX_AUTH_SECRET}
 MATRIX_APP_PORT=${APP_PORT}
 MATRIX_BASE_URL=${MATRIX_BASE_URL}
+MATRIXMANAGER_VERSION=${MATRIXMANAGER_VERSION}
 MATRIX_SQLITE_PATH=${MATRIX_SQLITE_PATH}
 MATRIX_CONTROL_DB_PATH=${MATRIX_CONTROL_DB_PATH}
 POSTGRES_HOST=${POSTGRES_HOST}
