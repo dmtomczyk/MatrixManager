@@ -916,6 +916,21 @@ table tbody tr:hover {
   color: var(--primary);
 }
 
+.assignment-status-approved {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.assignment-status-in-review {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.assignment-status-denied {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
 .timeline {
   list-style: none;
   padding: 0;
