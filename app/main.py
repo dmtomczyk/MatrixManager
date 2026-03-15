@@ -9,6 +9,8 @@ import json
 import os
 import re
 import secrets
+import subprocess
+import traceback
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Generator, List, Optional, Set
@@ -286,6 +288,44 @@ class AuditEntryRead(SQLModel):
     after_json: Optional[str]
 
 
+class RuntimeErrorLog(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    occurred_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    path: Optional[str] = None
+    method: Optional[str] = None
+    username: Optional[str] = None
+    error_type: str
+    message: str
+    traceback_text: Optional[str] = None
+
+
+class RuntimeErrorLogRead(SQLModel):
+    id: int
+    occurred_at: datetime
+    path: Optional[str] = None
+    method: Optional[str] = None
+    username: Optional[str] = None
+    error_type: str
+    message: str
+    traceback_text: Optional[str] = None
+
+
+class RuntimeServiceStatusRead(SQLModel):
+    name: str
+    state: str
+    health: Optional[str] = None
+    status_text: Optional[str] = None
+
+
+class RuntimeOverviewRead(SQLModel):
+    runtime_environment: str
+    active_db_type: str
+    install_mode: str
+    docker_available: bool
+    docker_error: Optional[str] = None
+    services: list[RuntimeServiceStatusRead] = []
+
+
 class DBConnectionBase(SQLModel):
     name: str
     db_type: str
@@ -482,6 +522,7 @@ def render_app_nav(current_path: str, username: str) -> str:
         admin_links = [
             ("/users", "Users"),
             ("/audit", "Audit"),
+            ("/runtime", "Runtime"),
             ("/db-management", "Databases"),
         ]
 
@@ -602,7 +643,7 @@ def build_login_page(error: str = "", next_path: str = "/") -> str:
 
 def is_html_request(request: Request) -> bool:
     accept = request.headers.get("accept", "")
-    return "text/html" in accept or request.url.path in {"/", "/planning", "/demands", "/people", "/staffing", "/orgs", "/job-codes", "/canvas", "/dashboard", "/inbox", "/audit", "/users", "/db-management", "/docs", "/redoc"}
+    return "text/html" in accept or request.url.path in {"/", "/planning", "/demands", "/people", "/staffing", "/orgs", "/job-codes", "/canvas", "/dashboard", "/inbox", "/audit", "/users", "/db-management", "/runtime", "/docs", "/redoc"}
 
 
 def create_db_and_tables(bind_engine=engine) -> None:
@@ -695,6 +736,7 @@ def run_migrations(bind_engine=engine) -> None:
                         connection.exec_driver_sql("ALTER TABLE inboxnotification ADD COLUMN metadata_json TEXT")
                 connection.exec_driver_sql("UPDATE employee SET employee_type = 'IC' WHERE employee_type IS NULL OR employee_type = ''")
         AuditEntry.__table__.create(bind=connection, checkfirst=True)
+        RuntimeErrorLog.__table__.create(bind=connection, checkfirst=True)
         DBConnectionConfig.__table__.create(bind=connection, checkfirst=True)
         UserAccount.__table__.create(bind=connection, checkfirst=True)
         InboxNotification.__table__.create(bind=connection, checkfirst=True)
@@ -998,6 +1040,76 @@ def serialize_audit_entry(entry: AuditEntry) -> AuditEntryRead:
     )
 
 
+def serialize_runtime_error(entry: RuntimeErrorLog) -> RuntimeErrorLogRead:
+    return RuntimeErrorLogRead(
+        id=entry.id,
+        occurred_at=entry.occurred_at,
+        path=entry.path,
+        method=entry.method,
+        username=entry.username,
+        error_type=entry.error_type,
+        message=entry.message,
+        traceback_text=entry.traceback_text,
+    )
+
+
+def record_runtime_error(exc: Exception, request: Optional[Request] = None) -> None:
+    try:
+        with Session(control_engine) as session:
+            entry = RuntimeErrorLog(
+                path=str(request.url.path) if request else None,
+                method=request.method if request else None,
+                username=get_session_username(request.cookies.get(SESSION_COOKIE_NAME)) if request else None,
+                error_type=exc.__class__.__name__,
+                message=str(exc),
+                traceback_text="".join(traceback.format_exception(type(exc), exc, exc.__traceback__)),
+            )
+            session.add(entry)
+            session.commit()
+    except Exception:
+        pass
+
+
+def get_runtime_overview() -> RuntimeOverviewRead:
+    services: list[RuntimeServiceStatusRead] = []
+    docker_error = None
+    docker_available = False
+    try:
+        result = subprocess.run(
+            ["docker", "compose", "ps", "--format", "json"],
+            cwd=str(ROOT_DIR),
+            capture_output=True,
+            text=True,
+            timeout=8,
+            check=False,
+        )
+        if result.returncode == 0:
+            docker_available = True
+            lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+            for line in lines:
+                item = json.loads(line)
+                services.append(
+                    RuntimeServiceStatusRead(
+                        name=item.get("Service") or item.get("Name") or "unknown",
+                        state=item.get("State") or "unknown",
+                        health=item.get("Health"),
+                        status_text=item.get("Status") or item.get("Publishers"),
+                    )
+                )
+        else:
+            docker_error = (result.stderr or result.stdout or "docker compose ps failed").strip()
+    except Exception as exc:
+        docker_error = str(exc)
+    return RuntimeOverviewRead(
+        runtime_environment="docker" if Path("/.dockerenv").exists() else "host",
+        active_db_type=MATRIX_ACTIVE_DB_TYPE,
+        install_mode=MATRIX_INSTALL_MODE,
+        docker_available=docker_available,
+        docker_error=docker_error,
+        services=services,
+    )
+
+
 def record_audit_entry(
     session: Session,
     *,
@@ -1106,6 +1218,17 @@ async def require_login(request: Request, call_next):
     if is_html_request(request):
         return RedirectResponse(url=f"/login?next={quote(str(request.url.path))}", status_code=302)
     raise HTTPException(status_code=401, detail="Authentication required")
+
+
+@app.middleware("http")
+async def capture_runtime_errors(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        record_runtime_error(exc, request)
+        raise
 
 
 @app.get("/health")
@@ -1734,6 +1857,22 @@ def serve_db_management_page(request: Request) -> str:
         {
             'href="/static/styles.css"': f'href="{static_asset_url("styles.css")}"',
             'src="/static/db-management.js"': f'src="{static_asset_url("db-management.js")}"',
+        },
+        current_path=request.url.path,
+        username=username,
+    )
+
+
+@app.get("/runtime", response_class=HTMLResponse)
+def serve_runtime_page(request: Request) -> str:
+    username = get_session_username(request.cookies.get(SESSION_COOKIE_NAME))
+    if not is_admin_username(username):
+        raise HTTPException(status_code=403, detail="Only admin can view runtime status")
+    return serve_html_page(
+        "runtime.html",
+        {
+            'href="/static/styles.css"': f'href="{static_asset_url("styles.css")}"',
+            'src="/static/runtime.js"': f'src="{static_asset_url("runtime.js")}"',
         },
         current_path=request.url.path,
         username=username,
@@ -2684,6 +2823,20 @@ def get_project_schedule(project_id: int, session: Session = Depends(get_session
         select(Assignment).where(Assignment.project_id == project_id).order_by(Assignment.start_date)
     ).all()
     return [serialize_assignment(session, a) for a in assignments]
+
+
+@app.get("/runtime-overview", response_model=RuntimeOverviewRead)
+def runtime_overview(request: Request):
+    require_admin_user(request)
+    return get_runtime_overview()
+
+
+@app.get("/runtime-errors", response_model=List[RuntimeErrorLogRead])
+def list_runtime_errors(request: Request, limit: int = 100, session: Session = Depends(get_control_session)):
+    require_admin_user(request)
+    safe_limit = max(1, min(limit, 500))
+    items = session.exec(select(RuntimeErrorLog).order_by(RuntimeErrorLog.occurred_at.desc(), RuntimeErrorLog.id.desc())).all()
+    return [serialize_runtime_error(item) for item in items[:safe_limit]]
 
 
 @app.get("/audit-log", response_model=List[AuditEntryRead])

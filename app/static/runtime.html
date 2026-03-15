@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Matrix Manager · Runtime</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Runtime</h1>
+        <p>Monitor container/service health and review runtime errors captured by the app.</p>
+      </div>
+      <nav>
+        <a href="/planning">Projects</a>
+        <a href="/people">Employees</a>
+        <a href="/staffing">Assignments</a>
+        <a href="/orgs">Organizations</a>
+        <a href="/canvas">Canvas</a>
+        <a href="/dashboard">Forecast</a>
+        <form method="post" action="/logout" class="logout-form">
+          <button type="submit" class="logout-button">Logout</button>
+        </form>
+      </nav>
+    </header>
+
+    <main>
+      <section class="card single-column">
+        <div class="section-head with-actions">
+          <div class="section-copy">
+            <h2>Service Status</h2>
+            <p>Best-effort Docker Compose visibility plus app runtime context.</p>
+          </div>
+          <div class="panel-actions-row">
+            <button type="button" id="runtime-refresh" class="ghost-button">Refresh</button>
+          </div>
+        </div>
+        <div id="runtime-summary" class="card-grid"></div>
+        <div id="runtime-services" class="card-grid"></div>
+      </section>
+
+      <section class="card single-column">
+        <div class="section-head">
+          <h2>Runtime Errors</h2>
+          <p>Read-only list of uncaught runtime errors captured during app execution.</p>
+        </div>
+        <div class="db-table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>When</th>
+                <th>Path</th>
+                <th>User</th>
+                <th>Error</th>
+                <th>Message</th>
+              </tr>
+            </thead>
+            <tbody id="runtime-error-table"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <div id="toast" role="status" aria-live="polite"></div>
+
+    <script type="module" src="/static/runtime.js"></script>
+  </body>
+</html>

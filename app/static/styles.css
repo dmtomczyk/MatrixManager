@@ -794,6 +794,16 @@ main {
   overflow: auto;
 }
 
+.small-pre {
+  margin: 8px 0 0;
+  max-width: min(960px, 70vw);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
 .db-type-fields {
   display: flex;
   flex-direction: column;
