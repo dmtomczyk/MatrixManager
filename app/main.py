@@ -383,7 +383,10 @@ def render_app_nav(current_path: str, username: str) -> str:
         trigger_class = "nav-link nav-dropdown-trigger active" if any(href == current_path for href, _ in nav_links) else "nav-link nav-dropdown-trigger"
         return f'''
           <details class="{details_class}">
-            <summary class="{trigger_class}">{label}</summary>
+            <summary class="{trigger_class}">
+              <span>{label}</span>
+              <span class="nav-dropdown-caret" aria-hidden="true">▾</span>
+            </summary>
             <div class="{panel_class}">
               {"".join(rendered)}
             </div>
