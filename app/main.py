@@ -345,11 +345,14 @@ def get_session_username(cookie_value: Optional[str]) -> Optional[str]:
 def render_app_nav(current_path: str, username: str) -> str:
     links = [
         ("/", "Planning"),
-        ("/people", "Employees"),
         ("/staffing", "Assignments"),
-        ("/orgs", "Organizations"),
         ("/canvas", "Canvas"),
         ("/dashboard", "Project Dashboard"),
+    ]
+    people_links = [
+        ("/orgs", "Organizations"),
+        ("/people", "Employees"),
+        ("/job-codes", "Job Codes"),
     ]
     admin_links: list[tuple[str, str]] = []
     if is_admin_username(username):
@@ -358,50 +361,50 @@ def render_app_nav(current_path: str, username: str) -> str:
             ("/users", "Users"),
             ("/db-management", "DB Managment"),
         ]
-    rendered_links = []
-    for href, label in links:
-        class_name = "nav-link active" if href == current_path else "nav-link"
-        aria_current = ' aria-current="page"' if href == current_path else ""
-        rendered_links.append(f'<a href="{href}" class="{class_name}"{aria_current}>{label}</a>')
-    link_markup = "".join(rendered_links)
 
-    admin_link_markup = ""
-    mobile_admin_markup = ""
-    if admin_links:
-        admin_rendered_links = []
-        for href, label in admin_links:
+    def render_standard_links(nav_links: list[tuple[str, str]]) -> str:
+        rendered = []
+        for href, label in nav_links:
+            class_name = "nav-link active" if href == current_path else "nav-link"
+            aria_current = ' aria-current="page"' if href == current_path else ""
+            rendered.append(f'<a href="{href}" class="{class_name}"{aria_current}>{label}</a>')
+        return "".join(rendered)
+
+    def render_dropdown(label: str, nav_links: list[tuple[str, str]], mobile: bool = False) -> str:
+        if not nav_links:
+            return ""
+        rendered = []
+        for href, item_label in nav_links:
             class_name = "nav-dropdown-link active" if href == current_path else "nav-dropdown-link"
             aria_current = ' aria-current="page"' if href == current_path else ""
-            admin_rendered_links.append(f'<a href="{href}" class="{class_name}"{aria_current}>{label}</a>')
-        admin_panel_markup = "".join(admin_rendered_links)
-        admin_active = any(href == current_path for href, _ in admin_links)
-        admin_trigger_class = "nav-link nav-dropdown-trigger active" if admin_active else "nav-link nav-dropdown-trigger"
-        admin_link_markup = f'''
-          <details class="nav-dropdown">
-            <summary class="{admin_trigger_class}">Administration</summary>
-            <div class="nav-dropdown-panel">
-              {admin_panel_markup}
+            rendered.append(f'<a href="{href}" class="{class_name}"{aria_current}>{item_label}</a>')
+        panel_class = "nav-dropdown-panel nav-dropdown-panel-mobile" if mobile else "nav-dropdown-panel"
+        details_class = "nav-dropdown nav-dropdown-mobile" if mobile else "nav-dropdown"
+        trigger_class = "nav-link nav-dropdown-trigger active" if any(href == current_path for href, _ in nav_links) else "nav-link nav-dropdown-trigger"
+        return f'''
+          <details class="{details_class}">
+            <summary class="{trigger_class}">{label}</summary>
+            <div class="{panel_class}">
+              {"".join(rendered)}
             </div>
           </details>
         '''
-        mobile_admin_markup = f'''
-                <details class="nav-dropdown nav-dropdown-mobile">
-                  <summary class="nav-link nav-dropdown-trigger{' active' if admin_active else ''}">Administration</summary>
-                  <div class="nav-dropdown-panel nav-dropdown-panel-mobile">
-                    {admin_panel_markup}
-                  </div>
-                </details>
-        '''
+
+    link_markup = render_standard_links(links)
+    people_link_markup = render_dropdown("People", people_links)
+    mobile_people_markup = render_dropdown("People", people_links, mobile=True)
+    admin_link_markup = render_dropdown("Administration", admin_links) if admin_links else ""
+    mobile_admin_markup = render_dropdown("Administration", admin_links, mobile=True) if admin_links else ""
     return f'''<nav class="app-nav" aria-label="Primary">
         <div class="app-nav-main">
-          <div class="nav-links nav-links-desktop">{link_markup}{admin_link_markup}</div>
+          <div class="nav-links nav-links-desktop">{link_markup}{people_link_markup}{admin_link_markup}</div>
           <details class="hamburger-menu">
             <summary class="hamburger-trigger" aria-label="Open navigation menu">
               <span class="hamburger-icon" aria-hidden="true"></span>
               <span>Menu</span>
             </summary>
             <div class="hamburger-panel">
-              <div class="nav-links nav-links-mobile">{link_markup}{mobile_admin_markup}</div>
+              <div class="nav-links nav-links-mobile">{link_markup}{mobile_people_markup}{mobile_admin_markup}</div>
             </div>
           </details>
         </div>
@@ -465,7 +468,7 @@ def build_login_page(error: str = "", next_path: str = "/") -> str:
 
 def is_html_request(request: Request) -> bool:
     accept = request.headers.get("accept", "")
-    return "text/html" in accept or request.url.path in {"/", "/people", "/staffing", "/orgs", "/canvas", "/dashboard", "/audit", "/users", "/db-management", "/docs", "/redoc"}
+    return "text/html" in accept or request.url.path in {"/", "/people", "/staffing", "/orgs", "/job-codes", "/canvas", "/dashboard", "/audit", "/users", "/db-management", "/docs", "/redoc"}
 
 
 def create_db_and_tables(bind_engine=engine) -> None:
@@ -1001,6 +1004,19 @@ def serve_org_manager(request: Request) -> str:
         {
             'href="/static/styles.css"': f'href="{static_asset_url("styles.css")}"',
             'src="/static/organizations.js"': f'src="{static_asset_url("organizations.js")}"',
+        },
+        current_path=request.url.path,
+        username=get_session_username(request.cookies.get(SESSION_COOKIE_NAME)),
+    )
+
+
+@app.get("/job-codes", response_class=HTMLResponse)
+def serve_job_codes(request: Request) -> str:
+    return serve_html_page(
+        "job-codes.html",
+        {
+            'href="/static/styles.css"': f'href="{static_asset_url("styles.css")}"',
+            'src="/static/job-codes.js"': f'src="{static_asset_url("job-codes.js")}"',
         },
         current_path=request.url.path,
         username=get_session_username(request.cookies.get(SESSION_COOKIE_NAME)),

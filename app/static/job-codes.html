@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Matrix Manager · Job Codes</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Job Codes</h1>
+        <p>Define the standard people classifications that will support future staffing and reporting flows.</p>
+      </div>
+      <nav>
+        <a href="/">Planning</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="card single-column">
+        <div class="section-head">
+          <h2>Job code catalog</h2>
+          <p>This page is now part of the People navigation group. Backend CRUD can land next when you are ready to define the model.</p>
+        </div>
+        <div class="card-grid">
+          <article class="panel">
+            <h3>What belongs here</h3>
+            <ul>
+              <li>Job code / role code identifier</li>
+              <li>Display name</li>
+              <li>Job family or discipline</li>
+              <li>Optional level / track metadata</li>
+              <li>Active / inactive status</li>
+            </ul>
+          </article>
+          <article class="panel">
+            <h3>Suggested next step</h3>
+            <p>Add a dedicated JobCode model and CRUD surface, then let employees reference job codes instead of carrying freeform role text everywhere.</p>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <div id="toast" role="status" aria-live="polite"></div>
+
+    <script type="module" src="/static/job-codes.js"></script>
+  </body>
+</html>
