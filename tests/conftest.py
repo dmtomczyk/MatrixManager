@@ -107,6 +107,34 @@ def create_project(
     return response.json()
 
 
+def create_demand(
+    client: TestClient,
+    project_id: int,
+    title: str = "Backend SWE - C#",
+    job_code_id: int | None = None,
+    skill_notes: str | None = None,
+    start_date: str = "2026-03-01",
+    end_date: str = "2026-03-31",
+    required_allocation: float = 1.0,
+    notes: str | None = None,
+) -> dict:
+    response = client.post(
+        "/demands-api",
+        json={
+            "project_id": project_id,
+            "title": title,
+            "job_code_id": job_code_id,
+            "skill_notes": skill_notes,
+            "start_date": start_date,
+            "end_date": end_date,
+            "required_allocation": required_allocation,
+            "notes": notes,
+        },
+    )
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
 def create_assignment(
     client: TestClient,
     employee_id: int,
@@ -115,12 +143,14 @@ def create_assignment(
     end_date: str = "2026-03-14",
     allocation: float = 0.5,
     notes: str | None = None,
+    demand_id: int | None = None,
 ) -> dict:
     response = client.post(
         "/assignments",
         json={
             "employee_id": employee_id,
             "project_id": project_id,
+            "demand_id": demand_id,
             "start_date": start_date,
             "end_date": end_date,
             "allocation": allocation,

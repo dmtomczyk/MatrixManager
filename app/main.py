@@ -157,9 +157,56 @@ class ProjectUpdate(SQLModel):
     end_date: Optional[date] = None
 
 
+class DemandBase(SQLModel):
+    project_id: int = Field(foreign_key="project.id")
+    title: str
+    job_code_id: Optional[int] = Field(default=None, foreign_key="jobcode.id")
+    skill_notes: Optional[str] = None
+    start_date: date
+    end_date: date
+    required_allocation: float = 1.0
+    notes: Optional[str] = None
+
+
+class Demand(DemandBase, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+
+class DemandCreate(DemandBase):
+    pass
+
+
+class DemandUpdate(SQLModel):
+    project_id: Optional[int] = None
+    title: Optional[str] = None
+    job_code_id: Optional[int] = None
+    skill_notes: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    required_allocation: Optional[float] = None
+    notes: Optional[str] = None
+
+
+class DemandRead(SQLModel):
+    id: int
+    project_id: int
+    project_name: Optional[str] = None
+    title: str
+    job_code_id: Optional[int] = None
+    job_code_name: Optional[str] = None
+    skill_notes: Optional[str] = None
+    start_date: date
+    end_date: date
+    required_allocation: float
+    fulfilled_allocation: float = 0.0
+    remaining_allocation: float = 0.0
+    notes: Optional[str] = None
+
+
 class AssignmentBase(SQLModel):
     employee_id: int = Field(foreign_key="employee.id")
     project_id: int = Field(foreign_key="project.id")
+    demand_id: Optional[int] = Field(default=None, foreign_key="demand.id")
     start_date: date
     end_date: date
     allocation: float = 1.0
@@ -175,6 +222,7 @@ class AssignmentCreate(AssignmentBase):
 
 
 class AssignmentUpdate(SQLModel):
+    demand_id: Optional[int] = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     allocation: Optional[float] = None
@@ -185,12 +233,14 @@ class AssignmentRead(SQLModel):
     id: int
     employee_id: int
     project_id: int
+    demand_id: Optional[int] = None
     start_date: date
     end_date: date
     allocation: float
     notes: Optional[str]
     employee_name: Optional[str]
     project_name: Optional[str]
+    demand_title: Optional[str] = None
 
 
 class AuditEntry(SQLModel, table=True):
@@ -389,6 +439,7 @@ def render_app_nav(current_path: str, username: str) -> str:
     links = [
         ("/", "Home"),
         ("/planning", "Projects"),
+        ("/demands", "Demands"),
         ("/staffing", "Assignments"),
         ("/canvas", "Canvas"),
         ("/dashboard", "Forecast"),
@@ -518,7 +569,7 @@ def build_login_page(error: str = "", next_path: str = "/") -> str:
 
 def is_html_request(request: Request) -> bool:
     accept = request.headers.get("accept", "")
-    return "text/html" in accept or request.url.path in {"/", "/planning", "/people", "/staffing", "/orgs", "/job-codes", "/canvas", "/dashboard", "/inbox", "/audit", "/users", "/db-management", "/docs", "/redoc"}
+    return "text/html" in accept or request.url.path in {"/", "/planning", "/demands", "/people", "/staffing", "/orgs", "/job-codes", "/canvas", "/dashboard", "/inbox", "/audit", "/users", "/db-management", "/docs", "/redoc"}
 
 
 def create_db_and_tables(bind_engine=engine) -> None:
@@ -537,6 +588,10 @@ def run_migrations(bind_engine=engine) -> None:
                 connection.exec_driver_sql("ALTER TABLE employee ADD COLUMN employee_type TEXT DEFAULT 'IC'")
             if "job_code_id" not in column_names:
                 connection.exec_driver_sql("ALTER TABLE employee ADD COLUMN job_code_id INTEGER")
+            assignment_columns = connection.exec_driver_sql("PRAGMA table_info(assignment)").fetchall()
+            assignment_column_names = {row[1] for row in assignment_columns}
+            if "demand_id" not in assignment_column_names:
+                connection.exec_driver_sql("ALTER TABLE assignment ADD COLUMN demand_id INTEGER")
             connection.exec_driver_sql("UPDATE employee SET employee_type = 'IC' WHERE employee_type IS NULL OR employee_type = ''")
         else:
             employee_exists = connection.exec_driver_sql("SELECT to_regclass('public.employee')").scalar()
@@ -549,12 +604,19 @@ def run_migrations(bind_engine=engine) -> None:
                     connection.exec_driver_sql("ALTER TABLE employee ADD COLUMN employee_type TEXT DEFAULT 'IC'")
                 if "job_code_id" not in column_names:
                     connection.exec_driver_sql("ALTER TABLE employee ADD COLUMN job_code_id INTEGER")
+                assignment_exists = connection.exec_driver_sql("SELECT to_regclass('public.assignment')").scalar()
+                if assignment_exists:
+                    assignment_rows = connection.exec_driver_sql("SELECT column_name FROM information_schema.columns WHERE table_name = 'assignment'").fetchall()
+                    assignment_column_names = {row[0] for row in assignment_rows}
+                    if "demand_id" not in assignment_column_names:
+                        connection.exec_driver_sql("ALTER TABLE assignment ADD COLUMN demand_id INTEGER")
                 connection.exec_driver_sql("UPDATE employee SET employee_type = 'IC' WHERE employee_type IS NULL OR employee_type = ''")
         AuditEntry.__table__.create(bind=connection, checkfirst=True)
         DBConnectionConfig.__table__.create(bind=connection, checkfirst=True)
         UserAccount.__table__.create(bind=connection, checkfirst=True)
         InboxNotification.__table__.create(bind=connection, checkfirst=True)
         JobCode.__table__.create(bind=connection, checkfirst=True)
+        Demand.__table__.create(bind=connection, checkfirst=True)
 
 
 def get_control_session() -> Generator[Session, None, None]:
@@ -1202,6 +1264,19 @@ def serve_index(request: Request) -> str:
     )
 
 
+@app.get("/demands", response_class=HTMLResponse)
+def serve_demands(request: Request) -> str:
+    return serve_html_page(
+        "demands.html",
+        {
+            'href="/static/styles.css"': f'href="{static_asset_url("styles.css")}"',
+            'src="/static/demands.js"': f'src="{static_asset_url("demands.js")}"',
+        },
+        current_path=request.url.path,
+        username=get_session_username(request.cookies.get(SESSION_COOKIE_NAME)),
+    )
+
+
 @app.get("/people", response_class=HTMLResponse)
 def serve_employees(request: Request) -> str:
     return serve_html_page(
@@ -1631,6 +1706,89 @@ def delete_employee(employee_id: int, request: Request, session: Session = Depen
     )
 
 
+@app.get("/demands-api", response_model=List[DemandRead])
+def list_demands(session: Session = Depends(get_session)):
+    demands = session.exec(select(Demand).order_by(Demand.start_date, Demand.title)).all()
+    return [serialize_demand(session, demand) for demand in demands]
+
+
+@app.post("/demands-api", response_model=DemandRead, status_code=201)
+def create_demand(demand: DemandCreate, request: Request, session: Session = Depends(get_session)):
+    payload = validate_demand_payload(session, demand.model_dump())
+    db_demand = Demand(**payload)
+    session.add(db_demand)
+    session.commit()
+    session.refresh(db_demand)
+    record_audit_entry(
+        session,
+        actor_username=get_request_username(request),
+        entity_type="demand",
+        action="create",
+        entity_id=db_demand.id,
+        entity_label=db_demand.title,
+        after=audit_snapshot_from_model(serialize_demand(session, db_demand)),
+    )
+    return serialize_demand(session, db_demand)
+
+
+@app.put("/demands-api/{demand_id}", response_model=DemandRead)
+def update_demand(demand_id: int, update: DemandUpdate, request: Request, session: Session = Depends(get_session)):
+    demand = session.get(Demand, demand_id)
+    if not demand:
+        raise HTTPException(status_code=404, detail="Demand not found")
+    before = audit_snapshot_from_model(serialize_demand(session, demand))
+    data = update.model_dump(exclude_unset=True)
+    proposed = {
+        "project_id": data.get("project_id", demand.project_id),
+        "title": data.get("title", demand.title),
+        "job_code_id": data.get("job_code_id", demand.job_code_id),
+        "skill_notes": data.get("skill_notes", demand.skill_notes),
+        "start_date": data.get("start_date", demand.start_date),
+        "end_date": data.get("end_date", demand.end_date),
+        "required_allocation": data.get("required_allocation", demand.required_allocation),
+        "notes": data.get("notes", demand.notes),
+    }
+    validated = validate_demand_payload(session, proposed)
+    for key, value in validated.items():
+        setattr(demand, key, value)
+    session.add(demand)
+    session.commit()
+    session.refresh(demand)
+    record_audit_entry(
+        session,
+        actor_username=get_request_username(request),
+        entity_type="demand",
+        action="update",
+        entity_id=demand.id,
+        entity_label=demand.title,
+        before=before,
+        after=audit_snapshot_from_model(serialize_demand(session, demand)),
+    )
+    return serialize_demand(session, demand)
+
+
+@app.delete("/demands-api/{demand_id}", status_code=204)
+def delete_demand(demand_id: int, request: Request, session: Session = Depends(get_session)):
+    demand = session.get(Demand, demand_id)
+    if not demand:
+        raise HTTPException(status_code=404, detail="Demand not found")
+    if session.exec(select(Assignment).where(Assignment.demand_id == demand_id)).first():
+        raise HTTPException(status_code=400, detail="Cannot delete a demand that is fulfilled by assignments")
+    before = audit_snapshot_from_model(serialize_demand(session, demand))
+    label = demand.title
+    session.delete(demand)
+    session.commit()
+    record_audit_entry(
+        session,
+        actor_username=get_request_username(request),
+        entity_type="demand",
+        action="delete",
+        entity_id=demand_id,
+        entity_label=label,
+        before=before,
+    )
+
+
 @app.get("/projects", response_model=List[ProjectRead])
 def list_projects(session: Session = Depends(get_session)):
     projects = session.exec(select(Project).order_by(Project.name)).all()
@@ -1759,6 +1917,20 @@ def ensure_job_code(session: Session, job_code_id: int) -> JobCode:
     return job_code
 
 
+def ensure_project(session: Session, project_id: int) -> Project:
+    project = session.get(Project, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return project
+
+
+def ensure_demand(session: Session, demand_id: int) -> Demand:
+    demand = session.get(Demand, demand_id)
+    if not demand:
+        raise HTTPException(status_code=404, detail="Demand not found")
+    return demand
+
+
 def validate_employee_type(employee_type: str) -> str:
     if employee_type not in {"IC", "L"}:
         raise HTTPException(status_code=400, detail="Employee type must be IC or L")
@@ -1820,6 +1992,53 @@ def creates_manager_cycle(session: Session, employee_id: int, manager_id: int) -
     return False
 
 
+def validate_demand_payload(session: Session, payload: dict[str, Any]) -> dict[str, Any]:
+    project_id = payload.get("project_id")
+    title = (payload.get("title") or "").strip()
+    required_allocation = payload.get("required_allocation")
+    start_date_value = payload.get("start_date")
+    end_date_value = payload.get("end_date")
+    job_code_id = payload.get("job_code_id")
+    if project_id is None:
+        raise HTTPException(status_code=400, detail="Project is required")
+    ensure_project(session, project_id)
+    if not title:
+        raise HTTPException(status_code=400, detail="Demand title is required")
+    if required_allocation is None or required_allocation <= 0:
+        raise HTTPException(status_code=400, detail="Required allocation must be greater than zero")
+    if start_date_value is None or end_date_value is None or start_date_value > end_date_value:
+        raise HTTPException(status_code=400, detail="Demand start date must be on or before end date")
+    if job_code_id is not None:
+        ensure_job_code(session, job_code_id)
+    payload["title"] = title
+    payload["skill_notes"] = (payload.get("skill_notes") or "").strip() or None
+    payload["notes"] = (payload.get("notes") or "").strip() or None
+    return payload
+
+
+def serialize_demand(session: Session, demand: Demand) -> DemandRead:
+    project = session.get(Project, demand.project_id) if demand.project_id is not None else None
+    job_code = session.get(JobCode, demand.job_code_id) if demand.job_code_id is not None else None
+    assignments = session.exec(select(Assignment).where(Assignment.demand_id == demand.id)).all()
+    fulfilled_allocation = round(sum(item.allocation for item in assignments), 2)
+    remaining_allocation = round(max(demand.required_allocation - fulfilled_allocation, 0), 2)
+    return DemandRead(
+        id=demand.id,
+        project_id=demand.project_id,
+        project_name=project.name if project else None,
+        title=demand.title,
+        job_code_id=demand.job_code_id,
+        job_code_name=job_code.name if job_code else None,
+        skill_notes=demand.skill_notes,
+        start_date=demand.start_date,
+        end_date=demand.end_date,
+        required_allocation=demand.required_allocation,
+        fulfilled_allocation=fulfilled_allocation,
+        remaining_allocation=remaining_allocation,
+        notes=demand.notes,
+    )
+
+
 def serialize_employee(session: Session, employee: Employee) -> EmployeeRead:
     organization_name = None
     manager_name = None
@@ -1859,16 +2078,19 @@ def ensure_employee_and_project(session: Session, employee_id: int, project_id: 
 def serialize_assignment(session: Session, assignment: Assignment) -> AssignmentRead:
     employee = session.get(Employee, assignment.employee_id)
     project = session.get(Project, assignment.project_id)
+    demand = session.get(Demand, assignment.demand_id) if assignment.demand_id is not None else None
     return AssignmentRead(
         id=assignment.id,
         employee_id=assignment.employee_id,
         project_id=assignment.project_id,
+        demand_id=assignment.demand_id,
         start_date=assignment.start_date,
         end_date=assignment.end_date,
         allocation=assignment.allocation,
         notes=assignment.notes,
         employee_name=employee.name if employee else None,
         project_name=project.name if project else None,
+        demand_title=demand.title if demand else None,
     )
 
 
@@ -1891,6 +2113,10 @@ def list_assignments(
 @app.post("/assignments", response_model=AssignmentRead, status_code=201)
 def create_assignment(assignment: AssignmentCreate, request: Request, session: Session = Depends(get_session)):
     ensure_employee_and_project(session, assignment.employee_id, assignment.project_id)
+    if assignment.demand_id is not None:
+        demand = ensure_demand(session, assignment.demand_id)
+        if demand.project_id != assignment.project_id:
+            raise HTTPException(status_code=400, detail="Demand must belong to the selected project")
     validate_dates(assignment.start_date, assignment.end_date)
     if not 0 < assignment.allocation <= 1:
         raise HTTPException(status_code=400, detail="Allocation must be between 0 and 1")
@@ -1926,6 +2152,10 @@ def update_assignment(
         validate_dates(update.start_date or assignment.start_date, update.end_date or assignment.end_date)
     if update.allocation is not None and not 0 < update.allocation <= 1:
         raise HTTPException(status_code=400, detail="Allocation must be between 0 and 1")
+    if update.demand_id is not None:
+        demand = ensure_demand(session, update.demand_id)
+        if demand.project_id != assignment.project_id:
+            raise HTTPException(status_code=400, detail="Demand must belong to the selected project")
     data = update.dict(exclude_unset=True)
     for key, value in data.items():
         setattr(assignment, key, value)

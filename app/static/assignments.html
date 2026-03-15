@@ -10,7 +10,7 @@
     <header>
       <div>
         <h1>Assignment Manager</h1>
-        <p>Manage project staffing decisions, allocations, and notes in one place.</p>
+        <p>Fulfill project demands by assigning employees across time and allocation.</p>
       </div>
       <nav>
         <a href="/planning">Projects</a>
@@ -30,7 +30,7 @@
         <div class="section-head with-actions">
           <div class="section-copy">
             <h2>Assignments</h2>
-            <p>Time-phase people across projects with allocation percentages.</p>
+            <p>Time-phase people across projects and optionally connect each assignment to a specific demand.</p>
           </div>
           <button type="button" id="assignment-export" class="ghost-button">Export CSV</button>
         </div>
@@ -41,6 +41,7 @@
                 <tr>
                   <th>Employee</th>
                   <th>Project</th>
+                  <th>Demand</th>
                   <th>Dates</th>
                   <th>Allocation</th>
                   <th>Notes</th>
@@ -55,6 +56,8 @@
             <input type="hidden" name="entity_id" id="assignment-id" />
             <label>Employee<select name="employee_id" id="assignment-employee" required></select></label>
             <label>Project<select name="project_id" id="assignment-project" required></select></label>
+            <label>Demand<select name="demand_id" id="assignment-demand"></select></label>
+            <p class="muted small-text">Optional. If selected, the demand must belong to the chosen project.</p>
             <label>Start Date<input type="date" name="start_date" required /></label>
             <label>End Date<input type="date" name="end_date" required /></label>
             <label>Allocation (%)<input type="number" name="allocation" min="1" max="100" value="100" required /></label>

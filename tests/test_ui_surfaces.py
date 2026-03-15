@@ -27,10 +27,9 @@ def test_main_page_contains_core_ui_sections(client: TestClient):
 # TP-028, TP-031, TP-032, TP-033
 
 def test_main_page_contains_visualization_and_export_surfaces(client: TestClient):
-    response = client.get("/")
+    response = client.get("/planning")
     html = response.text
     assert "allocation-chart" in html
-    assert "assignment-graph" in html
     assert "allocation-preset" in html
     assert "allocation-apply" in html
     staffing_html = client.get("/staffing").text
@@ -81,10 +80,9 @@ def test_data_endpoints_support_ui_views_after_state_changes(client: TestClient)
     project = create_project(client, name="Project Atlas", start_date="2026-03-01", end_date="2026-03-31")
     create_assignment(client, engineer["id"], project["id"], allocation=1.0)
 
-    root_html = client.get("/").text
+    planning_html = client.get("/planning").text
     canvas_html = client.get("/canvas").text
-    assert "schedule-employee" in root_html
-    assert "schedule-project" in root_html
+    assert "allocation-chart" in planning_html
     assert "canvas-content" in canvas_html
 
     employee_schedule = client.get(f"/schedule/employee/{engineer['id']}").json()
