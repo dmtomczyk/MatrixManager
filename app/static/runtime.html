@@ -10,7 +10,7 @@
     <header>
       <div>
         <h1>Runtime</h1>
-        <p>Monitor container/service health and review runtime errors captured by the app.</p>
+        <p>Monitor container/service health, DB connectivity, and captured runtime failures.</p>
       </div>
       <nav>
         <a href="/planning">Projects</a>
@@ -29,15 +29,61 @@
       <section class="card single-column">
         <div class="section-head with-actions">
           <div class="section-copy">
-            <h2>Service Status</h2>
-            <p>Best-effort Docker Compose visibility plus app runtime context.</p>
+            <h2>Health Overview</h2>
+            <p>Auto-refreshes while this page is open so admins can debug live service and dependency issues.</p>
           </div>
           <div class="panel-actions-row">
-            <button type="button" id="runtime-refresh" class="ghost-button">Refresh</button>
+            <span id="runtime-last-updated" class="muted small-text">Not refreshed yet</span>
+            <button type="button" id="runtime-toggle-polling" class="ghost-button">Pause Auto-Refresh</button>
+            <button type="button" id="runtime-refresh" class="ghost-button">Refresh Now</button>
           </div>
         </div>
         <div id="runtime-summary" class="card-grid"></div>
         <div id="runtime-services" class="card-grid"></div>
+      </section>
+
+      <section class="card single-column">
+        <div class="section-head">
+          <h2>DB Connection Status</h2>
+          <p>Visibility into configured SQLite/PostgreSQL connections, active DB health, and probe latency.</p>
+        </div>
+        <div class="db-table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Active</th>
+                <th>Status</th>
+                <th>Latency</th>
+                <th>Detail</th>
+              </tr>
+            </thead>
+            <tbody id="runtime-db-table"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card single-column">
+        <div class="section-head">
+          <h2>Health Snapshots</h2>
+          <p>Background probe loop history for the most recent runtime checks.</p>
+        </div>
+        <div class="db-table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>When</th>
+                <th>Overall</th>
+                <th>Control DB</th>
+                <th>Active Data DB</th>
+                <th>Docker</th>
+                <th>Errors (1h)</th>
+              </tr>
+            </thead>
+            <tbody id="runtime-snapshot-table"></tbody>
+          </table>
+        </div>
       </section>
 
       <section class="card single-column">

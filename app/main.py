@@ -10,8 +10,10 @@ import os
 import re
 import secrets
 import subprocess
+import threading
+import time
 import traceback
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Generator, List, Optional, Set
 from urllib.parse import quote, quote_plus
@@ -48,6 +50,8 @@ control_engine = create_engine(
     connect_args={"check_same_thread": False},
 )
 engine_cache: dict[str, Any] = {}
+HEALTH_PROBE_INTERVAL_SECONDS = int(os.getenv("MATRIX_HEALTH_PROBE_INTERVAL_SECONDS", "60"))
+health_probe_thread_started = False
 
 
 class OrganizationBase(SQLModel):
@@ -317,13 +321,53 @@ class RuntimeServiceStatusRead(SQLModel):
     status_text: Optional[str] = None
 
 
+class RuntimeDbStatusRead(SQLModel):
+    name: str
+    db_type: str
+    is_active: bool
+    status: str
+    detail: Optional[str] = None
+    latency_ms: Optional[float] = None
+
+
+class RuntimeHealthSnapshot(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    occurred_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    overall_status: str
+    control_db_status: str
+    active_data_db_status: str
+    docker_status: str
+    error_count_last_hour: int = 0
+    details_json: Optional[str] = None
+
+
+class RuntimeHealthSnapshotRead(SQLModel):
+    id: int
+    occurred_at: datetime
+    overall_status: str
+    control_db_status: str
+    active_data_db_status: str
+    docker_status: str
+    error_count_last_hour: int = 0
+    details: Optional[dict[str, Any]] = None
+
+
 class RuntimeOverviewRead(SQLModel):
     runtime_environment: str
     active_db_type: str
     install_mode: str
     docker_available: bool
     docker_error: Optional[str] = None
+    overall_status: str = "unknown"
+    checked_at: datetime
+    control_db_status: str = "unknown"
+    control_db_detail: Optional[str] = None
+    active_data_db_status: str = "unknown"
+    active_data_db_detail: Optional[str] = None
+    recent_error_count: int = 0
     services: list[RuntimeServiceStatusRead] = []
+    db_connections: list[RuntimeDbStatusRead] = []
+    latest_snapshot: Optional[RuntimeHealthSnapshotRead] = None
 
 
 class DBConnectionBase(SQLModel):
@@ -737,6 +781,7 @@ def run_migrations(bind_engine=engine) -> None:
                 connection.exec_driver_sql("UPDATE employee SET employee_type = 'IC' WHERE employee_type IS NULL OR employee_type = ''")
         AuditEntry.__table__.create(bind=connection, checkfirst=True)
         RuntimeErrorLog.__table__.create(bind=connection, checkfirst=True)
+        RuntimeHealthSnapshot.__table__.create(bind=connection, checkfirst=True)
         DBConnectionConfig.__table__.create(bind=connection, checkfirst=True)
         UserAccount.__table__.create(bind=connection, checkfirst=True)
         InboxNotification.__table__.create(bind=connection, checkfirst=True)
@@ -1070,7 +1115,68 @@ def record_runtime_error(exc: Exception, request: Optional[Request] = None) -> N
         pass
 
 
-def get_runtime_overview() -> RuntimeOverviewRead:
+def serialize_runtime_snapshot(entry: RuntimeHealthSnapshot) -> RuntimeHealthSnapshotRead:
+    return RuntimeHealthSnapshotRead(
+        id=entry.id,
+        occurred_at=entry.occurred_at,
+        overall_status=entry.overall_status,
+        control_db_status=entry.control_db_status,
+        active_data_db_status=entry.active_data_db_status,
+        docker_status=entry.docker_status,
+        error_count_last_hour=entry.error_count_last_hour,
+        details=json.loads(entry.details_json) if entry.details_json else None,
+    )
+
+
+def probe_sqlite_path(path_text: str) -> RuntimeDbStatusRead:
+    started = time.perf_counter()
+    try:
+        path = Path(path_text).expanduser()
+        if not path.is_absolute():
+            path = ROOT_DIR / path
+        exists = path.exists()
+        with create_engine(f"sqlite:///{path}", connect_args={"check_same_thread": False}).connect() as connection:
+            connection.exec_driver_sql("SELECT 1")
+        latency_ms = round((time.perf_counter() - started) * 1000, 2)
+        return RuntimeDbStatusRead(
+            name=path.name,
+            db_type="sqlite",
+            is_active=False,
+            status="ok",
+            detail=f"{path} ({'exists' if exists else 'created on connect'})",
+            latency_ms=latency_ms,
+        )
+    except Exception as exc:
+        return RuntimeDbStatusRead(name=Path(path_text).name or "sqlite", db_type="sqlite", is_active=False, status="error", detail=str(exc))
+
+
+def probe_db_connection(connection: DBConnectionConfig) -> RuntimeDbStatusRead:
+    started = time.perf_counter()
+    try:
+        built_engine = create_engine(build_database_url(connection), connect_args={"check_same_thread": False} if connection.db_type == "sqlite" else {})
+        with built_engine.connect() as db_conn:
+            db_conn.exec_driver_sql("SELECT 1")
+        latency_ms = round((time.perf_counter() - started) * 1000, 2)
+        detail = build_connection_summary(connection)
+        return RuntimeDbStatusRead(
+            name=connection.name,
+            db_type=connection.db_type,
+            is_active=connection.is_active,
+            status="ok",
+            detail=detail,
+            latency_ms=latency_ms,
+        )
+    except Exception as exc:
+        return RuntimeDbStatusRead(
+            name=connection.name,
+            db_type=connection.db_type,
+            is_active=connection.is_active,
+            status="error",
+            detail=str(exc),
+        )
+
+
+def get_docker_service_status() -> tuple[bool, Optional[str], list[RuntimeServiceStatusRead]]:
     services: list[RuntimeServiceStatusRead] = []
     docker_error = None
     docker_available = False
@@ -1100,14 +1206,97 @@ def get_runtime_overview() -> RuntimeOverviewRead:
             docker_error = (result.stderr or result.stdout or "docker compose ps failed").strip()
     except Exception as exc:
         docker_error = str(exc)
-    return RuntimeOverviewRead(
-        runtime_environment="docker" if Path("/.dockerenv").exists() else "host",
-        active_db_type=MATRIX_ACTIVE_DB_TYPE,
-        install_mode=MATRIX_INSTALL_MODE,
-        docker_available=docker_available,
-        docker_error=docker_error,
-        services=services,
-    )
+    return docker_available, docker_error, services
+
+
+def compute_runtime_overview() -> RuntimeOverviewRead:
+    checked_at = datetime.now(timezone.utc)
+    docker_available, docker_error, services = get_docker_service_status()
+    with Session(control_engine) as control_session:
+        recent_cutoff = checked_at - timedelta(hours=1)
+        recent_errors = control_session.exec(select(RuntimeErrorLog).where(RuntimeErrorLog.occurred_at >= recent_cutoff)).all()
+        latest_snapshot_entry = control_session.exec(select(RuntimeHealthSnapshot).order_by(RuntimeHealthSnapshot.occurred_at.desc(), RuntimeHealthSnapshot.id.desc())).first()
+        connection_configs = control_session.exec(select(DBConnectionConfig).order_by(DBConnectionConfig.name)).all()
+        control_started = time.perf_counter()
+        try:
+            control_session.exec(select(UserAccount).limit(1)).first()
+            control_db_status = "ok"
+            control_db_detail = f"control db reachable ({round((time.perf_counter() - control_started) * 1000, 2)} ms)"
+        except Exception as exc:
+            control_db_status = "error"
+            control_db_detail = str(exc)
+        db_connections = [probe_db_connection(connection) for connection in connection_configs]
+        if not any(item.db_type == "sqlite" and item.detail and str(DB_PATH) in item.detail for item in db_connections):
+            db_connections.append(probe_sqlite_path(str(DB_PATH)))
+        active_db_entry = next((item for item in db_connections if item.is_active), None)
+        active_data_db_status = active_db_entry.status if active_db_entry else "unknown"
+        active_data_db_detail = active_db_entry.detail if active_db_entry else "No active DB connection configured"
+        docker_status = "ok" if docker_available else ("degraded" if docker_error else "unknown")
+        status_values = [control_db_status, active_data_db_status, docker_status]
+        overall_status = "error" if "error" in status_values else "degraded" if "degraded" in status_values else "ok"
+        return RuntimeOverviewRead(
+            runtime_environment="docker" if Path("/.dockerenv").exists() else "host",
+            active_db_type=MATRIX_ACTIVE_DB_TYPE,
+            install_mode=MATRIX_INSTALL_MODE,
+            docker_available=docker_available,
+            docker_error=docker_error,
+            overall_status=overall_status,
+            checked_at=checked_at,
+            control_db_status=control_db_status,
+            control_db_detail=control_db_detail,
+            active_data_db_status=active_data_db_status,
+            active_data_db_detail=active_data_db_detail,
+            recent_error_count=len(recent_errors),
+            services=services,
+            db_connections=db_connections,
+            latest_snapshot=serialize_runtime_snapshot(latest_snapshot_entry) if latest_snapshot_entry else None,
+        )
+
+
+def record_runtime_health_snapshot() -> Optional[RuntimeHealthSnapshot]:
+    try:
+        overview = compute_runtime_overview()
+        details = {
+            "checked_at": overview.checked_at.isoformat(),
+            "control_db_detail": overview.control_db_detail,
+            "active_data_db_detail": overview.active_data_db_detail,
+            "db_connections": [item.model_dump() for item in overview.db_connections],
+            "services": [item.model_dump() for item in overview.services],
+            "docker_error": overview.docker_error,
+        }
+        with Session(control_engine) as session:
+            snapshot = RuntimeHealthSnapshot(
+                overall_status=overview.overall_status,
+                control_db_status=overview.control_db_status,
+                active_data_db_status=overview.active_data_db_status,
+                docker_status="ok" if overview.docker_available else ("degraded" if overview.docker_error else "unknown"),
+                error_count_last_hour=overview.recent_error_count,
+                details_json=json.dumps(details),
+            )
+            session.add(snapshot)
+            session.commit()
+            session.refresh(snapshot)
+            return snapshot
+    except Exception:
+        return None
+
+
+def start_health_probe_loop() -> None:
+    global health_probe_thread_started
+    if health_probe_thread_started:
+        return
+    health_probe_thread_started = True
+
+    def worker() -> None:
+        while True:
+            record_runtime_health_snapshot()
+            time.sleep(max(15, HEALTH_PROBE_INTERVAL_SECONDS))
+
+    threading.Thread(target=worker, name="matrixmanager-health-probe", daemon=True).start()
+
+
+def get_runtime_overview() -> RuntimeOverviewRead:
+    return compute_runtime_overview()
 
 
 def record_audit_entry(
@@ -1201,6 +1390,8 @@ def on_startup() -> None:
     ensure_default_admin_user()
     active_connection = get_active_db_connection_config()
     get_or_create_data_engine(active_connection)
+    record_runtime_health_snapshot()
+    start_health_probe_loop()
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -1238,6 +1429,26 @@ def health_check():
         "install_mode": MATRIX_INSTALL_MODE,
         "active_db_type": MATRIX_ACTIVE_DB_TYPE,
     }
+
+
+@app.get("/health/ready")
+def health_ready():
+    overview = compute_runtime_overview()
+    return {
+        "ok": overview.overall_status == "ok",
+        "status": overview.overall_status,
+        "checked_at": overview.checked_at.isoformat(),
+        "control_db": {"status": overview.control_db_status, "detail": overview.control_db_detail},
+        "active_data_db": {"status": overview.active_data_db_status, "detail": overview.active_data_db_detail},
+        "docker": {"available": overview.docker_available, "error": overview.docker_error},
+        "recent_error_count": overview.recent_error_count,
+    }
+
+
+@app.get("/health/details", response_model=RuntimeOverviewRead)
+def health_details(request: Request):
+    require_admin_user(request)
+    return compute_runtime_overview()
 
 
 @app.get("/login", response_class=HTMLResponse)
@@ -2837,6 +3048,14 @@ def list_runtime_errors(request: Request, limit: int = 100, session: Session = D
     safe_limit = max(1, min(limit, 500))
     items = session.exec(select(RuntimeErrorLog).order_by(RuntimeErrorLog.occurred_at.desc(), RuntimeErrorLog.id.desc())).all()
     return [serialize_runtime_error(item) for item in items[:safe_limit]]
+
+
+@app.get("/runtime-health-snapshots", response_model=List[RuntimeHealthSnapshotRead])
+def list_runtime_health_snapshots(request: Request, limit: int = 30, session: Session = Depends(get_control_session)):
+    require_admin_user(request)
+    safe_limit = max(1, min(limit, 240))
+    items = session.exec(select(RuntimeHealthSnapshot).order_by(RuntimeHealthSnapshot.occurred_at.desc(), RuntimeHealthSnapshot.id.desc())).all()
+    return [serialize_runtime_snapshot(item) for item in items[:safe_limit]]
 
 
 @app.get("/audit-log", response_model=List[AuditEntryRead])

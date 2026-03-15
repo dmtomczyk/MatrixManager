@@ -1,8 +1,16 @@
 const runtimeSummary = document.getElementById('runtime-summary');
 const runtimeServices = document.getElementById('runtime-services');
+const runtimeDbTable = document.getElementById('runtime-db-table');
+const runtimeSnapshotTable = document.getElementById('runtime-snapshot-table');
 const runtimeErrorTable = document.getElementById('runtime-error-table');
 const refreshButton = document.getElementById('runtime-refresh');
+const pollingButton = document.getElementById('runtime-toggle-polling');
+const lastUpdated = document.getElementById('runtime-last-updated');
 const toast = document.getElementById('toast');
+
+let pollingEnabled = true;
+let pollingHandle = null;
+const POLL_MS = 15000;
 
 const apiFetch = async (url, options = {}) => {
   const response = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...options });
@@ -19,14 +27,20 @@ const formatDate = (value) => { try { return new Date(value).toLocaleString(); }
 
 const stateBadgeClass = (state = '') => {
   const normalized = state.toLowerCase();
-  if (normalized.includes('running') || normalized.includes('healthy')) return 'assignment-status-approved';
-  if (normalized.includes('starting') || normalized.includes('created') || normalized.includes('restarting')) return 'assignment-status-in-review';
-  if (normalized.includes('exited') || normalized.includes('dead') || normalized.includes('error')) return 'assignment-status-denied';
+  if (normalized.includes('ok') || normalized.includes('running') || normalized.includes('healthy')) return 'assignment-status-approved';
+  if (normalized.includes('starting') || normalized.includes('created') || normalized.includes('restarting') || normalized.includes('degraded') || normalized.includes('unknown')) return 'assignment-status-in-review';
+  if (normalized.includes('exited') || normalized.includes('dead') || normalized.includes('error') || normalized.includes('fail')) return 'assignment-status-denied';
   return '';
 };
 
 const renderOverview = (overview) => {
   runtimeSummary.innerHTML = `
+    <article class="flow-node">
+      <span class="flow-kicker">Overall</span>
+      <strong><span class="badge ${stateBadgeClass(overview.overall_status)}">${escapeHtml(overview.overall_status)}</span></strong>
+      <span>Checked: ${escapeHtml(formatDate(overview.checked_at))}</span>
+      <span>Recent runtime errors (1h): ${escapeHtml(String(overview.recent_error_count || 0))}</span>
+    </article>
     <article class="flow-node">
       <span class="flow-kicker">Environment</span>
       <strong>${escapeHtml(overview.runtime_environment)}</strong>
@@ -34,22 +48,65 @@ const renderOverview = (overview) => {
       <span>Active DB: ${escapeHtml(overview.active_db_type)}</span>
     </article>
     <article class="flow-node">
+      <span class="flow-kicker">Control DB</span>
+      <strong><span class="badge ${stateBadgeClass(overview.control_db_status)}">${escapeHtml(overview.control_db_status)}</span></strong>
+      <span>${escapeHtml(overview.control_db_detail || 'No detail')}</span>
+    </article>
+    <article class="flow-node">
+      <span class="flow-kicker">Active Data DB</span>
+      <strong><span class="badge ${stateBadgeClass(overview.active_data_db_status)}">${escapeHtml(overview.active_data_db_status)}</span></strong>
+      <span>${escapeHtml(overview.active_data_db_detail || 'No detail')}</span>
+    </article>
+    <article class="flow-node">
       <span class="flow-kicker">Docker</span>
       <strong>${overview.docker_available ? 'Available' : 'Unavailable'}</strong>
       <span>${escapeHtml(overview.docker_error || 'Docker Compose status read succeeded')}</span>
     </article>
   `;
+
   if (!overview.services.length) {
     runtimeServices.innerHTML = '<article class="flow-node"><strong>No service data</strong><span>Docker status was unavailable or no Compose services were returned.</span></article>';
+  } else {
+    runtimeServices.innerHTML = overview.services.map((service) => `
+      <article class="flow-node">
+        <span class="flow-kicker">Service</span>
+        <strong>${escapeHtml(service.name)}</strong>
+        <span class="badge ${stateBadgeClass(service.state || service.health || '')}">${escapeHtml(service.state || 'unknown')}</span>
+        <span>${escapeHtml(service.health || service.status_text || 'No extra status reported')}</span>
+      </article>
+    `).join('');
+  }
+
+  if (!overview.db_connections.length) {
+    runtimeDbTable.innerHTML = '<tr><td colspan="6">No database connections available.</td></tr>';
+  } else {
+    runtimeDbTable.innerHTML = overview.db_connections.map((item) => `
+      <tr>
+        <td>${escapeHtml(item.name)}</td>
+        <td>${escapeHtml(item.db_type)}</td>
+        <td>${item.is_active ? 'Yes' : 'No'}</td>
+        <td><span class="badge ${stateBadgeClass(item.status)}">${escapeHtml(item.status)}</span></td>
+        <td>${item.latency_ms != null ? `${escapeHtml(String(item.latency_ms))} ms` : '—'}</td>
+        <td>${escapeHtml(item.detail || '—')}</td>
+      </tr>
+    `).join('');
+  }
+}
+
+const renderSnapshots = (items) => {
+  if (!items.length) {
+    runtimeSnapshotTable.innerHTML = '<tr><td colspan="6">No health snapshots yet.</td></tr>';
     return;
   }
-  runtimeServices.innerHTML = overview.services.map((service) => `
-    <article class="flow-node">
-      <span class="flow-kicker">Service</span>
-      <strong>${escapeHtml(service.name)}</strong>
-      <span class="badge ${stateBadgeClass(service.state || service.health || '')}">${escapeHtml(service.state || 'unknown')}</span>
-      <span>${escapeHtml(service.health || service.status_text || 'No extra status reported')}</span>
-    </article>
+  runtimeSnapshotTable.innerHTML = items.map((item) => `
+    <tr>
+      <td>${escapeHtml(formatDate(item.occurred_at))}</td>
+      <td><span class="badge ${stateBadgeClass(item.overall_status)}">${escapeHtml(item.overall_status)}</span></td>
+      <td><span class="badge ${stateBadgeClass(item.control_db_status)}">${escapeHtml(item.control_db_status)}</span></td>
+      <td><span class="badge ${stateBadgeClass(item.active_data_db_status)}">${escapeHtml(item.active_data_db_status)}</span></td>
+      <td><span class="badge ${stateBadgeClass(item.docker_status)}">${escapeHtml(item.docker_status)}</span></td>
+      <td>${escapeHtml(String(item.error_count_last_hour || 0))}</td>
+    </tr>
   `).join('');
 };
 
@@ -70,10 +127,31 @@ const renderErrors = (items) => {
 };
 
 const loadRuntime = async () => {
-  const [overview, errors] = await Promise.all([apiFetch('/runtime-overview'), apiFetch('/runtime-errors')]);
+  const [overview, errors, snapshots] = await Promise.all([
+    apiFetch('/health/details'),
+    apiFetch('/runtime-errors'),
+    apiFetch('/runtime-health-snapshots'),
+  ]);
   renderOverview(overview);
   renderErrors(errors);
+  renderSnapshots(snapshots);
+  lastUpdated.textContent = `Last updated ${formatDate(new Date().toISOString())}`;
 };
+
+const startPolling = () => {
+  if (pollingHandle) clearInterval(pollingHandle);
+  if (!pollingEnabled) return;
+  pollingHandle = setInterval(() => {
+    loadRuntime().catch(() => {});
+  }, POLL_MS);
+};
+
+pollingButton.addEventListener('click', () => {
+  pollingEnabled = !pollingEnabled;
+  pollingButton.textContent = pollingEnabled ? 'Pause Auto-Refresh' : 'Resume Auto-Refresh';
+  startPolling();
+  showToast(pollingEnabled ? 'Auto-refresh enabled' : 'Auto-refresh paused');
+});
 
 refreshButton.addEventListener('click', async () => {
   try {
@@ -84,4 +162,4 @@ refreshButton.addEventListener('click', async () => {
   }
 });
 
-loadRuntime().catch((err) => alert(err.message));
+loadRuntime().then(startPolling).catch((err) => alert(err.message));
