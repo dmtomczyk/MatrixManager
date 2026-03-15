@@ -257,6 +257,9 @@ class AssignmentRead(SQLModel):
     approved_by_username: Optional[str] = None
     denied_by_username: Optional[str] = None
     reviewed_at: Optional[datetime] = None
+    pending_approver_usernames: list[str] = []
+    submitted_by_current_user: bool = False
+    requires_current_user_approval: bool = False
 
 
 class AuditEntry(SQLModel, table=True):
@@ -1173,6 +1176,68 @@ def add_inbox_notification(session: Session, *, username: str, title: str, messa
     session.commit()
     session.refresh(notification)
     return notification
+
+
+def ensure_assignment_review_notifications(assignment: Assignment, *, control_session: Optional[Session] = None) -> list[str]:
+    if assignment.status != "in_review":
+        return []
+    owned_session = control_session is None
+    session = control_session or Session(control_engine)
+    try:
+        active_connection = get_active_db_connection_config()
+        data_engine = get_or_create_data_engine(active_connection)
+        with Session(data_engine) as data_session:
+            assignment_read = serialize_assignment(data_session, assignment)
+        approver_usernames = get_management_chain_usernames(assignment.employee_id)
+        metadata = {
+            "kind": "assignment_review",
+            "assignment_id": assignment.id,
+            "employee_name": assignment_read.employee_name,
+            "project_name": assignment_read.project_name,
+            "submitter_username": assignment.submitted_by_username,
+        }
+        existing_items = session.exec(select(InboxNotification).where(InboxNotification.metadata_json.is_not(None))).all()
+        existing_usernames = {
+            item.username
+            for item in existing_items
+            if ((json.loads(item.metadata_json) if item.metadata_json else {}).get("kind") == "assignment_review")
+            and ((json.loads(item.metadata_json) if item.metadata_json else {}).get("assignment_id") == assignment.id)
+        }
+        created_for: list[str] = []
+        for approver_username in approver_usernames:
+            if approver_username in existing_usernames:
+                continue
+            add_inbox_notification(
+                session,
+                username=approver_username,
+                title="Assignment request awaiting review",
+                message=f"{assignment.submitted_by_username or 'Someone'} submitted {assignment_read.employee_name or assignment.employee_id} → {assignment_read.project_name or assignment.project_id} for review.",
+                metadata=metadata,
+            )
+            created_for.append(approver_username)
+        return created_for
+    finally:
+        if owned_session:
+            session.close()
+
+
+def refresh_assignment_reviews_for_employee_link(employee_id: Optional[int], *, control_session: Optional[Session] = None) -> list[int]:
+    if employee_id is None:
+        return []
+    active_connection = get_active_db_connection_config()
+    data_engine = get_or_create_data_engine(active_connection)
+    refreshed: list[int] = []
+    with Session(data_engine) as data_session:
+        pending_assignments = data_session.exec(select(Assignment).where(Assignment.status == "in_review")).all()
+        for assignment in pending_assignments:
+            chain = get_management_chain_usernames(assignment.employee_id)
+            user = control_session.exec(select(UserAccount).where(UserAccount.employee_id == employee_id, UserAccount.is_active == True)).first() if control_session else None
+            target_username = user.username if user else None
+            if target_username and target_username in chain:
+                created = ensure_assignment_review_notifications(assignment, control_session=control_session)
+                if created:
+                    refreshed.append(assignment.id)
+    return refreshed
 
 
 def get_user_account(username: str) -> Optional[UserAccount]:
@@ -2239,11 +2304,12 @@ def ensure_employee_and_project(session: Session, employee_id: int, project_id: 
     ensure_project(session, project_id)
 
 
-def serialize_assignment(session: Session, assignment: Assignment) -> AssignmentRead:
+def serialize_assignment(session: Session, assignment: Assignment, current_username: Optional[str] = None) -> AssignmentRead:
     employee = session.get(Employee, assignment.employee_id)
     project = session.get(Project, assignment.project_id)
     organization = session.get(Organization, employee.organization_id) if employee and employee.organization_id is not None else None
     demand = session.get(Demand, assignment.demand_id) if assignment.demand_id is not None else None
+    pending_approver_usernames = get_management_chain_usernames(assignment.employee_id) if assignment.status == "in_review" else []
     return AssignmentRead(
         id=assignment.id,
         employee_id=assignment.employee_id,
@@ -2263,15 +2329,20 @@ def serialize_assignment(session: Session, assignment: Assignment) -> Assignment
         approved_by_username=assignment.approved_by_username,
         denied_by_username=assignment.denied_by_username,
         reviewed_at=assignment.reviewed_at,
+        pending_approver_usernames=pending_approver_usernames,
+        submitted_by_current_user=bool(current_username and assignment.submitted_by_username == current_username),
+        requires_current_user_approval=bool(current_username and assignment.status == "in_review" and current_username in pending_approver_usernames),
     )
 
 
 @app.get("/assignments", response_model=List[AssignmentRead])
 def list_assignments(
+    request: Request,
     employee_id: Optional[int] = None,
     project_id: Optional[int] = None,
     session: Session = Depends(get_session),
 ):
+    current_username = get_request_username(request)
     statement = select(Assignment)
     if employee_id is not None:
         statement = statement.where(Assignment.employee_id == employee_id)
@@ -2279,7 +2350,7 @@ def list_assignments(
         statement = statement.where(Assignment.project_id == project_id)
     statement = statement.order_by(Assignment.start_date)
     assignments = session.exec(statement).all()
-    return [serialize_assignment(session, a) for a in assignments]
+    return [serialize_assignment(session, a, current_username=current_username) for a in assignments]
 
 
 @app.post("/assignments", response_model=AssignmentRead, status_code=201)
@@ -2303,22 +2374,7 @@ def create_assignment(assignment: AssignmentCreate, request: Request, session: S
     session.commit()
     session.refresh(db_assignment)
     assignment_read = serialize_assignment(session, db_assignment)
-    with Session(control_engine) as control_session:
-        metadata = {
-            "kind": "assignment_review",
-            "assignment_id": db_assignment.id,
-            "employee_name": assignment_read.employee_name,
-            "project_name": assignment_read.project_name,
-            "submitter_username": submitter,
-        }
-        for approver_username in approver_usernames:
-            add_inbox_notification(
-                control_session,
-                username=approver_username,
-                title="Assignment request awaiting review",
-                message=f"{submitter} submitted {assignment_read.employee_name or db_assignment.employee_id} → {assignment_read.project_name or db_assignment.project_id} for review.",
-                metadata=metadata,
-            )
+    ensure_assignment_review_notifications(db_assignment)
     record_audit_entry(
         session,
         actor_username=submitter,
@@ -2366,6 +2422,30 @@ def update_assignment(
         entity_label=f"{assignment_read.employee_name or assignment.employee_id} → {assignment_read.project_name or assignment.project_id}",
         before=before,
         after=audit_snapshot_from_model(assignment_read),
+    )
+    return assignment_read
+
+
+@app.post("/assignments/{assignment_id}/refresh-approvers", response_model=AssignmentRead)
+def refresh_assignment_approvers(assignment_id: int, request: Request, session: Session = Depends(get_session)):
+    username = get_request_username(request)
+    assignment = session.get(Assignment, assignment_id)
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    if assignment.status != "in_review":
+        raise HTTPException(status_code=400, detail="Only in-review assignments can refresh approvers")
+    if not (is_admin_username(username) or assignment.submitted_by_username == username or can_review_assignment(username, assignment)):
+        raise HTTPException(status_code=403, detail="You are not allowed to refresh approvers for this assignment")
+    created_for = ensure_assignment_review_notifications(assignment)
+    assignment_read = serialize_assignment(session, assignment, current_username=username)
+    record_audit_entry(
+        session,
+        actor_username=username,
+        entity_type="assignment",
+        action="refresh_approvers",
+        entity_id=assignment.id,
+        entity_label=f"{assignment_read.employee_name or assignment.employee_id} → {assignment_read.project_name or assignment.project_id}",
+        after={"created_review_notifications_for": created_for},
     )
     return assignment_read
 
@@ -2636,6 +2716,8 @@ def create_user(user: UserAccountCreate, request: Request, session: Session = De
     session.commit()
     session.refresh(db_user)
     ensure_inbox_welcome_notification(db_user.username)
+    if db_user.employee_id is not None:
+        refresh_assignment_reviews_for_employee_link(db_user.employee_id, control_session=session)
     return serialize_user_account(db_user)
 
 
@@ -2645,6 +2727,7 @@ def update_user(user_id: int, update: UserAccountUpdate, request: Request, sessi
     user = session.get(UserAccount, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    previous_employee_id = user.employee_id
     data = update.model_dump(exclude_unset=True)
     if "password" in data and data["password"] is not None:
         if len(data["password"]) < 8:
@@ -2662,6 +2745,8 @@ def update_user(user_id: int, update: UserAccountUpdate, request: Request, sessi
     session.add(user)
     session.commit()
     session.refresh(user)
+    if user.employee_id is not None and user.employee_id != previous_employee_id:
+        refresh_assignment_reviews_for_employee_link(user.employee_id, control_session=session)
     return serialize_user_account(user)
 
 
