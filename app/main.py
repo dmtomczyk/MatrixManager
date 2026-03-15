@@ -851,12 +851,12 @@ def record_audit_entry(
 
 
 BASE_NAV_MARKUP = """<nav>
-        <a href="/">Planning</a>
+        <a href="/planning">Projects</a>
         <a href="/people">Employees</a>
         <a href="/staffing">Assignments</a>
         <a href="/orgs">Organizations</a>
         <a href="/canvas">Canvas</a>
-        <a href="/dashboard">Project Dashboard</a>
+        <a href="/dashboard">Forecast</a>
         <form method="post" action="/logout" class="logout-form">
           <button type="submit" class="logout-button">Logout</button>
         </form>
