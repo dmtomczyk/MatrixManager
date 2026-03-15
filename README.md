@@ -1,20 +1,104 @@
 # MatrixManager
 
-MatrixManager is a resource-planning and staffing web app for tracking:
+MatrixManager is a staffing and resource-planning web app for tracking organizations, employees, projects, and time-phased assignments. It combines a FastAPI + SQLModel backend with a lightweight browser UI for planning views, canvas workflows, audit history, and database management. It can run with SQLite by default or PostgreSQL when you need a more deployment-oriented setup.
 
-- organizations
-- employees and reporting lines
-- projects
-- time-phased assignments
-- utilization / allocation over time
-- audit history
-- database connections and runtime configuration
+## Table of contents
 
-The app uses **FastAPI + SQLModel** on the backend and a **vanilla HTML/CSS/JavaScript** frontend. It can run against **SQLite by default** and also supports **PostgreSQL**.
+- [Production install](#production-install)
+- [Build from source](#build-from-source)
+- [What the app includes](#what-the-app-includes)
+- [Main UI routes](#main-ui-routes)
+- [Repository layout](#repository-layout)
+- [Configuration](#configuration)
+- [Database modes](#database-modes)
+- [Docker / docker-compose](#docker--docker-compose)
+- [Lifecycle scripts](#lifecycle-scripts)
+- [Tests](#tests)
+- [Development scripts](#development-scripts)
+- [API overview](#api-overview)
+- [Requirements and coverage tracking](#requirements-and-coverage-tracking)
+- [Notes for contributors](#notes-for-contributors)
+- [Suggested next documentation improvements](#suggested-next-documentation-improvements)
 
-## What the current app includes
+## Production install
 
-The repository currently includes these major capabilities:
+If you want the fastest install path, use the included lifecycle scripts.
+
+```bash
+cd matrixmanager
+./install.sh
+./start.sh
+```
+
+Useful companion commands:
+
+```bash
+./status.sh
+./stop.sh
+./reset.sh
+./uninstall.sh
+```
+
+What this path is for:
+
+- guided/bootstrap-style install
+- `.env`-driven runtime configuration
+- containerized app startup
+- easier repeatable deployment on a host running Docker Compose
+
+If you want to inspect or change settings first, review:
+
+- `.env.example`
+- `docker-compose.yml`
+- `install.sh`
+
+## Build from source
+
+If you want to run it directly in a local dev environment:
+
+### 1) Create a virtual environment and install Python dependencies
+
+```bash
+cd matrixmanager
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 2) Configure runtime
+
+For a simple local SQLite setup:
+
+```bash
+export MATRIX_INSTALL_MODE=sqlite
+export MATRIX_ACTIVE_DB_TYPE=sqlite
+export MATRIX_AUTH_USERNAME=admin
+export MATRIX_AUTH_PASSWORD='change-me-now'
+export MATRIX_AUTH_SECRET='replace-with-a-long-random-secret'
+export MATRIX_APP_PORT=8000
+export MATRIX_BASE_URL='http://127.0.0.1:8000'
+export MATRIX_SQLITE_PATH="$PWD/matrix.db"
+export MATRIX_CONTROL_DB_PATH="$PWD/matrixmanager_control.db"
+```
+
+Or copy `.env.example` to `.env` and adjust values there.
+
+### 3) Run the app
+
+```bash
+uvicorn app.main:app --reload
+```
+
+Open:
+
+- `http://127.0.0.1:8000/`
+- `http://127.0.0.1:8000/docs`
+
+If auth is enabled, browser requests will redirect to `/login` until you sign in.
+
+## What the app includes
+
+The current repository includes these major capabilities:
 
 - **Authentication** via login page and signed session cookie
 - **Organizations** CRUD
@@ -32,13 +116,23 @@ The repository currently includes these major capabilities:
 - **Reset and seed scripts** for local development
 - **Docker / docker-compose** runtime support
 
-## Tech stack
+## Main UI routes
 
-- **Backend:** Python, FastAPI, SQLModel
-- **Database:** SQLite by default, PostgreSQL optional
-- **Frontend:** static HTML, CSS, vanilla JavaScript
-- **Tests:** pytest, Playwright
-- **Containerization:** Docker, docker-compose
+Once the app is running and you are authenticated, these are the main routes to know about:
+
+- `/` — app entry / root
+- `/planning` — planning view
+- `/employees` — employee roster and hierarchy management
+- `/assignments` — assignment management and export flows
+- `/organizations` — organization management
+- `/canvas` — visual staffing canvas
+- `/audit` — change history and audit trail
+- `/db-management` — database connection management
+- `/project-dashboard` — project-centric dashboard
+- `/login` — sign-in page
+- `/docs` — FastAPI OpenAPI docs
+
+> Exact navigation behavior may vary slightly depending on auth state and the active frontend shell.
 
 ## Repository layout
 
@@ -54,6 +148,12 @@ matrixmanager/
 ├── .env.example                 # runtime configuration template
 ├── Dockerfile
 ├── docker-compose.yml
+├── install.sh
+├── start.sh
+├── stop.sh
+├── status.sh
+├── reset.sh
+├── uninstall.sh
 ├── package.json
 ├── playwright.config.js
 ├── pytest.ini
@@ -61,74 +161,9 @@ matrixmanager/
 └── README.md
 ```
 
-## Main UI routes
+## Configuration
 
-Once the app is running and you are authenticated, the repo currently exposes these primary pages:
-
-- `/` — app entry / root
-- `/planning` — planning view
-- `/employees` — employee roster and hierarchy management
-- `/assignments` — assignment management and export flows
-- `/organizations` — organization management
-- `/canvas` — visual staffing canvas
-- `/audit` — change history and audit trail
-- `/db-management` — database connection management
-- `/project-dashboard` — project-centric dashboard
-- `/login` — sign-in page
-- `/docs` — FastAPI OpenAPI docs
-
-> Note: exact navigation behavior may depend on auth state and the active frontend shell.
-
-## Quick start (local dev)
-
-### 1) Create a virtual environment and install Python deps
-
-```bash
-cd matrixmanager
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-### 2) Configure environment
-
-Start from `.env.example` or export env vars manually.
-
-Example minimal local setup:
-
-```bash
-export MATRIX_INSTALL_MODE=sqlite
-export MATRIX_ACTIVE_DB_TYPE=sqlite
-export MATRIX_AUTH_USERNAME=admin
-export MATRIX_AUTH_PASSWORD='change-me-now'
-export MATRIX_AUTH_SECRET='replace-with-a-long-random-secret'
-export MATRIX_APP_PORT=8000
-export MATRIX_BASE_URL='http://127.0.0.1:8000'
-```
-
-If you want file locations to match the deployment-style layout, you can also set:
-
-```bash
-export MATRIX_SQLITE_PATH="$PWD/matrix.db"
-export MATRIX_CONTROL_DB_PATH="$PWD/matrixmanager_control.db"
-```
-
-### 3) Run the app
-
-```bash
-uvicorn app.main:app --reload
-```
-
-Open:
-
-- `http://127.0.0.1:8000/`
-- `http://127.0.0.1:8000/docs`
-
-If auth is enabled, page requests will redirect to `/login` until you sign in.
-
-## Environment variables
-
-The current `.env.example` defines these key settings:
+The current `.env.example` defines these key settings.
 
 ### App/auth/runtime
 
@@ -158,9 +193,9 @@ The current `.env.example` defines these key settings:
 
 ### SQLite
 
-SQLite is the default and simplest way to run the app locally.
+SQLite is the default and simplest option for local use and quick evaluation.
 
-Typical local flow:
+Typical flow:
 
 ```bash
 cd matrixmanager
@@ -170,14 +205,13 @@ uvicorn app.main:app --reload
 
 ### PostgreSQL
 
-PostgreSQL is supported via runtime configuration and the included compose file.
-The app can also manage DB connection profiles from the UI via `/db-management`.
+PostgreSQL is supported through runtime configuration and the included Compose setup. The app also includes a `/db-management` UI for managing and activating database connection profiles.
 
 ## Docker / docker-compose
 
 A container workflow is already included.
 
-### Run app with SQLite-backed volumes
+### Run the app with SQLite-backed volumes
 
 ```bash
 cd matrixmanager
@@ -192,38 +226,21 @@ This uses:
   - `./data/sqlite:/data/sqlite`
   - `./data/app:/data/app`
 
-### Run with PostgreSQL profile enabled
+### Run with the PostgreSQL profile enabled
 
 ```bash
 cd matrixmanager
 docker compose --profile postgres up --build
 ```
 
-The compose setup also includes:
+The Compose setup also includes:
 
 - app healthcheck on `/health`
 - optional PostgreSQL service with persistent volume
 
-## API overview
-
-FastAPI exposes interactive API docs at:
-
-- `/docs`
-
-The README previously documented these core resource families, which still match the app’s domain model:
-
-- `/organizations`
-- `/employees`
-- `/projects`
-- `/assignments`
-- `/schedule/employee/{id}`
-- `/schedule/project/{id}`
-
-In practice, the current backend also includes auth, audit, and DB-management related behavior surfaced through the app.
-
 ## Lifecycle scripts
 
-For the containerized beta workflow:
+For the containerized install/deploy workflow:
 
 ```bash
 cd matrixmanager
@@ -235,34 +252,14 @@ cd matrixmanager
 ./uninstall.sh
 ```
 
+Script summary:
+
 - `install.sh` — guided install/bootstrap and `.env` generation
 - `start.sh` — start the Compose stack with the correct profile
 - `stop.sh` — stop the stack while preserving data
 - `status.sh` — show Compose status plus a host-side health probe
-- `reset.sh` — wipe Matrix Manager data while keeping config/scripts
-- `uninstall.sh` — remove runtime, with an option to keep or delete all data
-
-## Development scripts
-
-### Reset the database
-
-```bash
-cd matrixmanager
-python scripts/reset_db.py
-# or
-npm run db:reset
-```
-
-### Seed sample data
-
-```bash
-cd matrixmanager
-python scripts/seed_sample_data.py
-# or
-npm run db:seed
-```
-
-The seeder recreates a clean sample dataset with organizations, hierarchy, projects, and assignments.
+- `reset.sh` — wipe MatrixManager data while keeping config/scripts
+- `uninstall.sh` — remove runtime, with an option to keep or delete data
 
 ## Tests
 
@@ -294,40 +291,77 @@ npm run test:e2e:ui
 
 The E2E specs live in `e2e/`.
 
+## Development scripts
+
+### Reset the database
+
+```bash
+cd matrixmanager
+python scripts/reset_db.py
+# or
+npm run db:reset
+```
+
+### Seed sample data
+
+```bash
+cd matrixmanager
+python scripts/seed_sample_data.py
+# or
+npm run db:seed
+```
+
+The seeder recreates a clean sample dataset with organizations, hierarchy, projects, and assignments.
+
+## API overview
+
+FastAPI exposes interactive API docs at:
+
+- `/docs`
+
+The core resource families documented by the current app domain are:
+
+- `/organizations`
+- `/employees`
+- `/projects`
+- `/assignments`
+- `/schedule/employee/{id}`
+- `/schedule/project/{id}`
+
+The backend also includes auth, audit, and database-management-related behavior used by the UI.
+
 ## Requirements and coverage tracking
 
-The repo also includes product and QA artifacts under `requirements/`:
+The repo includes product and QA artifacts under `requirements/`:
 
 - `requirements.csv`
 - `requirements_test_plan.csv`
 - `tp_coverage_matrix.csv`
 - phase planning / installer documents
 
-These are useful if you want to understand current scope, delivery planning, and test coverage status.
+These are useful for understanding scope, delivery planning, and current test coverage status.
 
 ## Notes for contributors
 
-- The frontend is plain static assets under `app/static/`
 - The backend entrypoint is `app/main.py`
-- SQLite is easiest for local iteration
-- The repo already includes both test and deployment scaffolding, so it is more than a one-file MVP at this point
+- The frontend lives under `app/static/`
+- SQLite is the easiest local iteration path
+- Docker/Compose and lifecycle scripts are already included for more deployment-like usage
+- The project now has enough surface area that route-level docs and screenshots would add real value
 
-## Next sensible improvements
+## Suggested next documentation improvements
 
-A few likely next-step areas, based on the current repo shape:
+Useful follow-on improvements for the docs:
 
-- tighten README/API docs around auth/admin endpoints
+- add screenshots or short workflow walkthroughs
+- document auth/admin behavior in more detail
 - document `/project-dashboard` and `/db-management` more deeply
-- add screenshots / workflow walkthroughs
-- document production deployment and backup strategy
-- describe the audit model and database switching behavior in more detail
+- add a production backup/restore section
+- describe database switching behavior and audit model in more detail
 
 ---
 
-If you are opening this repo fresh, the fastest path is:
+If you are opening this repo for the first time, start with either:
 
-1. create `.venv`
-2. install `requirements.txt`
-3. copy `.env.example` to `.env` and adjust credentials
-4. run `uvicorn app.main:app --reload`
-5. sign in and explore `/planning`, `/canvas`, `/audit`, and `/db-management`
+- **Production-style install:** `./install.sh && ./start.sh`
+- **Source/dev install:** create `.venv`, install `requirements.txt`, set env vars, then run `uvicorn app.main:app --reload`
