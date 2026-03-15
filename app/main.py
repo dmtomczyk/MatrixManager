@@ -7,6 +7,7 @@ import hmac
 import io
 import json
 import os
+import re
 import secrets
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -822,12 +823,16 @@ BASE_NAV_MARKUP = """<nav>
       </nav>"""
 
 
-def build_header_brand_open() -> str:
+def build_header_brand(subtitle: str = "") -> str:
     logo_url = static_asset_url("images/matrix-manager-favicon.svg")
+    subtitle_markup = f'<p class="header-brand-subtitle">{subtitle}</p>' if subtitle else ""
     return f'''<a href="/" class="header-brand" aria-label="Matrix Manager home">
         <img src="{logo_url}" alt="Matrix Manager" class="header-brand-logo" />
         <div class="header-brand-copy">
-'''
+          <span class="header-brand-title">Matrix Management</span>
+          {subtitle_markup}
+        </div>
+      </a>'''
 
 
 def serve_html_page(
@@ -842,10 +847,16 @@ def serve_html_page(
     if "</head>" in html and favicon_markup not in html:
         html = html.replace("</head>", f"    {favicon_markup}\n  </head>", 1)
     if "<header>" in html and '<a href="/" class="header-brand"' not in html:
-        html = html.replace("<header>", "<header class=\"app-header\">", 1)
-        html = html.replace("<header class=\"app-header\">\n      <div>", f"<header class=\"app-header\">\n      {build_header_brand_open()}", 1)
-        html = html.replace("\n        <h1>", "\n          <h1>", 1)
-        html = html.replace("      </div>\n      <nav", "        </div>\n      </a>\n      <nav", 1)
+        subtitle_match = re.search(r"<header>\s*<div>\s*<h1>.*?</h1>\s*<p>(.*?)</p>\s*</div>", html, re.DOTALL)
+        subtitle = subtitle_match.group(1).strip() if subtitle_match else ""
+        brand_markup = build_header_brand(subtitle)
+        html = re.sub(
+            r"<header>\s*<div>\s*<h1>.*?</h1>\s*<p>.*?</p>\s*</div>",
+            f'<header class="app-header">\n      {brand_markup}',
+            html,
+            count=1,
+            flags=re.DOTALL,
+        )
     if current_path and username:
         replacements[BASE_NAV_MARKUP] = render_app_nav(current_path=current_path, username=username)
         replacements["</body>"] = f'    <script src="{static_asset_url("app-shell.js")}"></script>\n  </body>'
