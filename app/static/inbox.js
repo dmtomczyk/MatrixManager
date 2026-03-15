@@ -56,7 +56,7 @@ const renderInbox = (items) => {
           <p class="muted small-text">${escapeHtml(formatDate(item.created_at))}</p>
         </div>
         <div class="panel-actions-row">
-          ${item.payload?.kind === 'assignment_review' ? `<button type="button" class="table-action-button table-action-button-approve" data-action="approve" data-id="${item.id}">Approve</button><button type="button" class="table-action-button table-action-button-deny" data-action="deny" data-id="${item.id}">Deny</button>` : ''}
+          ${item.payload?.kind === 'assignment_review' && item.is_actionable ? `<button type="button" class="table-action-button table-action-button-approve" data-action="approve" data-id="${item.id}">Approve</button><button type="button" class="table-action-button table-action-button-deny" data-action="deny" data-id="${item.id}">Deny</button>` : ''}
           ${item.is_read ? '' : `<button type="button" data-action="mark-read" data-id="${item.id}">Mark read</button>`}
           <button type="button" class="secondary" data-action="delete" data-id="${item.id}">Delete</button>
         </div>

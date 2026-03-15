@@ -489,6 +489,7 @@ class InboxNotificationRead(SQLModel):
     title: str
     message: str
     payload: Optional[dict[str, Any]] = None
+    is_actionable: bool = False
     is_read: bool
     created_at: datetime
 
@@ -1605,14 +1606,31 @@ def ensure_inbox_welcome_notification(username: str) -> None:
         session.commit()
 
 
+def get_assignment_review_actionable_state(metadata: Optional[dict[str, Any]]) -> bool:
+    if not metadata or metadata.get("kind") != "assignment_review":
+        return False
+    assignment_id = metadata.get("assignment_id")
+    if not assignment_id:
+        return False
+    active_connection = get_active_db_connection_config()
+    data_engine = get_or_create_data_engine(active_connection)
+    with Session(data_engine) as data_session:
+        assignment = data_session.get(Assignment, assignment_id)
+        return bool(assignment and assignment.status == "in_review")
+
+
 def serialize_inbox_notification(notification: InboxNotification) -> InboxNotificationRead:
     metadata = json.loads(notification.metadata_json) if notification.metadata_json else None
+    is_actionable = get_assignment_review_actionable_state(metadata)
+    if metadata and metadata.get("kind") == "assignment_review":
+        metadata = {**metadata, "is_actionable": is_actionable}
     return InboxNotificationRead(
         id=notification.id,
         username=notification.username,
         title=notification.title,
         message=notification.message,
         payload=metadata,
+        is_actionable=is_actionable,
         is_read=notification.is_read,
         created_at=notification.created_at,
     )
@@ -1629,6 +1647,20 @@ def add_inbox_notification(session: Session, *, username: str, title: str, messa
     session.commit()
     session.refresh(notification)
     return notification
+
+
+def retire_assignment_review_notifications(session: Session, assignment_id: int) -> None:
+    notifications = session.exec(select(InboxNotification).where(InboxNotification.metadata_json.is_not(None))).all()
+    updated = False
+    for notification in notifications:
+        metadata = json.loads(notification.metadata_json) if notification.metadata_json else None
+        if metadata and metadata.get("kind") == "assignment_review" and metadata.get("assignment_id") == assignment_id:
+            if not notification.is_read:
+                notification.is_read = True
+                session.add(notification)
+                updated = True
+    if updated:
+        session.commit()
 
 
 def ensure_assignment_review_notifications(assignment: Assignment, *, control_session: Optional[Session] = None) -> list[str]:
@@ -3331,6 +3363,7 @@ def approve_inbox_notification(notification_id: int, request: Request, session: 
     notification.is_read = True
     session.add(notification)
     session.commit()
+    retire_assignment_review_notifications(session, assignment_id)
     session.refresh(notification)
     submitter_username = metadata.get("submitter_username")
     if submitter_username:
@@ -3372,6 +3405,7 @@ def deny_inbox_notification(notification_id: int, request: Request, session: Ses
     notification.is_read = True
     session.add(notification)
     session.commit()
+    retire_assignment_review_notifications(session, assignment_id)
     session.refresh(notification)
     submitter_username = metadata.get("submitter_username")
     if submitter_username:
