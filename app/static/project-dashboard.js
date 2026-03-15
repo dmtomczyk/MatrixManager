@@ -219,7 +219,8 @@ const computeWeeklyDatasets = (rangeStart, rangeEnd) => {
       fill: false,
       segment: {
         borderColor: (ctx) => {
-          const demandValue = ctx.dataset.demandReference?.[ctx.p1DataIndex] ?? 0;
+          const dataset = ctx.chart?.data?.datasets?.[ctx.datasetIndex];
+          const demandValue = dataset?.demandReference?.[ctx.p1DataIndex] ?? 0;
           const allocationValue = ctx.p1?.parsed?.y ?? 0;
           return allocationValue < demandValue ? '#dc2626' : lightenHex(baseColor, 0.45);
         },
