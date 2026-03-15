@@ -189,13 +189,13 @@ def serve_index() -> str:
     return index_path.read_text(encoding="utf-8")
 
 
-@app.get("/employees", response_class=HTMLResponse)
+@app.get("/people", response_class=HTMLResponse)
 def serve_employees() -> str:
     path = STATIC_DIR / "employees.html"
     return path.read_text(encoding="utf-8")
 
 
-@app.get("/assignments", response_class=HTMLResponse)
+@app.get("/staffing", response_class=HTMLResponse)
 def serve_assignments() -> str:
     path = STATIC_DIR / "assignments.html"
     return path.read_text(encoding="utf-8")
