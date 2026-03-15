@@ -18,6 +18,7 @@ MatrixManager is a staffing and resource-planning web app for tracking organizat
 - [API overview](#api-overview)
 - [Requirements and coverage tracking](#requirements-and-coverage-tracking)
 - [Notes for contributors](#notes-for-contributors)
+- [Dependency manifest](#dependency-manifest)
 - [Suggested next documentation improvements](#suggested-next-documentation-improvements)
 
 ## Production install
@@ -329,6 +330,12 @@ The core resource families documented by the current app domain are:
 - `/schedule/project/{id}`
 
 The backend also includes auth, audit, and database-management-related behavior used by the UI.
+
+## Dependency manifest
+
+For a human-readable dependency inventory with rationale, production/dev split, runtime-mode notes, and an easy dependency tree, see:
+
+- [`dependencies.md`](./dependencies.md)
 
 ## Requirements and coverage tracking
 
