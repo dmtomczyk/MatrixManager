@@ -5,13 +5,14 @@ const employeeManagerHelp = document.querySelector('#employee-manager-help');
 const employeeTable = document.querySelector('#employee-table');
 const employeeOrgFilter = document.querySelector('#employee-org-filter');
 const employeeForm = document.querySelector('#employee-form');
-const bulkEmployeeForm = document.querySelector('#bulk-employee-form');
-const bulkEmployeeOrganizationSelect = document.querySelector('#bulk-employee-organization');
-const bulkEmployeeManagerSelect = document.querySelector('#bulk-employee-manager');
-const bulkEmployeeTypeSelect = document.querySelector('#bulk-employee-type');
-const bulkSelectionStatus = document.querySelector('#bulk-selection-status');
-const bulkApplyButton = document.querySelector('#bulk-apply-button');
-const bulkClearSelectionButton = document.querySelector('#bulk-clear-selection');
+const employeeFormTitle = document.querySelector('#employee-form-title');
+const employeeFormStatus = document.querySelector('#employee-form-status');
+const employeeSubmitButton = document.querySelector('#employee-submit-button');
+const employeeFormSecondaryAction = document.querySelector('#employee-form-secondary-action');
+const employeeNameInput = document.querySelector('#employee-name');
+const employeeRoleInput = document.querySelector('#employee-role');
+const employeeLocationInput = document.querySelector('#employee-location');
+const employeeCapacityInput = document.querySelector('#employee-capacity');
 const selectAllEmployeesCheckbox = document.querySelector('#select-all-employees');
 const expandAllVisibleButton = document.querySelector('#expand-all-visible');
 const collapseAllVisibleButton = document.querySelector('#collapse-all-visible');
@@ -21,6 +22,7 @@ let organizations = [];
 let employees = [];
 let expandedEmployees = new Set();
 let selectedEmployees = new Set();
+let activeEmployeeMode = 'create';
 
 const escapeHtml = (value = '') => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char] || char));
 const apiFetch = async (url, options = {}) => {
@@ -42,11 +44,6 @@ const getCurrentEmployeeTypeValue = () => employeeTypeSelect?.value || 'IC';
 const getVisibleEmployees = () => {
   const selectedOrg = employeeOrgFilter?.value || '';
   return employees.filter((emp) => !selectedOrg || String(emp.organization_id) === selectedOrg);
-};
-const syncManagerFieldState = () => {
-  const isIc = getCurrentEmployeeTypeValue() === 'IC';
-  employeeManagerSelect.required = isIc;
-  if (employeeManagerHelp) employeeManagerHelp.textContent = isIc ? 'Required for ICs. Optional for leaders without reports above them.' : 'Optional for leaders.';
 };
 const buildHierarchy = (items) => {
   const byId = new Map(items.map((employee) => [employee.id, employee]));
@@ -87,24 +84,151 @@ const collapseEmployeeBranch = (employeeId, directReports) => {
   expandedEmployees.delete(employeeId);
   getDescendantIds(employeeId, directReports).forEach((id) => expandedEmployees.delete(id));
 };
+const getCurrentEmployeeId = () => Number(employeeForm?.querySelector('input[name="entity_id"]')?.value) || null;
+const getEmployeeFormMode = () => {
+  if (selectedEmployees.size > 1) return 'bulk';
+  if (getCurrentEmployeeId()) return 'edit';
+  return 'create';
+};
+const setEmployeeTypeModeOptions = (mode) => {
+  const previousValue = employeeTypeSelect.value;
+  const options = mode === 'bulk'
+    ? ['<option value="">No change</option>', '<option value="IC">Set to IC</option>', '<option value="L">Set to L</option>']
+    : ['<option value="IC">IC</option>', '<option value="L">L</option>'];
+  employeeTypeSelect.innerHTML = options.join('');
+  if ([...employeeTypeSelect.options].some((option) => option.value === previousValue)) {
+    employeeTypeSelect.value = previousValue;
+  } else {
+    employeeTypeSelect.value = mode === 'bulk' ? '' : 'IC';
+  }
+};
+const updateOrganizationSelect = () => {
+  const options = organizations.map((org) => `<option value="${org.id}">${escapeHtml(org.name)}</option>`).join('');
+  const previousOrg = employeeOrganizationSelect.value;
+  const placeholder = getEmployeeFormMode() === 'bulk' ? 'No change' : 'Select organization';
+  employeeOrganizationSelect.innerHTML = `<option value="">${placeholder}</option>${options}`;
+  if (previousOrg && organizations.some((org) => String(org.id) === previousOrg)) employeeOrganizationSelect.value = previousOrg;
+  const previousFilter = employeeOrgFilter.value;
+  employeeOrgFilter.innerHTML = ['<option value="">All organizations</option>'].concat(organizations.map((org) => `<option value="${org.id}">${escapeHtml(org.name)}</option>`)).join('');
+  if (previousFilter && organizations.some((org) => String(org.id) === previousFilter)) employeeOrgFilter.value = previousFilter;
+};
+const updateManagerSelect = (selectedId = '', currentEmployeeId = null) => {
+  const leaders = getLeaderEmployees(currentEmployeeId);
+  const mode = getEmployeeFormMode();
+  const options = mode === 'bulk'
+    ? ['<option value="">No change</option>', '<option value="__CLEAR__">Clear manager</option>']
+    : ['<option value="">No manager</option>'];
+  employeeManagerSelect.innerHTML = options.concat(leaders.map((emp) => `<option value="${emp.id}">${escapeHtml(emp.name + (emp.organization_name ? ` · ${emp.organization_name}` : ''))}</option>`)).join('');
+  employeeManagerSelect.value = selectedId && [...employeeManagerSelect.options].some((option) => option.value === String(selectedId)) ? String(selectedId) : '';
+  syncManagerFieldState();
+};
+const syncManagerFieldState = () => {
+  const mode = getEmployeeFormMode();
+  const isIc = getCurrentEmployeeTypeValue() === 'IC';
+  employeeOrganizationSelect.required = mode !== 'bulk';
+  const managerRequired = mode !== 'bulk' && isIc;
+  employeeManagerSelect.required = managerRequired;
+  if (managerRequired) employeeManagerSelect.setAttribute('aria-required', 'true');
+  else employeeManagerSelect.removeAttribute('aria-required');
+  if (!employeeManagerHelp) return;
+  if (mode === 'bulk') {
+    employeeManagerHelp.textContent = 'Choose fields to apply to all selected employees. Leave anything blank for no change.';
+    return;
+  }
+  employeeManagerHelp.textContent = isIc ? 'Required for ICs. Optional for leaders without reports above them.' : 'Optional for leaders.';
+};
+const resetEmployeeFormFields = () => {
+  employeeForm.reset();
+  employeeForm.querySelector('input[name="entity_id"]').value = '';
+  employeeNameInput.disabled = false;
+  employeeNameInput.required = true;
+  employeeNameInput.placeholder = '';
+  employeeRoleInput.placeholder = '';
+  employeeLocationInput.placeholder = '';
+  employeeCapacityInput.placeholder = '';
+  employeeCapacityInput.value = '1';
+  setEmployeeTypeModeOptions('create');
+  updateOrganizationSelect();
+  updateManagerSelect();
+  syncManagerFieldState();
+};
+const syncEmployeeFormMode = () => {
+  const mode = getEmployeeFormMode();
+  if (activeEmployeeMode === mode) {
+    syncManagerFieldState();
+    return;
+  }
+  activeEmployeeMode = mode;
+  if (mode === 'bulk') {
+    employeeFormTitle.textContent = 'Bulk Edit Selected Employees';
+    employeeFormStatus.textContent = `${selectedEmployees.size} employees selected. Name is disabled because it must stay unique per employee.`;
+    employeeSubmitButton.textContent = 'Apply to Selected';
+    employeeFormSecondaryAction.textContent = 'Clear Selection';
+    employeeForm.querySelector('input[name="entity_id"]').value = '';
+    employeeNameInput.value = '';
+    employeeNameInput.disabled = true;
+    employeeNameInput.required = false;
+    employeeNameInput.placeholder = 'Disabled for multi-edit';
+    employeeRoleInput.value = '';
+    employeeRoleInput.placeholder = 'Leave blank for no change';
+    employeeLocationInput.value = '';
+    employeeLocationInput.placeholder = 'Leave blank for no change';
+    employeeCapacityInput.value = '';
+    employeeCapacityInput.placeholder = 'Leave blank for no change';
+    setEmployeeTypeModeOptions('bulk');
+    updateOrganizationSelect();
+    updateManagerSelect();
+    return;
+  }
+  if (mode === 'edit') {
+    employeeFormTitle.textContent = 'Update Employee';
+    employeeFormStatus.textContent = 'Edit one employee using the same form.';
+    employeeSubmitButton.textContent = 'Update Employee';
+    employeeFormSecondaryAction.textContent = 'Clear Form';
+    employeeNameInput.disabled = false;
+    employeeNameInput.required = true;
+    employeeNameInput.placeholder = '';
+    employeeRoleInput.placeholder = '';
+    employeeLocationInput.placeholder = '';
+    employeeCapacityInput.placeholder = '';
+    setEmployeeTypeModeOptions('edit');
+    updateOrganizationSelect();
+    updateManagerSelect(employeeManagerSelect.value || '', getCurrentEmployeeId());
+    return;
+  }
+  employeeFormTitle.textContent = 'Add Employee';
+  employeeFormStatus.textContent = 'Use this form to add a new employee.';
+  employeeSubmitButton.textContent = 'Save Employee';
+  employeeFormSecondaryAction.textContent = 'Clear Form';
+  employeeNameInput.disabled = false;
+  employeeNameInput.required = true;
+  employeeNameInput.placeholder = '';
+  employeeRoleInput.placeholder = '';
+  employeeLocationInput.placeholder = '';
+  employeeCapacityInput.placeholder = '';
+  employeeCapacityInput.value = employeeCapacityInput.value || '1';
+  setEmployeeTypeModeOptions('create');
+  updateOrganizationSelect();
+  updateManagerSelect();
+};
+const clearEmployeeForm = () => {
+  employeeForm.reset();
+  employeeForm.querySelector('input[name="entity_id"]').value = '';
+  activeEmployeeMode = '';
+  syncEmployeeFormMode();
+};
 const updateBulkSelectionState = () => {
   const visibleEmployeeIds = new Set(getVisibleEmployees().map((employee) => employee.id));
   selectedEmployees = new Set([...selectedEmployees].filter((id) => employees.some((employee) => employee.id === id)));
   const visibleSelectedCount = [...selectedEmployees].filter((id) => visibleEmployeeIds.has(id)).length;
-  bulkSelectionStatus.textContent = visibleSelectedCount
-    ? `${visibleSelectedCount} selected on this view · ${selectedEmployees.size} total selected.`
-    : selectedEmployees.size
-      ? `${selectedEmployees.size} selected outside this filter.`
-      : 'No employees selected.';
-  bulkApplyButton.disabled = selectedEmployees.size === 0;
-  bulkClearSelectionButton.disabled = selectedEmployees.size === 0;
   if (!visibleEmployeeIds.size) {
     selectAllEmployeesCheckbox.checked = false;
     selectAllEmployeesCheckbox.indeterminate = false;
-    return;
+  } else {
+    selectAllEmployeesCheckbox.checked = visibleSelectedCount === visibleEmployeeIds.size;
+    selectAllEmployeesCheckbox.indeterminate = visibleSelectedCount > 0 && visibleSelectedCount < visibleEmployeeIds.size;
   }
-  selectAllEmployeesCheckbox.checked = visibleSelectedCount === visibleEmployeeIds.size;
-  selectAllEmployeesCheckbox.indeterminate = visibleSelectedCount > 0 && visibleSelectedCount < visibleEmployeeIds.size;
+  syncEmployeeFormMode();
 };
 const renderEmployees = () => {
   const filteredEmployees = getVisibleEmployees();
@@ -156,38 +280,6 @@ const renderEmployees = () => {
   employeeTable.innerHTML = rows.join('');
   updateBulkSelectionState();
 };
-const updateOrganizationSelect = () => {
-  const options = organizations.map((org) => `<option value="${org.id}">${escapeHtml(org.name)}</option>`).join('');
-  const previousOrg = employeeOrganizationSelect.value;
-  employeeOrganizationSelect.innerHTML = '<option value="">Select organization</option>' + options;
-  if (previousOrg && organizations.some((org) => String(org.id) === previousOrg)) employeeOrganizationSelect.value = previousOrg;
-  const previousFilter = employeeOrgFilter.value;
-  employeeOrgFilter.innerHTML = ['<option value="">All organizations</option>'].concat(organizations.map((org) => `<option value="${org.id}">${escapeHtml(org.name)}</option>`)).join('');
-  if (previousFilter && organizations.some((org) => String(org.id) === previousFilter)) employeeOrgFilter.value = previousFilter;
-  bulkEmployeeOrganizationSelect.innerHTML = '<option value="">No change</option>' + options;
-};
-const updateManagerSelect = (selectedId = '', currentEmployeeId = null) => {
-  const leaders = getLeaderEmployees(currentEmployeeId);
-  const options = ['<option value="">No manager</option>'].concat(leaders.map((emp) => `<option value="${emp.id}">${escapeHtml(emp.name + (emp.organization_name ? ` · ${emp.organization_name}` : ''))}</option>`)).join('');
-  employeeManagerSelect.innerHTML = options;
-  employeeManagerSelect.value = selectedId && leaders.some((emp) => String(emp.id) === String(selectedId)) ? String(selectedId) : '';
-  bulkEmployeeManagerSelect.innerHTML = '<option value="">No change</option><option value="__CLEAR__">Clear manager</option>' + leaders.map((emp) => `<option value="${emp.id}">${escapeHtml(emp.name + (emp.organization_name ? ` · ${emp.organization_name}` : ''))}</option>`).join('');
-  syncManagerFieldState();
-};
-const resetForm = () => {
-  employeeForm.reset();
-  employeeForm.querySelector('input[name="entity_id"]').value = '';
-  employeeForm.querySelector('button[type="submit"]').textContent = 'Save Employee';
-  employeeTypeSelect.value = 'IC';
-  syncManagerFieldState();
-  updateManagerSelect();
-};
-const resetBulkForm = () => {
-  bulkEmployeeForm.reset();
-  bulkEmployeeTypeSelect.value = '';
-  bulkEmployeeOrganizationSelect.value = '';
-  bulkEmployeeManagerSelect.value = '';
-};
 const loadOrganizations = async () => {
   organizations = await apiFetch('/organizations');
   updateOrganizationSelect();
@@ -198,11 +290,18 @@ const loadEmployees = async () => {
   expandedEmployees = new Set([...expandedEmployees].filter((id) => managerIds.has(id)));
   selectedEmployees = new Set([...selectedEmployees].filter((id) => employees.some((employee) => employee.id === id)));
   renderEmployees();
-  updateManagerSelect(employeeManagerSelect?.value || '', Number(employeeForm?.querySelector('input[name="entity_id"]')?.value) || null);
+  if (getCurrentEmployeeId()) {
+    const current = employees.find((employee) => employee.id === getCurrentEmployeeId());
+    if (current) populateEmployeeForm(current.id);
+    else clearEmployeeForm();
+  } else {
+    updateManagerSelect(employeeManagerSelect?.value || '', null);
+  }
 };
 const populateEmployeeForm = (id) => {
   const employee = employees.find((e) => e.id === Number(id));
   if (!employee) return;
+  selectedEmployees.clear();
   employeeForm.name.value = employee.name;
   employeeForm.role.value = employee.role || '';
   employeeTypeSelect.value = employee.employee_type || 'IC';
@@ -210,12 +309,52 @@ const populateEmployeeForm = (id) => {
   employeeForm.location.value = employee.location || '';
   employeeForm.capacity.value = employee.capacity || 1;
   employeeForm.querySelector('input[name="entity_id"]').value = employee.id;
-  employeeForm.querySelector('button[type="submit"]').textContent = 'Update Employee';
+  activeEmployeeMode = '';
+  syncEmployeeFormMode();
   updateManagerSelect(employee.manager_id || '', employee.id);
   syncManagerFieldState();
+  renderEmployees();
+};
+const buildBulkUpdatePayload = () => {
+  const payload = {};
+  if (employeeTypeSelect.value) payload.employee_type = employeeTypeSelect.value;
+  if (employeeOrganizationSelect.value) payload.organization_id = Number(employeeOrganizationSelect.value);
+  if (employeeManagerSelect.value === '__CLEAR__') payload.manager_id = null;
+  else if (employeeManagerSelect.value) payload.manager_id = Number(employeeManagerSelect.value);
+  const roleValue = employeeRoleInput.value.trim();
+  if (roleValue) payload.role = roleValue;
+  const locationValue = employeeLocationInput.value.trim();
+  if (locationValue) payload.location = locationValue;
+  const capacityValue = employeeCapacityInput.value;
+  if (capacityValue) payload.capacity = Number(capacityValue);
+  return payload;
 };
 employeeForm.addEventListener('submit', async (event) => {
   event.preventDefault();
+  const mode = getEmployeeFormMode();
+  if (mode === 'bulk') {
+    if (selectedEmployees.size < 2) {
+      alert('Select at least two employees to use multi-edit.');
+      return;
+    }
+    const payload = buildBulkUpdatePayload();
+    if (!Object.keys(payload).length) {
+      alert('Choose at least one field to update.');
+      return;
+    }
+    try {
+      for (const employeeId of selectedEmployees) {
+        await apiFetch(`/employees/${employeeId}`, { method: 'PUT', body: JSON.stringify(payload) });
+      }
+      showToast(`Updated ${selectedEmployees.size} employees`);
+      selectedEmployees.clear();
+      clearEmployeeForm();
+      await loadEmployees();
+    } catch (err) {
+      alert(err.message);
+    }
+    return;
+  }
   const formData = new FormData(employeeForm);
   const organizationId = Number(formData.get('organization_id'));
   if (!organizationId) return alert('Select an organization for this employee.');
@@ -237,41 +376,7 @@ employeeForm.addEventListener('submit', async (event) => {
       await apiFetch('/employees', { method: 'POST', body: JSON.stringify(payload) });
       showToast('Employee added');
     }
-    resetForm();
-    await loadEmployees();
-  } catch (err) {
-    alert(err.message);
-  }
-});
-bulkEmployeeForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  if (!selectedEmployees.size) {
-    alert('Select at least one employee to bulk edit.');
-    return;
-  }
-  const updates = [...selectedEmployees].map((employeeId) => {
-    const payload = {};
-    if (bulkEmployeeTypeSelect.value) payload.employee_type = bulkEmployeeTypeSelect.value;
-    if (bulkEmployeeOrganizationSelect.value) payload.organization_id = Number(bulkEmployeeOrganizationSelect.value);
-    if (bulkEmployeeManagerSelect.value === '__CLEAR__') payload.manager_id = null;
-    else if (bulkEmployeeManagerSelect.value) payload.manager_id = Number(bulkEmployeeManagerSelect.value);
-    const locationValue = bulkEmployeeForm.location.value.trim();
-    if (locationValue) payload.location = locationValue;
-    const capacityValue = bulkEmployeeForm.capacity.value;
-    if (capacityValue) payload.capacity = Number(capacityValue);
-    return { employeeId, payload };
-  }).filter((entry) => Object.keys(entry.payload).length > 0);
-  if (!updates.length) {
-    alert('Choose at least one field to update.');
-    return;
-  }
-  try {
-    for (const update of updates) {
-      await apiFetch(`/employees/${update.employeeId}`, { method: 'PUT', body: JSON.stringify(update.payload) });
-    }
-    showToast(`Updated ${updates.length} employee${updates.length === 1 ? '' : 's'}`);
-    selectedEmployees.clear();
-    resetBulkForm();
+    clearEmployeeForm();
     await loadEmployees();
   } catch (err) {
     alert(err.message);
@@ -311,6 +416,7 @@ employeeTable.addEventListener('click', async (event) => {
     if (!confirm('Delete this employee and related assignments? Direct reports will become unassigned.')) return;
     await apiFetch(`/employees/${id}`, { method: 'DELETE' });
     selectedEmployees.delete(Number(id));
+    if (String(getCurrentEmployeeId()) === String(id)) clearEmployeeForm();
     showToast('Employee deleted');
     await loadEmployees();
   }
@@ -329,10 +435,14 @@ selectAllEmployeesCheckbox.addEventListener('change', () => {
   else visibleEmployees.forEach((employee) => selectedEmployees.delete(employee.id));
   renderEmployees();
 });
-bulkClearSelectionButton.addEventListener('click', () => {
-  selectedEmployees.clear();
-  updateBulkSelectionState();
-  renderEmployees();
+employeeFormSecondaryAction.addEventListener('click', () => {
+  if (getEmployeeFormMode() === 'bulk') {
+    selectedEmployees.clear();
+    renderEmployees();
+    clearEmployeeForm();
+    return;
+  }
+  clearEmployeeForm();
 });
 expandAllVisibleButton.addEventListener('click', () => {
   const filteredEmployees = getVisibleEmployees();
@@ -352,7 +462,7 @@ employeeOrgFilter.addEventListener('change', () => {
 });
 (async function init() {
   await loadOrganizations();
+  clearEmployeeForm();
   await loadEmployees();
   syncManagerFieldState();
-  resetBulkForm();
 })();

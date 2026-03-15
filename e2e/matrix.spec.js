@@ -86,6 +86,42 @@ test('TP-017: filter employees by organization', async ({ page }) => {
   await expect(page.locator('#employee-table')).not.toContainText('TP017 PM');
 });
 
+test('TP-018: employee page uses one form for multi-edit and disables unique name field', async ({ page }) => {
+  const org = await createOrganization(page, { name: 'Engineering' });
+  const lead = await createEmployee(page, {
+    name: 'TP018 Lead', employee_type: 'L', organization_id: org.id, capacity: 1,
+  });
+  const engineerA = await createEmployee(page, {
+    name: 'TP018 Engineer A', employee_type: 'IC', organization_id: org.id, manager_id: lead.id, capacity: 1,
+  });
+  const engineerB = await createEmployee(page, {
+    name: 'TP018 Engineer B', employee_type: 'IC', organization_id: org.id, manager_id: lead.id, capacity: 1,
+  });
+
+  await page.goto('/people');
+  await waitForSelectOption(page, '#employee-organization', String(org.id));
+  await page.locator('#expand-all-visible').click();
+
+  await page.locator(`.employee-select-checkbox[data-id="${engineerA.id}"]`).check();
+  await page.locator(`.employee-select-checkbox[data-id="${engineerB.id}"]`).check();
+
+  await expect(page.locator('#employee-form-title')).toContainText('Bulk Edit Selected Employees');
+  await expect(page.locator('#employee-name')).toBeDisabled();
+  await page.locator('#employee-role').fill('Platform Engineer');
+  await page.locator('#employee-location').fill('Hybrid');
+  await page.locator('#employee-type').selectOption('L');
+  await page.locator('#employee-form button[type="submit"]').click();
+
+  const rowA = page.locator('#employee-table tr').filter({ hasText: 'TP018 Engineer A' });
+  const rowB = page.locator('#employee-table tr').filter({ hasText: 'TP018 Engineer B' });
+  await expect(rowA).toContainText('Platform Engineer');
+  await expect(rowB).toContainText('Platform Engineer');
+  await expect(rowA).toContainText('Hybrid');
+  await expect(rowB).toContainText('Hybrid');
+  await expect(rowA).toContainText('L');
+  await expect(rowB).toContainText('L');
+});
+
 test('TP-022 TP-027 TP-029 TP-030: create assignment and display in schedule surfaces', async ({ page }) => {
   const org = await createOrganization(page, { name: 'Engineering' });
   const leader = await createEmployee(page, {
