@@ -130,6 +130,7 @@ Freeze the Phase 0 / P0 decisions for the Phase 1 beta installer so implementati
 ### Notes
 - Release artifacts must be versioned.
 - Compose definitions must support both SQLite and PostgreSQL modes.
+- The Matrix Manager app container is assumed to be **built locally from the release/source bundle**, not pulled as a published application image.
 
 ---
 
