@@ -353,8 +353,15 @@ header nav a,
 }
 
 .account-menu-has-alert .account-menu-trigger {
-  border-color: rgba(251, 191, 36, 0.75);
-  box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.18);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.account-menu-has-pending-approvals .account-menu-trigger {
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.22);
+}
+
+.account-menu-has-unread-messages .account-menu-trigger {
+  background: rgba(15, 23, 42, 0.3);
 }
 
 .nav-dropdown-trigger {
@@ -502,6 +509,42 @@ header nav a,
   border: 2px solid #0f172a;
 }
 
+.account-menu-counters {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+}
+
+.account-counter {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.account-counter-icon {
+  font-size: 0.78rem;
+  line-height: 1;
+}
+
+.account-counter-approvals {
+  color: #92400e;
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+}
+
+.account-counter-messages {
+  color: #dbeafe;
+  background: rgba(59, 130, 246, 0.24);
+  border: 1px solid rgba(147, 197, 253, 0.24);
+}
+
 .account-menu-label {
   font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.7);
@@ -530,8 +573,7 @@ header nav a,
   background: rgba(59, 130, 246, 0.12);
 }
 
-.account-menu-link[data-alert="unread"]::after,
-.account-menu-link[data-alert="pending"]::after {
+.account-menu-link[data-alert]::after {
   content: attr(data-alert);
   margin-left: 8px;
   padding: 2px 8px;
@@ -542,12 +584,12 @@ header nav a,
   letter-spacing: 0.04em;
 }
 
-.account-menu-link[data-alert="unread"]::after {
+.account-menu-link[data-alert^="unread"]::after {
   color: #1d4ed8;
   background: rgba(59, 130, 246, 0.12);
 }
 
-.account-menu-link[data-alert="pending"]::after {
+.account-menu-link[data-alert^="pending"]::after {
   color: #92400e;
   background: rgba(245, 158, 11, 0.18);
 }

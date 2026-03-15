@@ -6,6 +6,25 @@ const closeOpenMenus = (eventTarget = null) => {
   });
 };
 
+const ensureAccountCounters = (accountTrigger) => {
+  let counterRow = accountTrigger.querySelector('.account-menu-counters');
+  if (counterRow) return counterRow;
+  counterRow = document.createElement('span');
+  counterRow.className = 'account-menu-counters';
+  counterRow.innerHTML = `
+    <span class="account-counter account-counter-approvals" hidden>
+      <span class="account-counter-icon" aria-hidden="true">✅</span>
+      <span class="account-counter-value">0</span>
+    </span>
+    <span class="account-counter account-counter-messages" hidden>
+      <span class="account-counter-icon" aria-hidden="true">✉️</span>
+      <span class="account-counter-value">0</span>
+    </span>
+  `;
+  accountTrigger.appendChild(counterRow);
+  return counterRow;
+};
+
 const updateAccountNotificationState = async () => {
   const accountMenu = document.querySelector('details.account-menu');
   const accountTrigger = document.querySelector('.account-menu-trigger');
@@ -15,13 +34,24 @@ const updateAccountNotificationState = async () => {
     const response = await fetch('/inbox-api', { headers: { Accept: 'application/json' } });
     if (!response.ok) return;
     const items = await response.json();
-    const hasUnread = items.some((item) => !item.is_read);
-    const hasPendingApproval = items.some((item) => (item.payload || {}).kind === 'assignment_review' && !item.is_read);
-    const hasAlert = hasUnread || hasPendingApproval;
+    const pendingApprovals = items.filter((item) => !item.is_read && (item.payload || {}).kind === 'assignment_review').length;
+    const unreadMessages = items.filter((item) => !item.is_read && (item.payload || {}).kind !== 'assignment_review').length;
+    const hasAlert = pendingApprovals > 0 || unreadMessages > 0;
     accountMenu.classList.toggle('account-menu-has-alert', hasAlert);
-    accountTrigger.setAttribute('aria-label', hasPendingApproval ? 'Signed in account menu with pending approvals' : hasUnread ? 'Signed in account menu with unread notifications' : 'Signed in account menu');
+    accountMenu.classList.toggle('account-menu-has-pending-approvals', pendingApprovals > 0);
+    accountMenu.classList.toggle('account-menu-has-unread-messages', unreadMessages > 0);
+    accountTrigger.setAttribute('aria-label', `Signed in account menu with ${pendingApprovals} pending approvals and ${unreadMessages} unread messages`);
+
+    const counterRow = ensureAccountCounters(accountTrigger);
+    const approvalsCounter = counterRow.querySelector('.account-counter-approvals');
+    const messagesCounter = counterRow.querySelector('.account-counter-messages');
+    approvalsCounter.hidden = pendingApprovals === 0;
+    messagesCounter.hidden = unreadMessages === 0;
+    approvalsCounter.querySelector('.account-counter-value').textContent = String(pendingApprovals);
+    messagesCounter.querySelector('.account-counter-value').textContent = String(unreadMessages);
+
     if (inboxLink) {
-      inboxLink.dataset.alert = hasPendingApproval ? 'pending' : hasUnread ? 'unread' : '';
+      inboxLink.dataset.alert = pendingApprovals > 0 ? `pending ${pendingApprovals}` : unreadMessages > 0 ? `unread ${unreadMessages}` : '';
     }
   } catch (_) {
     // Non-fatal nav enhancement; ignore fetch failures.
