@@ -3,14 +3,14 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Matrix Manager · Planning</title>
+    <title>Matrix Manager · Projects</title>
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
     <header>
       <div>
-        <h1>Demand & Planning</h1>
-        <p>Plan project demand, staffing signals, and utilization without the admin clutter.</p>
+        <h1>Projects</h1>
+        <p>Manage projects and review allocation pressure across your workforce.</p>
       </div>
       <nav>
         <a href="/">Planning</a>
@@ -57,25 +57,6 @@
         </div>
       </section>
 
-      <section id="timelines" class="card">
-        <div class="section-head">
-          <h2>Quick Timelines</h2>
-          <p>Peek at current staffing for one employee or one project.</p>
-        </div>
-        <div class="timelines">
-          <div class="panel">
-            <h3>Employee Schedule</h3>
-            <label>Employee<select id="schedule-employee"></select></label>
-            <ul id="employee-schedule" class="timeline"></ul>
-          </div>
-          <div class="panel">
-            <h3>Project Staffing</h3>
-            <label>Project<select id="schedule-project"></select></label>
-            <ul id="project-schedule" class="timeline"></ul>
-          </div>
-        </div>
-      </section>
-
       <section id="utilization" class="card">
         <div class="section-head">
           <h2>Allocation watchdog</h2>
@@ -103,16 +84,6 @@
         </div>
       </section>
 
-      <section id="assignments-visuals" class="card">
-        <div class="section-head">
-          <h2>Assignment graph</h2>
-          <p>See employees on the left, projects on the right, and current demand links between them.</p>
-        </div>
-        <div class="assignment-graph">
-          <div id="assignment-graph-empty" class="muted">Add assignments to see the relationship graph.</div>
-          <div id="assignment-graph"></div>
-        </div>
-      </section>
     </main>
 
     <div id="toast" role="status" aria-live="polite"></div>

@@ -370,10 +370,10 @@ def get_session_username(cookie_value: Optional[str]) -> Optional[str]:
 def render_app_nav(current_path: str, username: str) -> str:
     links = [
         ("/", "Home"),
-        ("/planning", "Planning"),
+        ("/planning", "Projects"),
         ("/staffing", "Assignments"),
         ("/canvas", "Canvas"),
-        ("/dashboard", "Project Dashboard"),
+        ("/dashboard", "Forecast"),
     ]
     people_links = [
         ("/orgs", "Organizations"),
