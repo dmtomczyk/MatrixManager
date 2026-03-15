@@ -9,9 +9,9 @@ DATA_APP_DIR="${ROOT_DIR}/data/app"
 DATA_BACKUPS_DIR="${ROOT_DIR}/data/backups"
 DEFAULT_PORT="8000"
 DEFAULT_ADMIN_USERNAME="admin"
-DEFAULT_POSTGRES_DB="matrixmanager"
-DEFAULT_POSTGRES_USER="matrixmanager"
-DEFAULT_POSTGRES_SSLMODE="prefer"
+DEFAULT_POSTGRES_DB="${POSTGRES_DB:-matrixmanager}"
+DEFAULT_POSTGRES_USER="${POSTGRES_USER:-matrixmanager}"
+DEFAULT_POSTGRES_SSLMODE="${POSTGRES_SSLMODE:-prefer}"
 
 require_command() {
   local cmd="$1"
@@ -64,6 +64,20 @@ ensure_dir_or_fallback() {
   printf '%s' "$fallback"
 }
 
+get_compose_project_name() {
+  if [[ -n "${COMPOSE_PROJECT_NAME:-}" ]]; then
+    printf '%s' "$COMPOSE_PROJECT_NAME"
+  else
+    basename "$ROOT_DIR"
+  fi
+}
+
+existing_postgres_volume_name() {
+  local project_name
+  project_name="$(get_compose_project_name)"
+  docker volume ls --format '{{.Name}}' | grep -E "^${project_name}_postgres_data$" | head -n 1 || true
+}
+
 require_command docker
 require_command curl
 require_command python3
@@ -76,6 +90,13 @@ fi
 mkdir -p "$DATA_SQLITE_DIR" "$DATA_APP_DIR"
 DATA_BACKUPS_DIR="$(ensure_dir_or_fallback "$DATA_BACKUPS_DIR" "${ROOT_DIR}/backups")"
 
+if [[ -f "$ENV_FILE" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$ENV_FILE"
+  set +a
+fi
+
 if [[ ! -f "$ENV_EXAMPLE_FILE" ]]; then
   echo "Error: .env.example is missing at $ENV_EXAMPLE_FILE" >&2
   exit 1
@@ -85,7 +106,7 @@ echo "Matrix Manager beta installer"
 echo "Project root: $ROOT_DIR"
 echo
 
-INSTALL_MODE="$(prompt_with_default "Install mode (postgresql/sqlite)" "postgresql")"
+INSTALL_MODE="$(prompt_with_default "Install mode (postgresql/sqlite)" "${MATRIX_INSTALL_MODE:-postgresql}")"
 INSTALL_MODE="$(printf '%s' "$INSTALL_MODE" | tr '[:upper:]' '[:lower:]')"
 if [[ "$INSTALL_MODE" != "sqlite" && "$INSTALL_MODE" != "postgresql" ]]; then
   echo "Error: install mode must be 'sqlite' or 'postgresql'." >&2
@@ -112,16 +133,58 @@ POSTGRES_HOST="postgres"
 POSTGRES_PORT="5432"
 POSTGRES_DB="$DEFAULT_POSTGRES_DB"
 POSTGRES_USER="$DEFAULT_POSTGRES_USER"
-POSTGRES_PASSWORD=""
+POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-}"
 POSTGRES_SSLMODE="$DEFAULT_POSTGRES_SSLMODE"
+POSTGRES_DATA_ACTION="fresh"
 
 if [[ "$INSTALL_MODE" == "postgresql" ]]; then
+  EXISTING_POSTGRES_VOLUME="$(existing_postgres_volume_name)"
+  if [[ -n "$EXISTING_POSTGRES_VOLUME" ]]; then
+    echo
+    echo "Existing bundled PostgreSQL data detected: $EXISTING_POSTGRES_VOLUME"
+    echo "PostgreSQL bootstrap credentials are only applied the first time the DB is initialized."
+    echo "Choose how to proceed:"
+    echo "  1) Preserve existing PostgreSQL data and reuse existing credentials"
+    echo "  2) Reset PostgreSQL data and reinitialize with new credentials"
+    echo "  3) Cancel"
+    read -r -p "Selection [1-3]: " PG_DATA_CHOICE
+    case "$PG_DATA_CHOICE" in
+      1)
+        POSTGRES_DATA_ACTION="preserve"
+        echo "Preserving existing PostgreSQL data. Reusing values from existing .env where available."
+        ;;
+      2)
+        POSTGRES_DATA_ACTION="reset"
+        echo "PostgreSQL data will be reset and reinitialized."
+        ;;
+      3)
+        echo "Canceled."
+        exit 0
+        ;;
+      *)
+        echo "Invalid selection." >&2
+        exit 1
+        ;;
+    esac
+  fi
+
   POSTGRES_DB="$(prompt_with_default "PostgreSQL database name" "$DEFAULT_POSTGRES_DB")"
   POSTGRES_USER="$(prompt_with_default "PostgreSQL username" "$DEFAULT_POSTGRES_USER")"
-  read -r -s -p "PostgreSQL password (leave blank to auto-generate): " POSTGRES_PASSWORD
-  echo
-  if [[ -z "$POSTGRES_PASSWORD" ]]; then
-    POSTGRES_PASSWORD="$(random_secret)"
+
+  if [[ "$POSTGRES_DATA_ACTION" == "preserve" ]]; then
+    if [[ -n "${POSTGRES_PASSWORD:-}" ]]; then
+      echo "Using the existing PostgreSQL password from .env because data is being preserved."
+    else
+      echo "Error: PostgreSQL data is being preserved, but no existing POSTGRES_PASSWORD was found in .env." >&2
+      echo "Either restore the correct .env, or choose the reset/reinitialize option." >&2
+      exit 1
+    fi
+  else
+    read -r -s -p "PostgreSQL password (leave blank to auto-generate): " POSTGRES_PASSWORD
+    echo
+    if [[ -z "$POSTGRES_PASSWORD" ]]; then
+      POSTGRES_PASSWORD="$(random_secret)"
+    fi
   fi
 fi
 
@@ -154,6 +217,12 @@ POSTGRES_SSLMODE=${POSTGRES_SSLMODE}
 EOF
 
 cd "$ROOT_DIR"
+
+if [[ "$INSTALL_MODE" == "postgresql" && "$POSTGRES_DATA_ACTION" == "reset" ]]; then
+  echo "Resetting existing bundled PostgreSQL data before reinstall..."
+  docker compose --profile postgres down -v --remove-orphans || true
+  rm -f "$DATA_APP_DIR"/* 2>/dev/null || true
+fi
 
 if [[ "$INSTALL_MODE" == "postgresql" ]]; then
   echo "Starting Matrix Manager with bundled PostgreSQL..."
