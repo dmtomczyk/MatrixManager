@@ -28,6 +28,10 @@ const formatDate = (value) => {
   }
 };
 
+const notifyAccountCountsChanged = () => {
+  document.dispatchEvent(new CustomEvent('account-notifications-changed'));
+};
+
 const renderInbox = (items) => {
   if (!items.length) {
     inboxList.innerHTML = '<div class="panel"><p class="muted">No notifications yet.</p></div>';
@@ -77,6 +81,7 @@ inboxList.addEventListener('click', async (event) => {
       showToast('Notification deleted');
     }
     await loadInbox();
+    notifyAccountCountsChanged();
   } catch (err) {
     alert(err.message);
   }

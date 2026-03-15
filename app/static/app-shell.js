@@ -58,6 +58,11 @@ const updateAccountNotificationState = async () => {
   }
 };
 
+window.refreshAccountNotificationState = updateAccountNotificationState;
+document.addEventListener('account-notifications-changed', () => {
+  updateAccountNotificationState();
+});
+
 document.addEventListener('click', (event) => {
   closeOpenMenus(event.target);
 });
