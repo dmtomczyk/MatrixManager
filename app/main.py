@@ -589,7 +589,7 @@ def render_app_nav(current_path: str, username: str) -> str:
         admin_links = [
             ("/users", "Users"),
             ("/audit", "Audit"),
-            ("/runtime", "Runtime"),
+            ("/runtime", "System Health"),
             ("/db-management", "Databases"),
         ]
 
@@ -678,6 +678,7 @@ def build_login_page(error: str = "", next_path: str = "/") -> str:
     error_markup = f'<p class="login-error">{error}</p>' if error else ""
     styles_href = static_asset_url("styles.css")
     favicon_href = static_asset_url("images/matrix-manager-favicon.ico")
+    logo_href = static_asset_url("images/matrix-manager-favicon.svg")
     safe_next = next_path if next_path.startswith("/") else "/"
     return f"""<!doctype html>
 <html lang=\"en\">
@@ -691,7 +692,8 @@ def build_login_page(error: str = "", next_path: str = "/") -> str:
   <body class=\"login-page\">
     <main class=\"login-shell\">
       <section class=\"card login-card\">
-        <div class=\"section-head\">
+        <div class=\"section-head login-head\">
+          <img src=\"{logo_href}\" alt=\"Matrix Management\" class=\"login-logo\" />
           <h1>Matrix Manager</h1>
           <p>Sign in to continue.</p>
         </div>
@@ -1284,7 +1286,6 @@ def get_installed_versions(docker_available: bool) -> list[RuntimeVersionRead]:
         RuntimeVersionRead(name="Python", version=os.sys.version.split()[0], source="runtime"),
         RuntimeVersionRead(name="FastAPI", version=getattr(fastapi, "__version__", "unknown"), source="python package"),
         RuntimeVersionRead(name="SQLModel", version=getattr(sqlmodel, "__version__", "unknown"), source="python package"),
-        RuntimeVersionRead(name="OpenClaw", version=os.getenv("OPENCLAW_VERSION", "unknown"), source="env/runtime"),
     ]
     try:
         sqlite_version = create_engine("sqlite://", connect_args={"check_same_thread": False}).connect().exec_driver_sql("select sqlite_version()").scalar()
@@ -1488,7 +1489,8 @@ def serve_html_page(
         )
     if current_path and username:
         replacements[BASE_NAV_MARKUP] = render_app_nav(current_path=current_path, username=username)
-        replacements["</body>"] = f'    <script src="{static_asset_url("app-shell.js")}"></script>\n  </body>'
+        footer_markup = '    <footer class="app-footer">Created by Daymian</footer>\n'
+        replacements["</body>"] = f'{footer_markup}    <script src="{static_asset_url("app-shell.js")}"></script>\n  </body>'
     for old, new in replacements.items():
         html = html.replace(old, new)
     return html

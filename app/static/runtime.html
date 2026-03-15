@@ -3,13 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Matrix Manager · Runtime</title>
+    <title>Matrix Manager · System Health</title>
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
     <header>
       <div>
-        <h1>Runtime</h1>
+        <h1>System Health</h1>
         <p>Monitor container/service health, DB connectivity, and captured runtime failures.</p>
       </div>
       <nav>
@@ -88,40 +88,6 @@
       <section class="card single-column">
         <div class="section-head with-actions">
           <div class="section-copy">
-            <h2>Health Snapshots</h2>
-            <p>Background probe loop history for the most recent runtime checks.</p>
-          </div>
-          <div class="panel-actions-row">
-            <label class="small-text">Status Filter
-              <select id="runtime-snapshot-filter">
-                <option value="all">All</option>
-                <option value="ok">OK</option>
-                <option value="degraded">Degraded</option>
-                <option value="error">Error</option>
-              </select>
-            </label>
-          </div>
-        </div>
-        <div class="db-table-shell">
-          <table>
-            <thead>
-              <tr>
-                <th>When</th>
-                <th>Overall</th>
-                <th>Control DB</th>
-                <th>Active Data DB</th>
-                <th>Docker</th>
-                <th>Errors (1h)</th>
-              </tr>
-            </thead>
-            <tbody id="runtime-snapshot-table"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="card single-column">
-        <div class="section-head with-actions">
-          <div class="section-copy">
             <h2>Grouped Runtime Errors</h2>
             <p>Repeated failures are rolled up by error type + message so recurring issues stand out quickly.</p>
           </div>
@@ -175,6 +141,40 @@
               </tr>
             </thead>
             <tbody id="runtime-error-table"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card single-column">
+        <div class="section-head with-actions">
+          <div class="section-copy">
+            <h2>Health Snapshots</h2>
+            <p>Background probe loop history for recent system checks. The newest ~10 are visible at once; scroll for older entries.</p>
+          </div>
+          <div class="panel-actions-row">
+            <label class="small-text">Status Filter
+              <select id="runtime-snapshot-filter">
+                <option value="all">All</option>
+                <option value="ok">OK</option>
+                <option value="degraded">Degraded</option>
+                <option value="error">Error</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <div class="db-table-shell runtime-snapshot-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>When</th>
+                <th>Overall</th>
+                <th>Control DB</th>
+                <th>Active Data DB</th>
+                <th>Docker</th>
+                <th>Errors (1h)</th>
+              </tr>
+            </thead>
+            <tbody id="runtime-snapshot-table"></tbody>
           </table>
         </div>
       </section>

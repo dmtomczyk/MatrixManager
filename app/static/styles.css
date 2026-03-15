@@ -25,6 +25,18 @@ body.login-page {
   padding: 24px;
 }
 
+.login-head {
+  align-items: center;
+  text-align: center;
+}
+
+.login-logo {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 8px;
+  display: block;
+}
+
 .home-hero-grid,
 .card-grid {
   display: grid;
@@ -1135,6 +1147,18 @@ table tbody tr:hover {
 
 .runtime-recommendations-panel li + li {
   margin-top: 6px;
+}
+
+.runtime-snapshot-shell {
+  max-height: 440px;
+  overflow: auto;
+}
+
+.app-footer {
+  padding: 10px 16px 18px;
+  text-align: center;
+  font-size: 0.76rem;
+  color: rgba(71, 85, 105, 0.72);
 }
 
 .panel-actions-row {
