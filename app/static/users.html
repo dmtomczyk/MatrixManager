@@ -37,6 +37,7 @@
               <thead>
                 <tr>
                   <th>Username</th>
+                  <th>Linked Employee</th>
                   <th>Admin</th>
                   <th>Active</th>
                   <th></th>
@@ -50,6 +51,8 @@
             <input type="hidden" name="entity_id" />
             <label><span class="label-text required-field">Username</span><input name="username" required /></label>
             <label>Password<input name="password" type="password" placeholder="Leave blank to keep existing password when editing" /></label>
+            <label>Linked Employee<select name="employee_id" id="user-employee"></select></label>
+            <p class="muted small-text">Link a user to an employee so manager-chain approvals can route correctly.</p>
             <label class="checkbox-row"><input name="is_admin" type="checkbox" /> Admin user</label>
             <label class="checkbox-row"><input name="is_active" type="checkbox" checked /> Active</label>
             <div class="panel-actions-row">

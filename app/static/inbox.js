@@ -41,6 +41,7 @@ const renderInbox = (items) => {
           <p class="muted small-text">${escapeHtml(formatDate(item.created_at))}</p>
         </div>
         <div class="panel-actions-row">
+          ${item.payload?.kind === 'assignment_review' ? `<button type="button" data-action="approve" data-id="${item.id}">Approve</button><button type="button" class="secondary" data-action="deny" data-id="${item.id}">Deny</button>` : ''}
           ${item.is_read ? '' : `<button type="button" data-action="mark-read" data-id="${item.id}">Mark read</button>`}
           <button type="button" class="secondary" data-action="delete" data-id="${item.id}">Delete</button>
         </div>
@@ -59,6 +60,14 @@ inboxList.addEventListener('click', async (event) => {
   if (!button) return;
   const { action, id } = button.dataset;
   try {
+    if (action === 'approve') {
+      await apiFetch(`/inbox-api/${id}/approve`, { method: 'POST' });
+      showToast('Assignment approved');
+    }
+    if (action === 'deny') {
+      await apiFetch(`/inbox-api/${id}/deny`, { method: 'POST' });
+      showToast('Assignment denied');
+    }
     if (action === 'mark-read') {
       await apiFetch(`/inbox-api/${id}/read`, { method: 'POST' });
       showToast('Notification marked read');

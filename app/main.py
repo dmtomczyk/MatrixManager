@@ -219,6 +219,11 @@ class AssignmentBase(SQLModel):
 
 class Assignment(AssignmentBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
+    status: str = "approved"
+    submitted_by_username: Optional[str] = None
+    approved_by_username: Optional[str] = None
+    denied_by_username: Optional[str] = None
+    reviewed_at: Optional[datetime] = None
 
 
 class AssignmentCreate(AssignmentBase):
@@ -247,6 +252,11 @@ class AssignmentRead(SQLModel):
     organization_id: Optional[int] = None
     organization_name: Optional[str] = None
     demand_title: Optional[str] = None
+    status: str = "approved"
+    submitted_by_username: Optional[str] = None
+    approved_by_username: Optional[str] = None
+    denied_by_username: Optional[str] = None
+    reviewed_at: Optional[datetime] = None
 
 
 class AuditEntry(SQLModel, table=True):
@@ -320,6 +330,7 @@ class UserAccount(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     username: str
     password_hash: str
+    employee_id: Optional[int] = None
     is_admin: bool = False
     is_active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -329,11 +340,13 @@ class UserAccount(SQLModel, table=True):
 class UserAccountCreate(SQLModel):
     username: str
     password: str
+    employee_id: Optional[int] = None
     is_admin: bool = False
 
 
 class UserAccountUpdate(SQLModel):
     password: Optional[str] = None
+    employee_id: Optional[int] = None
     is_admin: Optional[bool] = None
     is_active: Optional[bool] = None
 
@@ -341,6 +354,8 @@ class UserAccountUpdate(SQLModel):
 class UserAccountRead(SQLModel):
     id: int
     username: str
+    employee_id: Optional[int] = None
+    employee_name: Optional[str] = None
     is_admin: bool
     is_active: bool
     created_at: datetime
@@ -353,6 +368,7 @@ class InboxNotification(SQLModel, table=True):
     username: str
     title: str
     message: str
+    metadata_json: Optional[str] = None
     is_read: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -362,6 +378,7 @@ class InboxNotificationRead(SQLModel):
     username: str
     title: str
     message: str
+    payload: Optional[dict[str, Any]] = None
     is_read: bool
     created_at: datetime
 
@@ -606,6 +623,24 @@ def run_migrations(bind_engine=engine) -> None:
             assignment_column_names = {row[1] for row in assignment_columns}
             if "demand_id" not in assignment_column_names:
                 connection.exec_driver_sql("ALTER TABLE assignment ADD COLUMN demand_id INTEGER")
+            if "status" not in assignment_column_names:
+                connection.exec_driver_sql("ALTER TABLE assignment ADD COLUMN status TEXT DEFAULT 'approved'")
+            if "submitted_by_username" not in assignment_column_names:
+                connection.exec_driver_sql("ALTER TABLE assignment ADD COLUMN submitted_by_username TEXT")
+            if "approved_by_username" not in assignment_column_names:
+                connection.exec_driver_sql("ALTER TABLE assignment ADD COLUMN approved_by_username TEXT")
+            if "denied_by_username" not in assignment_column_names:
+                connection.exec_driver_sql("ALTER TABLE assignment ADD COLUMN denied_by_username TEXT")
+            if "reviewed_at" not in assignment_column_names:
+                connection.exec_driver_sql("ALTER TABLE assignment ADD COLUMN reviewed_at TEXT")
+            control_columns = connection.exec_driver_sql("PRAGMA table_info(useraccount)").fetchall() if connection.exec_driver_sql("SELECT name FROM sqlite_master WHERE type='table' AND name='useraccount'").fetchone() else []
+            control_column_names = {row[1] for row in control_columns}
+            if control_columns and "employee_id" not in control_column_names:
+                connection.exec_driver_sql("ALTER TABLE useraccount ADD COLUMN employee_id INTEGER")
+            inbox_columns = connection.exec_driver_sql("PRAGMA table_info(inboxnotification)").fetchall() if connection.exec_driver_sql("SELECT name FROM sqlite_master WHERE type='table' AND name='inboxnotification'").fetchone() else []
+            inbox_column_names = {row[1] for row in inbox_columns}
+            if inbox_columns and "metadata_json" not in inbox_column_names:
+                connection.exec_driver_sql("ALTER TABLE inboxnotification ADD COLUMN metadata_json TEXT")
             connection.exec_driver_sql("UPDATE employee SET employee_type = 'IC' WHERE employee_type IS NULL OR employee_type = ''")
         else:
             employee_exists = connection.exec_driver_sql("SELECT to_regclass('public.employee')").scalar()
@@ -862,9 +897,18 @@ def authenticate_username_password(username: str, password: str) -> bool:
 
 
 def serialize_user_account(user: UserAccount) -> UserAccountRead:
+    employee_name = None
+    if user.employee_id is not None:
+        active_connection = get_active_db_connection_config()
+        data_engine = get_or_create_data_engine(active_connection)
+        with Session(data_engine) as session:
+            employee = session.get(Employee, user.employee_id)
+            employee_name = employee.name if employee else None
     return UserAccountRead(
         id=user.id,
         username=user.username,
+        employee_id=user.employee_id,
+        employee_name=employee_name,
         is_admin=user.is_admin,
         is_active=user.is_active,
         created_at=user.created_at,
@@ -1084,14 +1128,70 @@ def ensure_inbox_welcome_notification(username: str) -> None:
 
 
 def serialize_inbox_notification(notification: InboxNotification) -> InboxNotificationRead:
+    metadata = json.loads(notification.metadata_json) if notification.metadata_json else None
     return InboxNotificationRead(
         id=notification.id,
         username=notification.username,
         title=notification.title,
         message=notification.message,
+        payload=metadata,
         is_read=notification.is_read,
         created_at=notification.created_at,
     )
+
+
+def add_inbox_notification(session: Session, *, username: str, title: str, message: str, metadata: Optional[dict[str, Any]] = None) -> InboxNotification:
+    notification = InboxNotification(
+        username=username,
+        title=title,
+        message=message,
+        metadata_json=json.dumps(metadata) if metadata else None,
+    )
+    session.add(notification)
+    session.commit()
+    session.refresh(notification)
+    return notification
+
+
+def get_user_account(username: str) -> Optional[UserAccount]:
+    with Session(control_engine) as session:
+        return session.exec(select(UserAccount).where(UserAccount.username == username)).first()
+
+
+def get_management_chain_usernames(employee_id: int) -> list[str]:
+    active_connection = get_active_db_connection_config()
+    data_engine = get_or_create_data_engine(active_connection)
+    with Session(data_engine) as data_session, Session(control_engine) as control_session:
+        chain_usernames: list[str] = []
+        seen: set[int] = set()
+        current = data_session.get(Employee, employee_id)
+        while current and current.manager_id and current.manager_id not in seen:
+            seen.add(current.manager_id)
+            manager = data_session.get(Employee, current.manager_id)
+            if not manager:
+                break
+            user = control_session.exec(select(UserAccount).where(UserAccount.employee_id == manager.id, UserAccount.is_active == True)).first()
+            if user and user.username not in chain_usernames:
+                chain_usernames.append(user.username)
+            current = manager
+        return chain_usernames
+
+
+def can_review_assignment(username: str, assignment: Assignment) -> bool:
+    if is_admin_username(username):
+        return True
+    user = get_user_account(username)
+    if not user or user.employee_id is None:
+        return False
+    chain_ids: set[int] = set()
+    active_connection = get_active_db_connection_config()
+    data_engine = get_or_create_data_engine(active_connection)
+    with Session(data_engine) as data_session:
+        current = data_session.get(Employee, assignment.employee_id)
+        while current and current.manager_id and current.manager_id not in chain_ids:
+            chain_ids.add(current.manager_id)
+            current = data_session.get(Employee, current.manager_id)
+    return user.employee_id in chain_ids
 
 
 def ensure_default_seed_data() -> None:
@@ -2136,6 +2236,11 @@ def serialize_assignment(session: Session, assignment: Assignment) -> Assignment
         organization_id=employee.organization_id if employee else None,
         organization_name=organization.name if organization else None,
         demand_title=demand.title if demand else None,
+        status=assignment.status,
+        submitted_by_username=assignment.submitted_by_username,
+        approved_by_username=assignment.approved_by_username,
+        denied_by_username=assignment.denied_by_username,
+        reviewed_at=assignment.reviewed_at,
     )
 
 
@@ -2157,6 +2262,7 @@ def list_assignments(
 
 @app.post("/assignments", response_model=AssignmentRead, status_code=201)
 def create_assignment(assignment: AssignmentCreate, request: Request, session: Session = Depends(get_session)):
+    submitter = get_request_username(request)
     ensure_employee_and_project(session, assignment.employee_id, assignment.project_id)
     if assignment.demand_id is not None:
         demand = ensure_demand(session, assignment.demand_id)
@@ -2165,16 +2271,37 @@ def create_assignment(assignment: AssignmentCreate, request: Request, session: S
     validate_dates(assignment.start_date, assignment.end_date)
     if not 0 < assignment.allocation <= 1:
         raise HTTPException(status_code=400, detail="Allocation must be between 0 and 1")
+    approver_usernames = get_management_chain_usernames(assignment.employee_id)
+    if not approver_usernames and not is_admin_username(submitter):
+        raise HTTPException(status_code=400, detail="No linked manager-chain user accounts are available to review this assignment")
     db_assignment = Assignment.from_orm(assignment)
+    db_assignment.status = "in_review"
+    db_assignment.submitted_by_username = submitter
     session.add(db_assignment)
     session.commit()
     session.refresh(db_assignment)
     assignment_read = serialize_assignment(session, db_assignment)
+    with Session(control_engine) as control_session:
+        metadata = {
+            "kind": "assignment_review",
+            "assignment_id": db_assignment.id,
+            "employee_name": assignment_read.employee_name,
+            "project_name": assignment_read.project_name,
+            "submitter_username": submitter,
+        }
+        for approver_username in approver_usernames:
+            add_inbox_notification(
+                control_session,
+                username=approver_username,
+                title="Assignment request awaiting review",
+                message=f"{submitter} submitted {assignment_read.employee_name or db_assignment.employee_id} → {assignment_read.project_name or db_assignment.project_id} for review.",
+                metadata=metadata,
+            )
     record_audit_entry(
         session,
-        actor_username=get_request_username(request),
+        actor_username=submitter,
         entity_type="assignment",
-        action="create",
+        action="submit_for_review",
         entity_id=db_assignment.id,
         entity_label=f"{assignment_read.employee_name or db_assignment.employee_id} → {assignment_read.project_name or db_assignment.project_id}",
         after=audit_snapshot_from_model(assignment_read),
@@ -2361,6 +2488,88 @@ def mark_inbox_notification_read(notification_id: int, request: Request, session
     return serialize_inbox_notification(notification)
 
 
+@app.post("/inbox-api/{notification_id}/approve", response_model=InboxNotificationRead)
+def approve_inbox_notification(notification_id: int, request: Request, session: Session = Depends(get_control_session)):
+    username = get_request_username(request)
+    notification = session.get(InboxNotification, notification_id)
+    if not notification or notification.username != username:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    metadata = json.loads(notification.metadata_json) if notification.metadata_json else {}
+    if metadata.get("kind") != "assignment_review":
+        raise HTTPException(status_code=400, detail="Notification is not actionable")
+    assignment_id = metadata.get("assignment_id")
+    active_connection = get_active_db_connection_config()
+    data_engine = get_or_create_data_engine(active_connection)
+    with Session(data_engine) as data_session:
+        assignment = data_session.get(Assignment, assignment_id)
+        if not assignment:
+            raise HTTPException(status_code=404, detail="Assignment not found")
+        if assignment.status != "in_review":
+            raise HTTPException(status_code=400, detail="Assignment is no longer awaiting review")
+        if not can_review_assignment(username, assignment):
+            raise HTTPException(status_code=403, detail="You are not allowed to review this assignment")
+        assignment.status = "approved"
+        assignment.approved_by_username = username
+        assignment.reviewed_at = datetime.now(timezone.utc)
+        data_session.add(assignment)
+        data_session.commit()
+    notification.is_read = True
+    session.add(notification)
+    session.commit()
+    session.refresh(notification)
+    submitter_username = metadata.get("submitter_username")
+    if submitter_username:
+        add_inbox_notification(
+            session,
+            username=submitter_username,
+            title="Assignment request approved",
+            message=f"{username} approved your assignment request for {metadata.get('employee_name') or 'employee'} → {metadata.get('project_name') or 'project'}.",
+            metadata={"kind": "assignment_review_result", "assignment_id": assignment_id, "result": "approved"},
+        )
+    return serialize_inbox_notification(notification)
+
+
+@app.post("/inbox-api/{notification_id}/deny", response_model=InboxNotificationRead)
+def deny_inbox_notification(notification_id: int, request: Request, session: Session = Depends(get_control_session)):
+    username = get_request_username(request)
+    notification = session.get(InboxNotification, notification_id)
+    if not notification or notification.username != username:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    metadata = json.loads(notification.metadata_json) if notification.metadata_json else {}
+    if metadata.get("kind") != "assignment_review":
+        raise HTTPException(status_code=400, detail="Notification is not actionable")
+    assignment_id = metadata.get("assignment_id")
+    active_connection = get_active_db_connection_config()
+    data_engine = get_or_create_data_engine(active_connection)
+    with Session(data_engine) as data_session:
+        assignment = data_session.get(Assignment, assignment_id)
+        if not assignment:
+            raise HTTPException(status_code=404, detail="Assignment not found")
+        if assignment.status != "in_review":
+            raise HTTPException(status_code=400, detail="Assignment is no longer awaiting review")
+        if not can_review_assignment(username, assignment):
+            raise HTTPException(status_code=403, detail="You are not allowed to review this assignment")
+        assignment.status = "denied"
+        assignment.denied_by_username = username
+        assignment.reviewed_at = datetime.now(timezone.utc)
+        data_session.add(assignment)
+        data_session.commit()
+    notification.is_read = True
+    session.add(notification)
+    session.commit()
+    session.refresh(notification)
+    submitter_username = metadata.get("submitter_username")
+    if submitter_username:
+        add_inbox_notification(
+            session,
+            username=submitter_username,
+            title="Assignment request denied",
+            message=f"{username} denied your assignment request for {metadata.get('employee_name') or 'employee'} → {metadata.get('project_name') or 'project'}.",
+            metadata={"kind": "assignment_review_result", "assignment_id": assignment_id, "result": "denied"},
+        )
+    return serialize_inbox_notification(notification)
+
+
 @app.delete("/inbox-api/{notification_id}", status_code=204)
 def delete_inbox_notification(notification_id: int, request: Request, session: Session = Depends(get_control_session)):
     username = get_request_username(request)
@@ -2388,9 +2597,16 @@ def create_user(user: UserAccountCreate, request: Request, session: Session = De
         raise HTTPException(status_code=400, detail="Username already exists")
     if len(user.password) < 8:
         raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    if user.employee_id is not None:
+        active_connection = get_active_db_connection_config()
+        data_engine = get_or_create_data_engine(active_connection)
+        with Session(data_engine) as data_session:
+            if not data_session.get(Employee, user.employee_id):
+                raise HTTPException(status_code=400, detail="Linked employee not found")
     db_user = UserAccount(
         username=username,
         password_hash=hash_password(user.password),
+        employee_id=user.employee_id,
         is_admin=user.is_admin,
         is_active=True,
     )
@@ -2412,6 +2628,12 @@ def update_user(user_id: int, update: UserAccountUpdate, request: Request, sessi
         if len(data["password"]) < 8:
             raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
         user.password_hash = hash_password(data.pop("password"))
+    if "employee_id" in data and data["employee_id"] is not None:
+        active_connection = get_active_db_connection_config()
+        data_engine = get_or_create_data_engine(active_connection)
+        with Session(data_engine) as data_session:
+            if not data_session.get(Employee, data["employee_id"]):
+                raise HTTPException(status_code=400, detail="Linked employee not found")
     for key, value in data.items():
         setattr(user, key, value)
     user.updated_at = datetime.now(timezone.utc)
