@@ -1,5 +1,6 @@
 const inboxList = document.querySelector('#inbox-list');
 const toast = document.querySelector('#toast');
+const syncChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('matrixmanager-sync') : null;
 
 const apiFetch = async (url, options = {}) => {
   const response = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...options });
@@ -30,6 +31,16 @@ const formatDate = (value) => {
 
 const notifyAccountCountsChanged = () => {
   document.dispatchEvent(new CustomEvent('account-notifications-changed'));
+};
+
+const broadcastAssignmentsChanged = () => {
+  const payload = { type: 'assignments-changed', at: Date.now() };
+  if (syncChannel) syncChannel.postMessage(payload);
+  try {
+    localStorage.setItem('matrixmanager-assignments-changed', JSON.stringify(payload));
+  } catch {
+    // ignore storage failures
+  }
 };
 
 const renderInbox = (items) => {
@@ -67,10 +78,12 @@ inboxList.addEventListener('click', async (event) => {
     if (action === 'approve') {
       await apiFetch(`/inbox-api/${id}/approve`, { method: 'POST' });
       showToast('Assignment approved');
+      broadcastAssignmentsChanged();
     }
     if (action === 'deny') {
       await apiFetch(`/inbox-api/${id}/deny`, { method: 'POST' });
       showToast('Assignment denied');
+      broadcastAssignmentsChanged();
     }
     if (action === 'mark-read') {
       await apiFetch(`/inbox-api/${id}/read`, { method: 'POST' });
