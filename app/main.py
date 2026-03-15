@@ -968,6 +968,8 @@ def ensure_default_admin_user() -> None:
 def ensure_default_seed_data() -> None:
     active_connection = get_active_db_connection_config()
     data_engine = get_or_create_data_engine(active_connection)
+    start_date = datetime.now().date()
+    end_date = date(start_date.year + ((start_date.month + 5) // 12), ((start_date.month + 5) % 12) + 1, min(start_date.day, 28))
     with Session(data_engine) as session:
         not_assigned = session.exec(select(JobCode).where(JobCode.name == "Not Assigned")).first()
         if not not_assigned:
@@ -995,7 +997,15 @@ def ensure_default_seed_data() -> None:
             example_project = Project(
                 name="Example Project",
                 description="Starter project created during install",
+                start_date=start_date,
+                end_date=end_date,
             )
+            session.add(example_project)
+            session.commit()
+            session.refresh(example_project)
+        else:
+            example_project.start_date = start_date
+            example_project.end_date = end_date
             session.add(example_project)
             session.commit()
             session.refresh(example_project)
@@ -1058,8 +1068,8 @@ def ensure_default_seed_data() -> None:
             existing_assignment = Assignment(
                 employee_id=john.id,
                 project_id=example_project.id,
-                start_date=date.today(),
-                end_date=date.today(),
+                start_date=start_date,
+                end_date=end_date,
                 allocation=0.75,
                 notes="Starter example allocation",
             )
@@ -1068,6 +1078,8 @@ def ensure_default_seed_data() -> None:
             existing_assignment.allocation = 0.75
             existing_assignment.employee_id = john.id
             existing_assignment.project_id = example_project.id
+            existing_assignment.start_date = start_date
+            existing_assignment.end_date = end_date
             session.add(existing_assignment)
         session.commit()
 
