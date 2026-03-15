@@ -1,5 +1,7 @@
 # MatrixManager
 
+**Plan people, projects, and allocations in one place — with enough structure for real staffing decisions, but simple enough to run anywhere.**
+
 MatrixManager is a staffing and resource-planning web app for tracking organizations, employees, projects, and time-phased assignments. It uses a FastAPI + SQLModel backend with a lightweight browser UI for planning, canvas workflows, audit history, and database management. It runs with SQLite by default and can also be deployed with PostgreSQL.
 
 ## Table of contents
@@ -7,6 +9,7 @@ MatrixManager is a staffing and resource-planning web app for tracking organizat
 - [Production install](#production-install)
 - [Build from source](#build-from-source)
 - [What the app includes](#what-the-app-includes)
+- [Demo / screenshots](#demo--screenshots)
 - [Dependency manifest](#dependency-manifest)
 
 ## Production install
@@ -88,6 +91,24 @@ If auth is enabled, browser requests will redirect to `/login` until you sign in
 - SQLite + PostgreSQL support
 - Docker / docker-compose support
 - reset/seed scripts for local development
+
+## Demo / screenshots
+
+MatrixManager currently centers around a few core workflows:
+
+- **Planning view** — review staffing and allocation across projects
+- **Canvas workflow** — visualize and adjust staffing in a more spatial/project-centric layout
+- **People + project management** — maintain employees, organizations, projects, and assignments
+- **Audit + DB management** — track changes and manage active database connections
+
+If you are evaluating the app quickly, these are the best places to start after sign-in:
+
+- `/` or `/planning`
+- `/canvas`
+- `/audit`
+- `/db-management`
+
+> Screenshots can be added later, but this is the current demo path through the app.
 
 ## Dependency manifest
 
