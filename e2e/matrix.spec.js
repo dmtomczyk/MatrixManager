@@ -100,7 +100,8 @@ test('TP-018: employee page uses one form for multi-edit and disables unique nam
 
   await page.goto('/people');
   await waitForSelectOption(page, '#employee-organization', String(org.id));
-  await page.locator('#expand-all-visible').click();
+  await expect(page.locator('#employee-table')).toContainText('TP018 Engineer A');
+  await expect(page.locator('#employee-table')).toContainText('TP018 Engineer B');
 
   await page.locator(`.employee-select-checkbox[data-id="${engineerA.id}"]`).check();
   await page.locator(`.employee-select-checkbox[data-id="${engineerB.id}"]`).check();

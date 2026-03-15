@@ -287,7 +287,8 @@ const loadOrganizations = async () => {
 const loadEmployees = async () => {
   employees = await apiFetch('/employees');
   const managerIds = new Set(employees.filter((employee) => employee.direct_report_count > 0).map((employee) => employee.id));
-  expandedEmployees = new Set([...expandedEmployees].filter((id) => managerIds.has(id)));
+  const preservedExpanded = new Set([...expandedEmployees].filter((id) => managerIds.has(id)));
+  expandedEmployees = preservedExpanded.size ? preservedExpanded : managerIds;
   selectedEmployees = new Set([...selectedEmployees].filter((id) => employees.some((employee) => employee.id === id)));
   renderEmployees();
   if (getCurrentEmployeeId()) {
