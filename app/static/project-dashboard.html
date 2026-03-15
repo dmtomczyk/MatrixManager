@@ -62,11 +62,21 @@
 
       <section class="card">
         <div class="section-head">
-          <h2>Project FTE rollup</h2>
-          <p>Weekly full-time-equivalent load per project.</p>
+          <h2>Project demand vs allocation</h2>
+          <p>Each selected project shows two lines by default: total demand and total fulfilled allocation.</p>
         </div>
-        <div class="chart-panel large">
+        <div class="chart-panel large forecast-chart-panel">
           <canvas id="dashboard-chart"></canvas>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-head">
+          <h2>Monthly demand vs allocation</h2>
+          <p>Compare monthly demand and allocation totals for the same selected projects.</p>
+        </div>
+        <div class="chart-panel large forecast-chart-panel">
+          <canvas id="dashboard-monthly-chart"></canvas>
         </div>
       </section>
     </main>

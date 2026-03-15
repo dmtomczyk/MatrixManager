@@ -1062,6 +1062,15 @@ table tbody tr:hover {
   gap: 24px;
 }
 
+.forecast-chart-panel {
+  min-height: 340px;
+}
+
+.forecast-chart-panel canvas {
+  width: 100%;
+  min-height: 320px;
+}
+
 .filter-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
