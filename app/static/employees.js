@@ -127,11 +127,11 @@ const renderEmployees = () => {
         </td>
         <td>
           <div class="employee-name-cell" style="padding-left:${indent}px">
-            ${hasChildren ? `<button type="button" class="hierarchy-toggle hierarchy-toggle-small" data-action="toggle-employee" data-id="${employee.id}" aria-expanded="${expanded ? 'true' : 'false'}" title="Toggle direct reports"><span class="chevron">${expanded ? '▾' : '▸'}</span></button>` : '<span class="hierarchy-leaf hierarchy-leaf-small">•</span>'}
+            ${hasChildren ? `<button type="button" class="hierarchy-toggle hierarchy-toggle-small" data-action="toggle-employee" data-id="${employee.id}" aria-expanded="${expanded ? 'true' : 'false'}" title="Toggle direct reports"><span class="chevron-mark"></span></button>` : '<span class="hierarchy-leaf hierarchy-leaf-small"></span>'}
             <div class="employee-name-stack">
               <div class="employee-name-row">
                 <strong>${escapeHtml(employee.name)}</strong>
-                ${hasChildren ? `<button type="button" class="link-button" data-action="toggle-employee-recursive" data-id="${employee.id}">${expanded ? 'Collapse all' : 'Expand all'}</button>` : ''}
+                ${hasChildren ? `<button type="button" class="tree-inline-action" data-action="toggle-employee-recursive" data-id="${employee.id}">${expanded ? 'Collapse all' : 'Expand all'}</button>` : ''}
               </div>
               ${hasChildren ? `<span class="employee-subtle">${children.length} direct report${children.length === 1 ? '' : 's'}</span>` : ''}
             </div>
