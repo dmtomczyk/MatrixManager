@@ -26,16 +26,12 @@
     </header>
 
     <main class="dashboard-shell">
-      <section class="card filters">
-        <div class="section-head">
-          <h2>Filters</h2>
-          <p>Select projects and time range to plot.</p>
-        </div>
-        <div class="filter-grid">
-          <div>
-            <h4>Projects</h4>
+      <section class="card filters forecast-filters-card">
+        <div class="forecast-filters-row">
+          <div class="forecast-filter-group forecast-filter-group-projects">
+            <span class="forecast-filter-label">Projects</span>
             <div class="dropdown-control">
-              <button type="button" id="project-picker-btn" class="ghost-button">All projects</button>
+              <button type="button" id="project-picker-btn" class="ghost-button compact-toolbar-button">All projects</button>
               <div id="project-picker-panel" class="filter-panel hidden">
                 <input type="text" id="project-search" placeholder="Search projects" />
                 <div id="project-checkboxes" class="filter-list"></div>
@@ -46,16 +42,16 @@
               </div>
             </div>
           </div>
-          <div>
-            <h4>Date range</h4>
-            <div class="date-range">
-              <label>Start<input type="date" id="dashboard-start" /></label>
-              <label>End<input type="date" id="dashboard-end" /></label>
+          <div class="forecast-filter-group forecast-filter-group-dates">
+            <span class="forecast-filter-label">Date range</span>
+            <div class="date-range forecast-date-range">
+              <label><span class="label-text">Start</span><input type="date" id="dashboard-start" /></label>
+              <label><span class="label-text">End</span><input type="date" id="dashboard-end" /></label>
             </div>
-            <div class="filter-actions">
-              <button type="button" id="apply-range">Apply</button>
-              <button type="button" id="reset-range" class="secondary">Reset</button>
-            </div>
+          </div>
+          <div class="filter-actions forecast-filter-actions">
+            <button type="button" id="apply-range">Apply</button>
+            <button type="button" id="reset-range" class="secondary">Reset</button>
           </div>
         </div>
       </section>

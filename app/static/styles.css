@@ -626,6 +626,15 @@ main {
   .layout {
     grid-template-columns: 1fr;
   }
+
+  .forecast-filters-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .forecast-filter-actions {
+    justify-content: flex-start;
+  }
 }
 
  .audit-filter-grid {
@@ -1077,6 +1086,44 @@ table tbody tr:hover {
   gap: 16px;
 }
 
+.forecast-filters-card {
+  padding: 18px 20px;
+}
+
+.forecast-filters-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.2fr) minmax(320px, 1.6fr) auto;
+  gap: 14px;
+  align-items: end;
+}
+
+.forecast-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.forecast-filter-label {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.forecast-date-range {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.forecast-filter-actions {
+  margin-top: 0;
+  align-self: end;
+  white-space: nowrap;
+}
+
 .filter-list {
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -1128,30 +1175,15 @@ body.dashboard-page {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 body.dashboard-page .dashboard-shell {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-}
-
-body.dashboard-page .dashboard-shell > .card:first-of-type {
-  flex: 0 0 auto;
-}
-
-body.dashboard-page .dashboard-shell > .card:last-of-type {
-  flex: 1 1 auto;
-  min-height: 50vh;
-  display: flex;
-  flex-direction: column;
-}
-
-body.dashboard-page .dashboard-shell > .card:last-of-type .chart-panel.large {
-  flex: 1 1 auto;
-  height: 100%;
+  overflow: visible;
 }
 
 .dropdown-control {
