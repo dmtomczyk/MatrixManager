@@ -739,10 +739,19 @@ label {
   gap: 4px;
 }
 
+.label-text {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  width: fit-content;
+  min-height: 1.2em;
+}
+
 .required-field::after {
-  content: " *";
+  content: "*";
   color: #dc2626;
   font-weight: 800;
+  line-height: 1;
 }
 
 input,

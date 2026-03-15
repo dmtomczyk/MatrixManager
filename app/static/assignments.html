@@ -54,13 +54,13 @@
           <form id="assignment-form" class="panel">
             <h3>Create Assignment</h3>
             <input type="hidden" name="entity_id" id="assignment-id" />
-            <label class="required-field">Employee<select name="employee_id" id="assignment-employee" required></select></label>
-            <label class="required-field">Project<select name="project_id" id="assignment-project" required></select></label>
+            <label><span class="label-text required-field">Employee</span><select name="employee_id" id="assignment-employee" required></select></label>
+            <label><span class="label-text required-field">Project</span><select name="project_id" id="assignment-project" required></select></label>
             <label>Demand<select name="demand_id" id="assignment-demand"></select></label>
             <p class="muted small-text">Optional. If selected, the demand must belong to the chosen project.</p>
-            <label class="required-field">Start Date<input type="date" name="start_date" required /></label>
-            <label class="required-field">End Date<input type="date" name="end_date" required /></label>
-            <label class="required-field">Allocation (%)<input type="number" name="allocation" min="1" max="100" value="100" required /></label>
+            <label><span class="label-text required-field">Start Date</span><input type="date" name="start_date" required /></label>
+            <label><span class="label-text required-field">End Date</span><input type="date" name="end_date" required /></label>
+            <label><span class="label-text required-field">Allocation (%)</span><input type="number" name="allocation" min="1" max="100" value="100" required /></label>
             <label>Notes<textarea name="notes" rows="2"></textarea></label>
             <button type="submit">Save Assignment</button>
           </form>
