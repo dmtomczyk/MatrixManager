@@ -12,7 +12,7 @@ body {
 
 .canvas-react-shell {
   height: calc(100vh - 150px);
-  min-height: 640px;
+  min-height: 680px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -39,12 +39,92 @@ body {
   display: flex;
   gap: 10px;
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.canvas-react-inline-filter {
+  display: grid;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.canvas-react-inline-filter select {
+  min-width: 180px;
+}
+
+.canvas-react-layout {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 16px;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.canvas-react-sidebar {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  overflow: auto;
+}
+
+.canvas-react-sidecard {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: white;
+  padding: 14px;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+}
+
+.canvas-react-resource-list {
+  display: grid;
+  gap: 8px;
+  max-height: 460px;
+  overflow: auto;
+}
+
+.canvas-react-resource {
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px 12px;
+  display: grid;
+  gap: 4px;
+}
+
+.canvas-react-resource span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.canvas-react-resource.is-selected {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.canvas-react-inspector {
+  display: grid;
+  gap: 6px;
+}
+
+.canvas-react-inspector span {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.canvas-react-inspector-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 .canvas-react-stage {
   position: relative;
   flex: 1 1 auto;
-  min-height: 560px;
+  min-height: 620px;
   border: 1px solid var(--border);
   border-radius: 20px;
   overflow: hidden;
@@ -100,11 +180,16 @@ body {
 }
 
 .rf-card.rf-card-org {
-  min-width: 220px;
+  min-width: 230px;
 }
 
 .rf-card.rf-card-project {
-  min-width: 240px;
+  min-width: 260px;
+}
+
+.rf-card.is-selected {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12), 0 8px 20px rgba(15, 23, 42, 0.08);
 }
 
 .rf-card.is-over,
@@ -123,6 +208,36 @@ body {
   font-size: 0.8rem;
 }
 
+.canvas-react-context-menu {
+  position: fixed;
+  z-index: 100;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+  padding: 8px;
+  min-width: 190px;
+}
+
+.canvas-react-context-menu button {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+.canvas-react-context-menu button:hover {
+  background: #f8fafc;
+}
+
+.canvas-react-context-menu hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 6px 0;
+}
+
 .canvas-react-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -134,11 +249,15 @@ body {
 }
 
 .canvas-react-modal {
-  width: min(480px, 92vw);
+  width: min(520px, 92vw);
   background: white;
   border-radius: 18px;
   box-shadow: 0 24px 50px rgba(15, 23, 42, 0.22);
   padding: 22px;
+}
+
+.canvas-react-modal-wide {
+  width: min(760px, 94vw);
 }
 
 .canvas-react-modal h3 {
@@ -158,7 +277,8 @@ body {
 
 .canvas-react-form input,
 .canvas-react-form select,
-.canvas-react-form textarea {
+.canvas-react-form textarea,
+.canvas-react-inline-filter select {
   width: 100%;
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -172,6 +292,45 @@ body {
   gap: 10px;
 }
 
+.canvas-react-timeline-list {
+  display: grid;
+  gap: 10px;
+}
+
+.canvas-react-timeline-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.danger-button {
+  background: #dc2626;
+  color: white;
+  border: none;
+}
+
 .react-flow__attribution {
   display: none;
+}
+
+.react-flow__node {
+  border-radius: 16px;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke-width: 4;
+}
+
+@media (max-width: 1100px) {
+  .canvas-react-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .canvas-react-sidebar {
+    order: 2;
+  }
 }
