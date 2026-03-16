@@ -83,11 +83,13 @@ inboxList.addEventListener('click', async (event) => {
   const { action, id } = button.dataset;
   try {
     if (action === 'approve') {
+      if (!confirm('Approve this assignment request?')) return;
       await apiFetch(`/inbox-api/${id}/approve`, { method: 'POST' });
       showToast('Assignment approved');
       broadcastAssignmentsChanged();
     }
     if (action === 'deny') {
+      if (!confirm('Deny this assignment request?')) return;
       await apiFetch(`/inbox-api/${id}/deny`, { method: 'POST' });
       showToast('Assignment denied');
       broadcastAssignmentsChanged();

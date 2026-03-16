@@ -7,6 +7,7 @@ const sqliteFields = document.getElementById('sqlite-fields');
 const postgresFields = document.getElementById('postgres-fields');
 const clearButton = document.getElementById('db-clear-form');
 const createButton = document.getElementById('create-db-connection');
+const wipeDataDbButton = document.getElementById('wipe-data-db');
 const modal = document.getElementById('db-connection-modal');
 const modalClose = document.getElementById('db-modal-close');
 const toast = document.getElementById('toast');
@@ -69,6 +70,16 @@ table.addEventListener('click', async (event) => {
 });
 typeSelect.addEventListener('change', syncTypeFields);
 createButton?.addEventListener('click', () => { resetForm(); openModal(); });
+wipeDataDbButton?.addEventListener('click', async () => {
+  const confirmation = window.prompt('This will permanently erase all data in the active data DB. Type WIPE DATA DB to continue.');
+  if (confirmation === null) return;
+  try {
+    await apiFetch('/db-management/wipe-data-db', { method: 'POST', body: JSON.stringify({ confirmation_text: confirmation }) });
+    showToast('Data DB wiped');
+  } catch (err) {
+    alert(err.message);
+  }
+});
 clearButton.addEventListener('click', resetForm);
 modalClose?.addEventListener('click', () => closeModal({ reset: true }));
 modal?.addEventListener('click', (event) => { if (event.target === modal) closeModal({ reset: true }); });

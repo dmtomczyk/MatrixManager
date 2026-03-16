@@ -435,6 +435,10 @@ class DBConnectionUpdate(SQLModel):
     postgres_sslmode: Optional[str] = None
 
 
+class WipeDataDbRequest(SQLModel):
+    confirmation_text: str
+
+
 class DBConnectionRead(DBConnectionBase):
     id: int
     is_active: bool
@@ -841,6 +845,17 @@ def get_control_session() -> Generator[Session, None, None]:
     run_migrations(control_engine)
     with Session(control_engine) as session:
         yield session
+
+
+def wipe_primary_data_db() -> None:
+    active_connection = get_active_db_connection_config()
+    data_engine = get_or_create_data_engine(active_connection)
+    data_tables = [Assignment.__table__, Demand.__table__, Project.__table__, Employee.__table__, Organization.__table__, JobCode.__table__]
+    for table in data_tables:
+        table.drop(bind=data_engine, checkfirst=True)
+    for table in [Organization.__table__, JobCode.__table__, Employee.__table__, Project.__table__, Demand.__table__, Assignment.__table__]:
+        table.create(bind=data_engine, checkfirst=True)
+    run_migrations(data_engine)
 
 
 def build_connection_summary(connection: DBConnectionConfig) -> str:
@@ -3663,3 +3678,20 @@ def delete_db_connection(connection_id: int, request: Request, session: Session 
         raise HTTPException(status_code=400, detail="Cannot delete the active database connection")
     session.delete(db_connection)
     session.commit()
+
+
+@app.post("/db-management/wipe-data-db", status_code=204)
+def wipe_data_db(payload: WipeDataDbRequest, request: Request, session: Session = Depends(get_control_session)):
+    actor_username = require_admin_user(request)
+    if payload.confirmation_text.strip() != "WIPE DATA DB":
+        raise HTTPException(status_code=400, detail='Type "WIPE DATA DB" to confirm')
+    active_connection = get_active_db_connection_config()
+    wipe_primary_data_db()
+    record_audit_entry(
+        session,
+        actor_username=actor_username,
+        entity_type="data_db",
+        action="wipe",
+        entity_label=build_connection_summary(active_connection),
+        after={"db_type": active_connection.db_type, "connection_summary": build_connection_summary(active_connection)},
+    )
