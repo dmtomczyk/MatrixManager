@@ -1,12 +1,20 @@
 const orgTable = document.querySelector('#org-table');
 const orgForm = document.querySelector('#org-form');
+const orgFormTitle = document.querySelector('#org-form-title');
+const orgFormStatus = document.querySelector('#org-form-status');
+const orgSubmitButton = document.querySelector('#org-submit-button');
+const orgFormSecondaryAction = document.querySelector('#org-form-secondary-action');
 const rosterTable = document.querySelector('#org-roster-table');
 const orgParentSelect = document.querySelector('#org-parent-organization');
 const orgOwnerSelect = document.querySelector('#org-owner-employee');
+const createOrgButton = document.querySelector('#create-org');
+const orgModal = document.querySelector('#org-modal');
+const orgModalCloseButton = document.querySelector('#org-modal-close');
 const toast = document.querySelector('#toast');
 
 let organizations = [];
 let employees = [];
+let lastFocusedElement = null;
 
 const apiFetch = async (url, options = {}) => {
   const opts = {
@@ -34,20 +42,41 @@ const showToast = (message) => {
 
 const isManagerCandidate = (employee) => employee.employee_type === 'L' || employee.direct_report_count > 0;
 
-const resetForm = (form, label = 'Save Organization') => {
-  form.reset();
-  const hidden = form.querySelector('input[name="entity_id"]');
-  if (hidden) hidden.value = '';
-  const submit = form.querySelector('button[type="submit"]');
-  if (submit) submit.textContent = label;
-  renderParentOptions();
-  renderOwnerOptions();
+const openOrgModal = () => {
+  if (!orgModal) return;
+  lastFocusedElement = document.activeElement;
+  orgModal.classList.remove('hidden');
+  document.body.classList.add('modal-open');
+  window.setTimeout(() => orgForm?.querySelector('input[name="name"]')?.focus(), 0);
+};
+
+const closeOrgModal = ({ reset = false, restoreFocus = true } = {}) => {
+  if (!orgModal) return;
+  orgModal.classList.add('hidden');
+  document.body.classList.remove('modal-open');
+  if (reset) resetForm(orgForm, 'Save Organization');
+  if (restoreFocus && lastFocusedElement instanceof HTMLElement) lastFocusedElement.focus();
+};
+
+const buildOrganizationTree = () => {
+  const byId = new Map(organizations.map((org) => [org.id, org]));
+  const children = new Map(organizations.map((org) => [org.id, []]));
+  const roots = [];
+  organizations.forEach((org) => {
+    if (org.parent_organization_id && byId.has(org.parent_organization_id)) children.get(org.parent_organization_id).push(org);
+    else roots.push(org);
+  });
+  const sorter = (a, b) => a.name.localeCompare(b.name);
+  roots.sort(sorter);
+  children.forEach((items) => items.sort(sorter));
+  return { roots, children };
 };
 
 const renderParentOptions = (selectedOrgId = '', editingOrgId = null) => {
   if (!orgParentSelect) return;
   const options = organizations
     .filter((org) => String(org.id) !== String(editingOrgId || ''))
+    .sort((a, b) => a.name.localeCompare(b.name))
     .map((org) => `<option value="${org.id}">${org.name}</option>`)
     .join('');
   orgParentSelect.innerHTML = `<option value="">No parent</option>${options}`;
@@ -65,6 +94,18 @@ const renderOwnerOptions = (selectedEmployeeId = '') => {
   if (selectedEmployeeId) orgOwnerSelect.value = String(selectedEmployeeId);
 };
 
+const resetForm = (form, label = 'Save Organization') => {
+  form.reset();
+  const hidden = form.querySelector('input[name="entity_id"]');
+  if (hidden) hidden.value = '';
+  if (orgFormTitle) orgFormTitle.textContent = 'Add Organization';
+  if (orgFormStatus) orgFormStatus.textContent = 'Create or update one organization at a time.';
+  if (orgSubmitButton) orgSubmitButton.textContent = label;
+  if (orgFormSecondaryAction) orgFormSecondaryAction.textContent = 'Clear Form';
+  renderParentOptions();
+  renderOwnerOptions();
+};
+
 const renderOrganizations = () => {
   if (!orgTable) return;
   const headcounts = employees.reduce((acc, emp) => {
@@ -73,44 +114,65 @@ const renderOrganizations = () => {
     return acc;
   }, {});
   if (!organizations.length) {
-    orgTable.innerHTML = '<tr><td colspan="7">Add an organization to get started.</td></tr>';
+    orgTable.innerHTML = '<tr><td colspan="6">Add an organization to get started.</td></tr>';
     return;
   }
-  orgTable.innerHTML = organizations
-    .map((org) => {
-      const count = headcounts[org.id] || 0;
-      return `
-        <tr>
-          <td>${org.name}</td>
-          <td>${org.parent_organization_name || '—'}</td>
-          <td>${org.owner_employee_name || '—'}</td>
-          <td>${org.description || ''}</td>
-          <td>${count}</td>
-          <td>${org.child_organization_count || 0}</td>
-          <td class="actions">
-            <button type="button" data-action="edit-org" data-id="${org.id}">Edit</button>
-            <button type="button" class="secondary" data-action="delete-org" data-id="${org.id}">Delete</button>
-          </td>
-        </tr>`;
-    })
-    .join('');
+  const { roots, children } = buildOrganizationTree();
+  const rows = [];
+  const appendRow = (org, level = 0) => {
+    const childItems = children.get(org.id) || [];
+    const indent = level * 20;
+    rows.push(`
+      <tr>
+        <td>
+          <div class="employee-name-cell" style="padding-left:${indent}px">
+            ${level > 0 ? '<span class="hierarchy-leaf hierarchy-leaf-small"></span>' : '<span class="hierarchy-leaf hierarchy-leaf-small"></span>'}
+            <div class="employee-name-stack">
+              <div class="employee-name-row">
+                <strong>${org.name}</strong>
+                ${org.parent_organization_name ? `<span class="badge">Child org</span>` : `<span class="badge">Top level</span>`}
+              </div>
+              ${org.parent_organization_name ? `<span class="employee-subtle">Parent: ${org.parent_organization_name}</span>` : ''}
+            </div>
+          </div>
+        </td>
+        <td>${org.owner_employee_name ? `<span class="badge assignment-status-approved">${org.owner_employee_name}</span>` : '—'}</td>
+        <td>${org.description || ''}</td>
+        <td>${headcounts[org.id] || 0}</td>
+        <td>${org.child_organization_count || 0}</td>
+        <td class="actions employee-row-actions">
+          <button type="button" class="table-action-button" data-action="edit-org" data-id="${org.id}">Edit</button>
+          <button type="button" class="table-action-button table-action-button-secondary" data-action="delete-org" data-id="${org.id}">Delete</button>
+        </td>
+      </tr>`);
+    childItems.forEach((child) => appendRow(child, level + 1));
+  };
+  roots.forEach((org) => appendRow(org, 0));
+  orgTable.innerHTML = rows.join('');
 };
 
 const renderRoster = () => {
   if (!rosterTable) return;
   if (!employees.length) {
-    rosterTable.innerHTML = '<tr><td colspan="4">Add employees on the main dashboard to start assigning organizations.</td></tr>';
+    rosterTable.innerHTML = '<tr><td colspan="5">Add employees on the main dashboard to start assigning organizations.</td></tr>';
     return;
   }
   if (!organizations.length) {
-    rosterTable.innerHTML = '<tr><td colspan="4">Create at least one organization to assign employees.</td></tr>';
+    rosterTable.innerHTML = '<tr><td colspan="5">Create at least one organization to assign employees.</td></tr>';
     return;
   }
   const optionsMarkup = organizations
     .map((org) => `<option value="${org.id}">${org.name}</option>`)
     .join('');
+  const ownedOrgNamesByEmployee = organizations.reduce((acc, org) => {
+    if (!org.owner_employee_id) return acc;
+    acc[org.owner_employee_id] = acc[org.owner_employee_id] || [];
+    acc[org.owner_employee_id].push(org.name);
+    return acc;
+  }, {});
   rosterTable.innerHTML = employees
     .map((emp) => {
+      const ownedOrgs = ownedOrgNamesByEmployee[emp.id] || [];
       return `
         <tr>
           <td>${emp.name}</td>
@@ -120,6 +182,7 @@ const renderRoster = () => {
               ${optionsMarkup.replace(`value="${emp.organization_id}"`, `value="${emp.organization_id}" selected`)}
             </select>
           </td>
+          <td>${ownedOrgs.length ? ownedOrgs.map((name) => `<span class="badge assignment-status-approved">${name}</span>`).join(' ') : '<span class="muted small-text">—</span>'}</td>
           <td class="muted small-text">${emp.location || ''}</td>
         </tr>`;
     })
@@ -129,9 +192,7 @@ const renderRoster = () => {
     .forEach((select) => {
       const employeeId = Number(select.dataset.employeeId);
       const employee = employees.find((e) => e.id === employeeId);
-      if (employee) {
-        select.value = employee.organization_id || '';
-      }
+      if (employee) select.value = employee.organization_id || '';
     });
 };
 
@@ -170,7 +231,7 @@ const handleOrgSubmit = async (event) => {
       await apiFetch('/organizations', { method: 'POST', body: JSON.stringify(payload) });
       showToast('Organization added');
     }
-    resetForm(orgForm, 'Save Organization');
+    closeOrgModal({ reset: true, restoreFocus: false });
     await loadData();
   } catch (err) {
     alert(err.message);
@@ -190,7 +251,11 @@ const handleOrgTableClick = (event) => {
     orgForm.querySelector('input[name="entity_id"]').value = org.id;
     renderParentOptions(org.parent_organization_id || '', org.id);
     renderOwnerOptions(org.owner_employee_id || '');
-    orgForm.querySelector('button[type="submit"]').textContent = 'Update Organization';
+    if (orgFormTitle) orgFormTitle.textContent = 'Update Organization';
+    if (orgFormStatus) orgFormStatus.textContent = 'Update one organization, including its parent and owner.';
+    if (orgSubmitButton) orgSubmitButton.textContent = 'Update Organization';
+    openOrgModal();
+    return;
   }
   if (action === 'delete-org') {
     if (!confirm('Delete this organization? Employees and child orgs must be reassigned first.')) return;
@@ -226,5 +291,23 @@ const handleRosterChange = (event) => {
 orgForm.addEventListener('submit', handleOrgSubmit);
 orgTable.addEventListener('click', handleOrgTableClick);
 rosterTable.addEventListener('change', handleRosterChange);
+createOrgButton?.addEventListener('click', () => {
+  resetForm(orgForm, 'Save Organization');
+  openOrgModal();
+});
+orgFormSecondaryAction?.addEventListener('click', () => {
+  resetForm(orgForm, 'Save Organization');
+});
+orgModalCloseButton?.addEventListener('click', () => {
+  closeOrgModal({ reset: true });
+});
+orgModal?.addEventListener('click', (event) => {
+  if (event.target === orgModal) closeOrgModal({ reset: true });
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && orgModal && !orgModal.classList.contains('hidden')) {
+    closeOrgModal({ reset: true });
+  }
+});
 
 loadData();
