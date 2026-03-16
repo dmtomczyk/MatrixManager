@@ -36,8 +36,8 @@ const updateAccountNotificationState = async () => {
     const response = await fetch('/inbox-api', { headers: { Accept: 'application/json' } });
     if (!response.ok) return;
     const items = await response.json();
-    const pendingApprovals = items.filter((item) => !item.is_read && (item.payload || {}).kind === 'assignment_review').length;
-    const unreadMessages = items.filter((item) => !item.is_read && (item.payload || {}).kind !== 'assignment_review').length;
+    const pendingApprovals = items.filter((item) => (item.payload || {}).kind === 'assignment_review' && item.is_actionable).length;
+    const unreadMessages = items.filter((item) => !item.is_read && ((item.payload || {}).kind !== 'assignment_review' || !item.is_actionable)).length;
     const hasAlert = pendingApprovals > 0 || unreadMessages > 0;
     accountMenu.classList.toggle('account-menu-has-alert', hasAlert);
     accountMenu.classList.toggle('account-menu-has-pending-approvals', pendingApprovals > 0);
