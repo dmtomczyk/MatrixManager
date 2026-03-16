@@ -27,57 +27,71 @@
 
     <main>
       <section class="card single-column">
-        <div class="section-head">
-          <h2>Configured connections</h2>
-          <p>SQLite and PostgreSQL are supported. Activate one connection to make it the app’s live data backend.</p>
-        </div>
-        <div class="layout db-management-layout">
-          <div class="db-table-shell">
-            <table>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Type</th>
-                  <th>Summary</th>
-                  <th>Status</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="db-connection-table"></tbody>
-            </table>
+        <div class="section-head with-actions">
+          <div class="section-copy">
+            <h2>Configured connections</h2>
+            <p>SQLite and PostgreSQL are supported. Activate one connection to make it the app’s live data backend.</p>
           </div>
-          <form id="db-connection-form" class="panel">
-            <h3 id="db-form-title">Add Connection</h3>
-            <input type="hidden" name="entity_id" id="db-connection-id" />
-            <label><span class="label-text required-field">Name</span><input name="name" id="db-name" required /></label>
-            <label><span class="label-text required-field">Database Type</span>
-              <select name="db_type" id="db-type" required>
-                <option value="sqlite">SQLite</option>
-                <option value="postgresql">PostgreSQL</option>
-              </select>
-            </label>
-
-            <div id="sqlite-fields" class="db-type-fields">
-              <label id="db-sqlite-path-label"><span class="label-text">SQLite File Path</span><input name="sqlite_path" id="db-sqlite-path" placeholder="matrix.db" /></label>
-            </div>
-
-            <div id="postgres-fields" class="db-type-fields hidden">
-              <label id="db-postgres-host-label"><span class="label-text">Host</span><input name="postgres_host" id="db-postgres-host" placeholder="localhost" /></label>
-              <label>Port<input name="postgres_port" id="db-postgres-port" type="number" value="5432" /></label>
-              <label id="db-postgres-database-label"><span class="label-text">Database</span><input name="postgres_database" id="db-postgres-database" /></label>
-              <label id="db-postgres-username-label"><span class="label-text">Username</span><input name="postgres_username" id="db-postgres-username" /></label>
-              <label>Password<input name="postgres_password" id="db-postgres-password" type="password" /></label>
-              <label>SSL Mode<input name="postgres_sslmode" id="db-postgres-sslmode" value="prefer" /></label>
-            </div>
-
-            <div class="panel-actions-row">
-              <button type="submit" id="db-submit">Save Connection</button>
-              <button type="button" class="secondary" id="db-clear-form">Clear Form</button>
-            </div>
-          </form>
+          <div class="header-actions">
+            <button type="button" id="create-db-connection" class="compact-toolbar-button">Create New</button>
+          </div>
+        </div>
+        <div class="db-table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Summary</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="db-connection-table"></tbody>
+          </table>
         </div>
       </section>
     </main>
+
+    <div id="db-connection-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="db-form-title">
+      <div class="modal-card modal-card-form">
+        <div class="modal-head">
+          <div>
+            <h3 id="db-form-title">Add Connection</h3>
+            <p id="db-form-status" class="muted small-text">Create or update one database connection at a time.</p>
+          </div>
+          <button type="button" id="db-modal-close" class="modal-close-button" aria-label="Close database connection form">×</button>
+        </div>
+        <form id="db-connection-form" class="panel modal-form-panel">
+          <input type="hidden" name="entity_id" id="db-connection-id" />
+          <label><span class="label-text required-field">Name</span><input name="name" id="db-name" required /></label>
+          <label><span class="label-text required-field">Database Type</span>
+            <select name="db_type" id="db-type" required>
+              <option value="sqlite">SQLite</option>
+              <option value="postgresql">PostgreSQL</option>
+            </select>
+          </label>
+
+          <div id="sqlite-fields" class="db-type-fields">
+            <label id="db-sqlite-path-label"><span class="label-text">SQLite File Path</span><input name="sqlite_path" id="db-sqlite-path" placeholder="matrix.db" /></label>
+          </div>
+
+          <div id="postgres-fields" class="db-type-fields hidden">
+            <label id="db-postgres-host-label"><span class="label-text">Host</span><input name="postgres_host" id="db-postgres-host" placeholder="localhost" /></label>
+            <label>Port<input name="postgres_port" id="db-postgres-port" type="number" value="5432" /></label>
+            <label id="db-postgres-database-label"><span class="label-text">Database</span><input name="postgres_database" id="db-postgres-database" /></label>
+            <label id="db-postgres-username-label"><span class="label-text">Username</span><input name="postgres_username" id="db-postgres-username" /></label>
+            <label>Password<input name="postgres_password" id="db-postgres-password" type="password" /></label>
+            <label>SSL Mode<input name="postgres_sslmode" id="db-postgres-sslmode" value="prefer" /></label>
+          </div>
+
+          <div class="panel-actions-row modal-actions-row">
+            <button type="submit" id="db-submit">Save Connection</button>
+            <button type="button" class="secondary" id="db-clear-form">Clear</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <div id="toast" role="status" aria-live="polite"></div>
 

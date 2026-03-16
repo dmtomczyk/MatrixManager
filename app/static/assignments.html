@@ -32,45 +32,60 @@
             <h2>Assignments</h2>
             <p>Time-phase people across projects and optionally connect each assignment to a specific demand.</p>
           </div>
-          <button type="button" id="assignment-export" class="ghost-button">Export CSV</button>
-        </div>
-        <div class="layout">
-          <div>
-            <table>
-              <thead>
-                <tr>
-                  <th>Employee</th>
-                  <th>Project</th>
-                  <th>Demand</th>
-                  <th>Dates</th>
-                  <th>Allocation</th>
-                  <th>Status</th>
-                  <th>Pending Approvals</th>
-                  <th>Submitted By</th>
-                  <th>Review</th>
-                  <th>Notes</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="assignment-table"></tbody>
-            </table>
+          <div class="header-actions">
+            <button type="button" id="assignment-export" class="ghost-button">Export CSV</button>
+            <button type="button" id="create-assignment" class="compact-toolbar-button">Create New</button>
           </div>
-          <form id="assignment-form" class="panel">
-            <h3>Submit Assignment Request</h3>
-            <input type="hidden" name="entity_id" id="assignment-id" />
-            <label><span class="label-text required-field">Employee</span><select name="employee_id" id="assignment-employee" required></select></label>
-            <label><span class="label-text required-field">Project</span><select name="project_id" id="assignment-project" required></select></label>
-            <label>Demand<select name="demand_id" id="assignment-demand"></select></label>
-            <p class="muted small-text">Optional. If selected, the demand must belong to the chosen project.</p>
-            <label><span class="label-text required-field">Start Date</span><input type="date" name="start_date" required /></label>
-            <label><span class="label-text required-field">End Date</span><input type="date" name="end_date" required /></label>
-            <label><span class="label-text required-field">Allocation (%)</span><input type="number" name="allocation" min="1" max="100" value="100" required /></label>
-            <label>Notes<textarea name="notes" rows="2"></textarea></label>
-            <button type="submit">Save Assignment</button>
-          </form>
+        </div>
+        <div class="table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Project</th>
+                <th>Demand</th>
+                <th>Dates</th>
+                <th>Allocation</th>
+                <th>Status</th>
+                <th>Pending Approvals</th>
+                <th>Submitted By</th>
+                <th>Review</th>
+                <th>Notes</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="assignment-table"></tbody>
+          </table>
         </div>
       </section>
     </main>
+
+    <div id="assignment-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="assignment-form-title">
+      <div class="modal-card modal-card-form">
+        <div class="modal-head">
+          <div>
+            <h3 id="assignment-form-title">Submit Assignment Request</h3>
+            <p id="assignment-form-status" class="muted small-text">Create or update one assignment at a time.</p>
+          </div>
+          <button type="button" id="assignment-modal-close" class="modal-close-button" aria-label="Close assignment form">×</button>
+        </div>
+        <form id="assignment-form" class="panel modal-form-panel">
+          <input type="hidden" name="entity_id" id="assignment-id" />
+          <label><span class="label-text required-field">Employee</span><select name="employee_id" id="assignment-employee" required></select></label>
+          <label><span class="label-text required-field">Project</span><select name="project_id" id="assignment-project" required></select></label>
+          <label>Demand<select name="demand_id" id="assignment-demand"></select></label>
+          <p class="muted small-text">Optional. If selected, the demand must belong to the chosen project.</p>
+          <label><span class="label-text required-field">Start Date</span><input type="date" name="start_date" required /></label>
+          <label><span class="label-text required-field">End Date</span><input type="date" name="end_date" required /></label>
+          <label><span class="label-text required-field">Allocation (%)</span><input type="number" name="allocation" min="1" max="100" value="100" required /></label>
+          <label>Notes<textarea name="notes" rows="2"></textarea></label>
+          <div class="panel-actions-row modal-actions-row">
+            <button type="submit" id="assignment-submit">Save Assignment</button>
+            <button type="button" class="secondary" id="assignment-form-reset">Clear</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <div id="toast" role="status" aria-live="polite"></div>
 
