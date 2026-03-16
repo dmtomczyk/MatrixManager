@@ -626,7 +626,7 @@ def render_app_nav(current_path: str, username: str) -> str:
         ("/canvas", "Canvas"),
     ]
     staffing_links = [
-        ("/dashboard", "Forecast"),
+        ("/forecast", "Forecast"),
         ("/demands", "Demands"),
         ("/staffing", "Assignments"),
     ]
@@ -764,7 +764,7 @@ def build_login_page(error: str = "", next_path: str = "/") -> str:
 
 def is_html_request(request: Request) -> bool:
     accept = request.headers.get("accept", "")
-    return "text/html" in accept or request.url.path in {"/", "/planning", "/demands", "/people", "/staffing", "/orgs", "/job-codes", "/canvas", "/dashboard", "/inbox", "/account-settings", "/audit", "/users", "/db-management", "/runtime", "/docs", "/redoc"}
+    return "text/html" in accept or request.url.path in {"/", "/planning", "/demands", "/people", "/staffing", "/orgs", "/job-codes", "/canvas", "/forecast", "/dashboard", "/inbox", "/account-settings", "/audit", "/users", "/db-management", "/runtime", "/docs", "/redoc"}
 
 
 def create_db_and_tables(bind_engine=engine) -> None:
@@ -1577,7 +1577,7 @@ BASE_NAV_MARKUP = """<nav>
         <a href="/staffing">Assignments</a>
         <a href="/orgs">Organizations</a>
         <a href="/canvas">Canvas</a>
-        <a href="/dashboard">Forecast</a>
+        <a href="/forecast">Forecast</a>
         <form method="post" action="/logout" class="logout-form">
           <button type="submit" class="logout-button">Logout</button>
         </form>
@@ -2254,8 +2254,8 @@ def serve_canvas(request: Request) -> str:
     )
 
 
-@app.get("/dashboard", response_class=HTMLResponse)
-def serve_dashboard(request: Request) -> str:
+@app.get("/forecast", response_class=HTMLResponse)
+def serve_forecast(request: Request) -> str:
     return serve_html_page(
         "project-dashboard.html",
         {
@@ -2265,6 +2265,11 @@ def serve_dashboard(request: Request) -> str:
         current_path=request.url.path,
         username=get_session_username(request.cookies.get(SESSION_COOKIE_NAME)),
     )
+
+
+@app.get("/dashboard")
+def redirect_dashboard_to_forecast() -> RedirectResponse:
+    return RedirectResponse(url="/forecast", status_code=307)
 
 
 @app.get("/inbox", response_class=HTMLResponse)
