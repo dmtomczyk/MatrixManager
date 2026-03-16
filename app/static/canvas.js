@@ -401,6 +401,23 @@ const updateEmployeeOrganization = async (employeeId, organizationId) => {
   } catch (err) { alert(err.message); }
 };
 
+const updateEmployeeManager = async (employeeId, managerId) => {
+  const employee = getEmployeeById(employeeId);
+  const manager = getEmployeeById(managerId);
+  if (!employee || !manager) return;
+  if (employeeId === managerId) {
+    alert('An employee cannot manage themselves.');
+    return;
+  }
+  try {
+    await apiFetch(`/employees/${employeeId}`, { method: 'PUT', body: JSON.stringify({ manager_id: managerId }) });
+    showToast(`${employee.name} now reports to ${manager.name}`);
+    await loadData();
+  } catch (err) {
+    alert(err.message);
+  }
+};
+
 const renderCanvasConnections = () => {
   const overlay = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   overlay.setAttribute('class', 'canvas-connections');
@@ -629,13 +646,21 @@ const handlePointerMove = (event) => {
   const dx = event.clientX - panStart.x; const dy = event.clientY - panStart.y; pan.x += dx; pan.y += dy; panStart = { x: event.clientX, y: event.clientY }; applyTransform();
 };
 
-const finishConnectionDraft = (event) => {
+const finishConnectionDraft = async (event) => {
   if (!connectionDraft) return;
   const project = event.target.closest('.project-box');
+  const employeeNode = event.target.closest('.employee-node-canvas');
   const employeeId = connectionDraft.employeeId;
   connectionDraft = null;
   renderCanvas();
-  if (project) openAssignmentModal({ employeeId, projectId: Number(project.dataset.id) });
+  if (project) {
+    openAssignmentModal({ employeeId, projectId: Number(project.dataset.id) });
+    return;
+  }
+  if (employeeNode) {
+    const managerId = Number(employeeNode.dataset.id);
+    await updateEmployeeManager(employeeId, managerId);
+  }
 };
 
 const handlePointerUp = (event) => {
