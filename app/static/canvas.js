@@ -110,8 +110,16 @@ const updateConnectionHint = (text = '') => {
 
 const stagePointFromPointer = (event) => {
   const stageRect = canvasStage.getBoundingClientRect();
-  return { x: event.clientX - stageRect.left - pan.x, y: event.clientY - stageRect.top - pan.y };
+  return {
+    x: event.clientX - stageRect.left - pan.x,
+    y: event.clientY - stageRect.top - pan.y,
+  };
 };
+
+const getContentSize = () => ({
+  width: parseInt(canvasContent.style.width || String(canvasContent.clientWidth || 3600), 10) || 3600,
+  height: parseInt(canvasContent.style.height || String(canvasContent.clientHeight || 2400), 10) || 2400,
+});
 
 const buildOptions = (items, selectedId, placeholder = null) => {
   const options = items.map((item) => `<option value="${item.id}" ${item.id === selectedId ? 'selected' : ''}>${escapeHtml(item.name)}</option>`).join('');
@@ -566,8 +574,11 @@ const buildCurve = (startX, startY, endX, endY) => {
 
 const renderCanvasConnections = () => {
   const overlay = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  const { width, height } = getContentSize();
   overlay.setAttribute('class', 'canvas-connections');
-  overlay.setAttribute('viewBox', `0 0 ${parseInt(canvasContent.style.width || '3600', 10)} ${parseInt(canvasContent.style.height || '2400', 10)}`);
+  overlay.setAttribute('viewBox', `0 0 ${width} ${height}`);
+  overlay.setAttribute('width', String(width));
+  overlay.setAttribute('height', String(height));
   overlay.setAttribute('preserveAspectRatio', 'none');
 
   state.employees.forEach((employee) => {
@@ -610,7 +621,7 @@ const renderCanvas = () => {
   const stageWidth = stageRect.width || window.innerWidth;
   const stageHeight = stageRect.height || window.innerHeight;
   const currentWeek = getCurrentWeekRange();
-  const orgBaseX = 64;
+  const orgBaseX = 72;
   const orgBaseY = 72;
   const orgWidth = 420;
   const orgGap = 28;
@@ -620,16 +631,16 @@ const renderCanvas = () => {
   const projectHeight = 210;
   const projectGapX = 34;
   const projectGapY = 34;
-  const employeeNodeWidth = 184;
-  const employeeNodeHeight = 72;
-  const laneDepthGap = 196;
+  const employeeNodeWidth = 188;
+  const employeeNodeHeight = 76;
+  const laneDepthGap = 204;
 
   let nextLaneY = orgBaseY;
   state.organizations.forEach((org) => {
     const orgEmployees = state.employees.filter((employee) => employee.organization_id === org.id);
     const layout = buildEmployeeTreeLayout(orgEmployees);
     const lane = document.createElement('section');
-    lane.className = 'org-lane';
+    lane.className = 'org-lane canvas-node-shell';
     lane.style.left = `${orgBaseX}px`;
     lane.style.top = `${nextLaneY}px`;
     lane.style.width = `${orgWidth}px`;
@@ -656,7 +667,7 @@ const renderCanvas = () => {
       const percent = Math.round(allocation * 100);
       const cap = Math.round((employee.capacity || 1) * 100);
       const node = document.createElement('article');
-      node.className = `employee-node-canvas${allocation > (employee.capacity || 1) ? ' over' : ''}`;
+      node.className = `employee-node-canvas canvas-node-shell${allocation > (employee.capacity || 1) ? ' over' : ''}`;
       node.style.left = `${left}px`;
       node.style.top = `${top}px`;
       node.style.width = `${employeeNodeWidth}px`;
@@ -693,7 +704,7 @@ const renderCanvas = () => {
       return overlapsRange(startValue, endValue, currentWeek.weekStartValue, currentWeek.weekEndValue) ? sum + (asg.allocation || 0) : sum;
     }, 0);
     const box = document.createElement('article');
-    box.className = 'project-box';
+    box.className = 'project-box canvas-node-shell';
     box.style.left = `${left}px`;
     box.style.top = `${top}px`;
     box.style.width = `${projectWidth}px`;
