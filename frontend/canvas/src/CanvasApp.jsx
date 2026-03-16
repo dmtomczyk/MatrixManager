@@ -106,15 +106,17 @@ const buildHierarchy = (employees) => {
 const buildGraph = ({ organizations, employees, projects, assignments, selectedNodeId, orgFilter }) => {
   const nodes = [];
   const edges = [];
-  const orgLaneWidth = 280;
-  const employeeStartX = 360;
-  const employeeDepthX = 240;
-  const projectStartX = 1000;
-  const projectWidth = 280;
+  const orgLaneWidth = 700;
+  const orgLanePaddingX = 22;
+  const orgLanePaddingTop = 72;
+  const employeeDepthX = 170;
+  const employeeWidth = 150;
+  const projectStartX = 860;
+  const projectWidth = 240;
   const laneTop = 60;
   const laneGap = 48;
-  const employeeGapY = 98;
-  const projectGapY = 190;
+  const employeeGapY = 78;
+  const projectGapY = 170;
   const employeeById = new Map(employees.map((employee) => [employee.id, employee]));
   const visibleOrganizations = organizations.filter((org) => !orgFilter || String(org.id) === String(orgFilter));
 
@@ -125,28 +127,28 @@ const buildGraph = ({ organizations, employees, projects, assignments, selectedN
       .sort((a, b) => a.name.localeCompare(b.name));
     const { roots, directReports } = buildHierarchy(orgEmployees);
     const positions = new Map();
-    let cursor = currentLaneY + 96;
+    let cursor = orgLanePaddingTop;
 
     const layout = (employee, depth = 0) => {
       const reports = directReports.get(employee.id) || [];
       if (!reports.length) {
         const y = cursor;
-        positions.set(employee.id, { x: employeeStartX + depth * employeeDepthX, y });
+        positions.set(employee.id, { x: orgLanePaddingX + depth * employeeDepthX, y });
         cursor += employeeGapY;
         return y;
       }
       const childYs = reports.map((report) => layout(report, depth + 1));
       const y = (Math.min(...childYs) + Math.max(...childYs)) / 2;
-      positions.set(employee.id, { x: employeeStartX + depth * employeeDepthX, y });
+      positions.set(employee.id, { x: orgLanePaddingX + depth * employeeDepthX, y });
       return y;
     };
 
     roots.forEach((root) => {
       layout(root, 0);
-      cursor += 24;
+      cursor += 18;
     });
 
-    const laneHeight = Math.max(220, cursor - currentLaneY);
+    const laneHeight = Math.max(200, cursor + 26);
     nodes.push({
       id: `org-${org.id}`,
       type: 'organization',
@@ -159,17 +161,20 @@ const buildGraph = ({ organizations, employees, projects, assignments, selectedN
         count: orgEmployees.length,
         isSelected: selectedNodeId === `org-${org.id}`,
       },
-      style: { width: orgLaneWidth },
+      style: { width: orgLaneWidth, height: laneHeight },
     });
 
     orgEmployees.forEach((employee) => {
-      const position = positions.get(employee.id) || { x: employeeStartX, y: currentLaneY + 100 };
+      const position = positions.get(employee.id) || { x: orgLanePaddingX, y: orgLanePaddingTop };
       const allocation = getCurrentAllocation(employee.id, assignments);
       nodes.push({
         id: `employee-${employee.id}`,
         type: 'employee',
+        parentId: `org-${org.id}`,
+        extent: 'parent',
         position,
         draggable: true,
+        style: { width: employeeWidth },
         data: {
           label: employee.name,
           role: employee.role,
@@ -364,10 +369,13 @@ function CanvasAppInner() {
     const employee = data.employees.find((emp) => emp.id === employeeId);
     if (!employee) return;
 
+    const absoluteX = node.positionAbsolute?.x ?? node.position.x;
+    const absoluteY = node.positionAbsolute?.y ?? node.position.y;
+
     const projectNodes = nodes.filter((item) => item.id.startsWith('project-'));
     const overlappingProject = projectNodes.find((item) => {
-      const withinX = node.position.x >= item.position.x - 140 && node.position.x <= item.position.x + 320;
-      const withinY = node.position.y >= item.position.y - 110 && node.position.y <= item.position.y + 210;
+      const withinX = absoluteX >= item.position.x - 140 && absoluteX <= item.position.x + 280;
+      const withinY = absoluteY >= item.position.y - 90 && absoluteY <= item.position.y + 190;
       return withinX && withinY;
     });
     if (overlappingProject) {
@@ -377,9 +385,10 @@ function CanvasAppInner() {
 
     const orgNodes = nodes.filter((item) => item.id.startsWith('org-'));
     const insideOrg = orgNodes.find((orgNode) => {
-      const orgWidth = Number(orgNode.style?.width || 280);
-      const withinX = node.position.x >= orgNode.position.x - 40 && node.position.x <= orgNode.position.x + orgWidth + 120;
-      const withinY = node.position.y >= orgNode.position.y - 30 && node.position.y <= orgNode.position.y + 260;
+      const orgWidth = Number(orgNode.style?.width || 700);
+      const orgHeight = Number(orgNode.style?.height || 220);
+      const withinX = absoluteX >= orgNode.position.x && absoluteX <= orgNode.position.x + orgWidth;
+      const withinY = absoluteY >= orgNode.position.y && absoluteY <= orgNode.position.y + orgHeight;
       return withinX && withinY;
     });
     const nearestOrg = (insideOrg ? [{ orgId: Number(insideOrg.id.replace('org-', '')), yDistance: 0 }] : orgNodes

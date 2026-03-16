@@ -226,21 +226,23 @@ body {
 }
 
 .rf-card {
-  min-width: 180px;
-  border-radius: 16px;
+  min-width: 140px;
+  border-radius: 14px;
   border: 1px solid var(--canvas-border);
   background: var(--canvas-surface-strong);
   box-shadow: var(--canvas-shadow);
-  padding: 12px 14px;
+  padding: 8px 10px;
   color: var(--canvas-text);
 }
 
 .rf-card.rf-card-org {
-  min-width: 230px;
+  min-width: 220px;
+  padding: 10px 12px;
 }
 
 .rf-card.rf-card-project {
-  min-width: 260px;
+  min-width: 220px;
+  padding: 10px 12px;
 }
 
 .rf-card.is-selected {
@@ -256,13 +258,16 @@ body {
 
 .rf-card-title {
   font-weight: 800;
-  margin-bottom: 4px;
+  font-size: 0.86rem;
+  line-height: 1.2;
+  margin-bottom: 3px;
   color: var(--canvas-text);
 }
 
 .rf-card-meta {
   color: var(--canvas-muted);
-  font-size: 0.8rem;
+  font-size: 0.72rem;
+  line-height: 1.25;
 }
 
 .canvas-react-context-menu {
@@ -410,19 +415,26 @@ body {
 }
 
 .rf-handle {
-  width: 18px;
-  height: 18px;
-  border: 3px solid #ffffff;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #ffffff;
   background: var(--canvas-blue);
-  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.28);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.24);
+}
+
+.rf-handle::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border-radius: 999px;
 }
 
 .rf-handle-target {
-  left: -11px;
+  left: -6px;
 }
 
 .rf-handle-source {
-  right: -11px;
+  right: -6px;
 }
 
 .react-flow__edge.selected .react-flow__edge-path {
