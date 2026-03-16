@@ -782,11 +782,18 @@ def render_app_nav(current_path: str, username: str) -> str:
 
 
 def build_login_page(error: str = "", next_path: str = "/") -> str:
-    error_markup = f'<p class="login-error">{error}</p>' if error else ""
     styles_href = static_asset_url("styles.css")
+    ui_styles_href = static_asset_url("ui-react/ui-react.css")
+    ui_script_href = static_asset_url("ui-react/ui-react.js")
     favicon_href = static_asset_url("images/matrix-manager-favicon.ico")
     logo_href = static_asset_url("images/matrix-manager-favicon.svg")
     safe_next = next_path if next_path.startswith("/") else "/"
+    boot_payload = json.dumps({
+        "error": error,
+        "next": safe_next,
+        "logoHref": logo_href,
+        "githubUrl": GITHUB_REPO_URL,
+    })
     return f"""<!doctype html>
 <html lang=\"en\">
   <head>
@@ -795,24 +802,12 @@ def build_login_page(error: str = "", next_path: str = "/") -> str:
     <title>Matrix Manager · Login</title>
     <link rel=\"icon\" href=\"{favicon_href}\" sizes=\"any\" />
     <link rel=\"stylesheet\" href=\"{styles_href}\" />
+    <link rel=\"stylesheet\" href=\"{ui_styles_href}\" />
   </head>
   <body class=\"login-page\">
-    <main class=\"login-shell\">
-      <section class=\"card login-card\">
-        <div class=\"section-head login-head\">
-          <img src=\"{logo_href}\" alt=\"Matrix Management\" class=\"login-logo\" />
-          <h1>Matrix Manager</h1>
-          <p>Sign in to continue.</p>
-        </div>
-        {error_markup}
-        <form method=\"post\" action=\"/login\" class=\"panel\">
-          <input type=\"hidden\" name=\"next\" value=\"{safe_next}\" />
-          <label><span class=\"label-text required-field\">Username</span><input name=\"username\" autocomplete=\"username\" required /></label>
-          <label><span class=\"label-text required-field\">Password</span><input name=\"password\" type=\"password\" autocomplete=\"current-password\" required /></label>
-          <button type=\"submit\">Sign in</button>
-        </form>
-      </section>
-    </main>
+    <div id=\"root\" data-page=\"login\"></div>
+    <script id=\"mm-react-props\" type=\"application/json\">{boot_payload}</script>
+    <script type=\"module\" src=\"{ui_script_href}\"></script>
     {build_app_footer()}
   </body>
 </html>"""
@@ -2438,6 +2433,8 @@ def serve_home(request: Request) -> str:
         "home.html",
         {
             'href="/static/styles.css"': f'href="{static_asset_url("styles.css")}"',
+            'href="/static/ui-react/ui-react.css"': f'href="{static_asset_url("ui-react/ui-react.css")}"',
+            'src="/static/ui-react/ui-react.js"': f'src="{static_asset_url("ui-react/ui-react.js")}"',
         },
         current_path=request.url.path,
         username=get_session_username(request.cookies.get(SESSION_COOKIE_NAME)),
@@ -2502,7 +2499,8 @@ def serve_canvas(request: Request) -> str:
         "canvas.html",
         {
             'href="/static/styles.css"': f'href="{static_asset_url("styles.css")}"',
-            'src="/static/canvas.js"': f'src="{static_asset_url("canvas.js")}"',
+            'href="/static/canvas-react/canvas-react.css"': f'href="{static_asset_url("canvas-react/canvas-react.css")}"',
+            'src="/static/canvas-react/canvas-react.js"': f'src="{static_asset_url("canvas-react/canvas-react.js")}"',
         },
         current_path=request.url.path,
         username=get_session_username(request.cookies.get(SESSION_COOKIE_NAME)),
