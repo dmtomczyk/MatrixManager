@@ -2,6 +2,7 @@
 title: Matrix Manager Combined DB Architecture
 ---
 
+```mermaid
 flowchart LR
     subgraph CONTROL[Control DB]
         UA[(UserAccount)]
@@ -51,3 +52,4 @@ flowchart LR
 
     class UA,DBC,INBOX,AUDIT,RERR,RHS control;
     class ORG,JC,EMP,PROJ,DEM,ASN data;
+```
