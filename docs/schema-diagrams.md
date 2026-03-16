@@ -1,9 +1,10 @@
 # Matrix Manager Schema Diagrams
 
-Mermaid ER diagrams:
+Mermaid diagrams:
 
-- `docs/control-db-schema.mmd` — control DB
-- `docs/data-db-schema.mmd` — primary app/data DB
+- `docs/control-db-schema.mmd` — control DB ERD
+- `docs/data-db-schema.mmd` — primary app/data DB ERD
+- `docs/combined-db-architecture.mmd` — combined two-DB architecture + logical cross-links
 
 Notes:
 - The control DB and primary data DB are intentionally separate.
