@@ -333,6 +333,13 @@ header nav a,
   border-radius: 999px;
 }
 
+.nav-link-external::after {
+  content: "↗";
+  margin-left: 6px;
+  font-size: 0.82em;
+  opacity: 0.88;
+}
+
 .nav-links-mobile .nav-link {
   justify-content: flex-start;
 }
@@ -1837,6 +1844,33 @@ body.org-page .org-shell {
 
 .login-card {
   padding: 28px;
+}
+
+.login-github-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 14px;
+  padding: 11px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: white;
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.login-github-link::after {
+  content: "↗";
+  font-size: 0.82em;
+  opacity: 0.88;
+}
+
+.login-github-link:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
 }
 
 .login-error {

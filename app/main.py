@@ -619,6 +619,9 @@ def get_session_username(cookie_value: Optional[str]) -> Optional[str]:
     return cookie_value.split(":", 1)[0]
 
 
+GITHUB_REPO_URL = "https://github.com/dmtomczyk/matrixmanager"
+
+
 def render_app_nav(current_path: str, username: str) -> str:
     links = [
         ("/", "Home"),
@@ -685,16 +688,18 @@ def render_app_nav(current_path: str, username: str) -> str:
     mobile_people_markup = render_dropdown("Workforce", people_links, mobile=True)
     admin_link_markup = render_dropdown("Administration", admin_links) if admin_links else ""
     mobile_admin_markup = render_dropdown("Administration", admin_links, mobile=True) if admin_links else ""
+    github_link_markup = f'<a href="{GITHUB_REPO_URL}" class="nav-link nav-link-external" target="_blank" rel="noreferrer">GitHub</a>'
+    mobile_github_link_markup = f'<a href="{GITHUB_REPO_URL}" class="nav-link nav-link-external" target="_blank" rel="noreferrer">GitHub</a>'
     return f'''<nav class="app-nav" aria-label="Primary">
         <div class="app-nav-main">
-          <div class="nav-links nav-links-desktop">{link_markup}{staffing_link_markup}{people_link_markup}{admin_link_markup}</div>
+          <div class="nav-links nav-links-desktop">{link_markup}{staffing_link_markup}{people_link_markup}{admin_link_markup}{github_link_markup}</div>
           <details class="hamburger-menu">
             <summary class="hamburger-trigger" aria-label="Open navigation menu">
               <span class="hamburger-icon" aria-hidden="true"></span>
               <span>Menu</span>
             </summary>
             <div class="hamburger-panel">
-              <div class="nav-links nav-links-mobile">{link_markup}{mobile_staffing_markup}{mobile_people_markup}{mobile_admin_markup}</div>
+              <div class="nav-links nav-links-mobile">{link_markup}{mobile_staffing_markup}{mobile_people_markup}{mobile_admin_markup}{mobile_github_link_markup}</div>
             </div>
           </details>
         </div>
@@ -756,6 +761,7 @@ def build_login_page(error: str = "", next_path: str = "/") -> str:
           <label><span class=\"label-text required-field\">Password</span><input name=\"password\" type=\"password\" autocomplete=\"current-password\" required /></label>
           <button type=\"submit\">Sign in</button>
         </form>
+        <a href=\"{GITHUB_REPO_URL}\" class=\"login-github-link\" target=\"_blank\" rel=\"noreferrer\">View on GitHub</a>
       </section>
     </main>
   </body>
