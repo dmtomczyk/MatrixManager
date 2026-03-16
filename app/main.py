@@ -738,20 +738,18 @@ def render_app_nav(current_path: str, username: str) -> str:
     mobile_staffing_markup = render_dropdown("Planning", staffing_links, mobile=True)
     people_link_markup = render_dropdown("Workforce", people_links)
     mobile_people_markup = render_dropdown("Workforce", people_links, mobile=True)
-    admin_link_markup = render_dropdown("Administration", admin_links) if admin_links else ""
-    mobile_admin_markup = render_dropdown("Administration", admin_links, mobile=True) if admin_links else ""
-    github_link_markup = f'<a href="{GITHUB_REPO_URL}" class="nav-link nav-link-external" target="_blank" rel="noreferrer">GitHub</a>'
-    mobile_github_link_markup = f'<a href="{GITHUB_REPO_URL}" class="nav-link nav-link-external" target="_blank" rel="noreferrer">GitHub</a>'
+    admin_link_markup = render_dropdown("Server Admin", admin_links) if admin_links else ""
+    mobile_admin_markup = render_dropdown("Server Admin", admin_links, mobile=True) if admin_links else ""
     return f'''<nav class="app-nav" aria-label="Primary">
         <div class="app-nav-main">
-          <div class="nav-links nav-links-desktop">{link_markup}{staffing_link_markup}{people_link_markup}{admin_link_markup}{github_link_markup}</div>
+          <div class="nav-links nav-links-desktop">{link_markup}{staffing_link_markup}{people_link_markup}{admin_link_markup}</div>
           <details class="hamburger-menu">
             <summary class="hamburger-trigger" aria-label="Open navigation menu">
               <span class="hamburger-icon" aria-hidden="true"></span>
               <span>Menu</span>
             </summary>
             <div class="hamburger-panel">
-              <div class="nav-links nav-links-mobile">{link_markup}{mobile_staffing_markup}{mobile_people_markup}{mobile_admin_markup}{mobile_github_link_markup}</div>
+              <div class="nav-links nav-links-mobile">{link_markup}{mobile_staffing_markup}{mobile_people_markup}{mobile_admin_markup}</div>
             </div>
           </details>
         </div>
@@ -813,9 +811,9 @@ def build_login_page(error: str = "", next_path: str = "/") -> str:
           <label><span class=\"label-text required-field\">Password</span><input name=\"password\" type=\"password\" autocomplete=\"current-password\" required /></label>
           <button type=\"submit\">Sign in</button>
         </form>
-        <a href=\"{GITHUB_REPO_URL}\" class=\"login-github-link\" target=\"_blank\" rel=\"noreferrer\">View on GitHub</a>
       </section>
     </main>
+    {build_app_footer()}
   </body>
 </html>"""
 
@@ -1658,6 +1656,13 @@ def build_header_brand(subtitle: str = "") -> str:
       </a>'''
 
 
+def build_app_footer() -> str:
+    return f'''<footer class="app-footer">
+      <a href="{GITHUB_REPO_URL}" class="app-footer-link" target="_blank" rel="noreferrer">GitHub</a>
+      <div>Created by Daymian</div>
+    </footer>'''
+
+
 def serve_html_page(
     filename: str,
     replacements: Optional[dict[str, str]] = None,
@@ -1680,9 +1685,9 @@ def serve_html_page(
             count=1,
             flags=re.DOTALL,
         )
+    footer_markup = f"    {build_app_footer()}\n"
     if current_path and username:
         replacements[BASE_NAV_MARKUP] = render_app_nav(current_path=current_path, username=username)
-        footer_markup = '    <footer class="app-footer">Created by Daymian</footer>\n'
         replacements["</body>"] = f'{footer_markup}    <script src="{static_asset_url("app-shell.js")}"></script>\n  </body>'
     for old, new in replacements.items():
         html = html.replace(old, new)

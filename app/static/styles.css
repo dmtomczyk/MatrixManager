@@ -1332,6 +1332,20 @@ table tbody tr:hover {
   text-align: center;
   font-size: 0.76rem;
   color: rgba(71, 85, 105, 0.72);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.app-footer-link {
+  color: #1d4ed8;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.app-footer-link:hover {
+  text-decoration: underline;
 }
 
 .panel-actions-row {
