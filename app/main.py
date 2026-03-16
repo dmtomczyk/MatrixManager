@@ -697,7 +697,12 @@ def render_app_nav(current_path: str, username: str) -> str:
     def render_standard_links(nav_links: list[tuple[str, str]]) -> str:
         rendered = []
         for href, label in nav_links:
-            class_name = "nav-link active" if href == current_path else "nav-link"
+            classes = ["nav-link"]
+            if href == current_path:
+                classes.append("active")
+            if href == "/":
+                classes.append("nav-link-subtle")
+            class_name = " ".join(classes)
             aria_current = ' aria-current="page"' if href == current_path else ""
             nav_meta = ' data-nav-key="assignments"' if href == "/staffing" else ""
             rendered.append(f'<a href="{href}" class="{class_name}"{aria_current}{nav_meta}>{label}</a>')
@@ -2401,7 +2406,7 @@ async def login_submit(request: Request):
     if not authenticate_username_password(username, password):
         return HTMLResponse(build_login_page(error="Invalid username or password.", next_path=next_target), status_code=401)
     ensure_inbox_welcome_notification(username)
-    target = next_target if next_target.startswith("/") else "/"
+    target = next_target if next_target.startswith("/") and next_target not in {"", "/login", "/logout"} else "/"
     response = RedirectResponse(url=target, status_code=302)
     response.set_cookie(
         SESSION_COOKIE_NAME,

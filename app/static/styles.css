@@ -358,6 +358,22 @@ header nav a,
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
 }
 
+.nav-link-subtle {
+  color: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.nav-link-subtle:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.nav-link-subtle.active {
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
 .nav-link-has-pending-approvals,
 .nav-dropdown-link[data-pending-approvals] {
   position: relative;
