@@ -211,10 +211,11 @@ body {
 .canvas-react-context-menu {
   position: fixed;
   z-index: 100;
-  background: white;
-  border: 1px solid var(--border);
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid rgba(148, 163, 184, 0.24);
   border-radius: 12px;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.32);
   padding: 8px;
   min-width: 190px;
 }
@@ -222,19 +223,21 @@ body {
 .canvas-react-context-menu button {
   width: 100%;
   text-align: left;
-  background: none;
+  background: transparent;
+  color: #e2e8f0;
   border: none;
   padding: 8px 10px;
   border-radius: 8px;
 }
 
 .canvas-react-context-menu button:hover {
-  background: #f8fafc;
+  background: rgba(148, 163, 184, 0.16);
+  color: #ffffff;
 }
 
 .canvas-react-context-menu hr {
   border: none;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid rgba(148, 163, 184, 0.22);
   margin: 6px 0;
 }
 
