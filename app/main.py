@@ -615,7 +615,7 @@ def render_app_nav(current_path: str, username: str) -> str:
         panel_class = "nav-dropdown-panel nav-dropdown-panel-mobile" if mobile else "nav-dropdown-panel"
         details_class = "nav-dropdown nav-dropdown-mobile" if mobile else "nav-dropdown"
         trigger_class = "nav-link nav-dropdown-trigger active" if any(href == current_path for href, _ in nav_links) else "nav-link nav-dropdown-trigger"
-        trigger_meta = ' data-nav-key="staffing-trigger"' if label == "Staffing" else ""
+        trigger_meta = ' data-nav-key="staffing-trigger"' if label == "Workforce Planning" else ""
         return f'''
           <details class="{details_class}">
             <summary class="{trigger_class}"{trigger_meta}>
@@ -629,8 +629,8 @@ def render_app_nav(current_path: str, username: str) -> str:
         '''
 
     link_markup = render_standard_links(links)
-    staffing_link_markup = render_dropdown("Staffing", staffing_links)
-    mobile_staffing_markup = render_dropdown("Staffing", staffing_links, mobile=True)
+    staffing_link_markup = render_dropdown("Workforce Planning", staffing_links)
+    mobile_staffing_markup = render_dropdown("Workforce Planning", staffing_links, mobile=True)
     people_link_markup = render_dropdown("People", people_links)
     mobile_people_markup = render_dropdown("People", people_links, mobile=True)
     admin_link_markup = render_dropdown("Administration", admin_links) if admin_links else ""

@@ -71,7 +71,7 @@ const updateAccountNotificationState = async () => {
       } else {
         delete trigger.dataset.pendingApprovals;
       }
-      trigger.setAttribute('aria-label', pendingApprovals > 0 ? `Staffing menu with ${pendingApprovals} pending approvals` : 'Staffing menu');
+      trigger.setAttribute('aria-label', pendingApprovals > 0 ? `Workforce Planning menu with ${pendingApprovals} pending approvals` : 'Workforce Planning menu');
     });
   } catch (_) {
     // Non-fatal nav enhancement; ignore fetch failures.
