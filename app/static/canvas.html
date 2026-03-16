@@ -5,33 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Matrix Manager · Canvas</title>
     <link rel="stylesheet" href="/static/styles.css" />
-    <link rel="stylesheet" href="/static/canvas-react/canvas-react.css" />
+    <link rel="stylesheet" href="/static/ui-react/ui-react.css" />
   </head>
   <body class="canvas-page">
-    <header>
-      <div>
-        <h1>Matrix Manager</h1>
-        <p>Spatial staffing canvas.</p>
-      </div>
-      <nav>
-        <a href="/planning">Projects</a>
-        <a href="/people">Employees</a>
-        <a href="/staffing">Assignments</a>
-        <a href="/orgs">Organizations</a>
-        <a href="/canvas">Canvas</a>
-        <a href="/forecast">Forecast</a>
-        <form method="post" action="/logout" class="logout-form">
-          <button type="submit" class="logout-button">Logout</button>
-        </form>
-      </nav>
-    </header>
-
-    <main class="canvas-layout">
-      <section class="canvas-area">
-        <div id="root"></div>
-      </section>
-    </main>
-
-    <script type="module" src="/static/canvas-react/canvas-react.js"></script>
+    <div id="root" data-page="canvas"></div>
+    <script type="module" src="/static/ui-react/ui-react.js"></script>
   </body>
 </html>

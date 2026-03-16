@@ -2499,8 +2499,8 @@ def serve_canvas(request: Request) -> str:
         "canvas.html",
         {
             'href="/static/styles.css"': f'href="{static_asset_url("styles.css")}"',
-            'href="/static/canvas-react/canvas-react.css"': f'href="{static_asset_url("canvas-react/canvas-react.css")}"',
-            'src="/static/canvas-react/canvas-react.js"': f'src="{static_asset_url("canvas-react/canvas-react.js")}"',
+            'href="/static/ui-react/ui-react.css"': f'href="{static_asset_url("ui-react/ui-react.css")}"',
+            'src="/static/ui-react/ui-react.js"': f'src="{static_asset_url("ui-react/ui-react.js")}"',
         },
         current_path=request.url.path,
         username=get_session_username(request.cookies.get(SESSION_COOKIE_NAME)),
