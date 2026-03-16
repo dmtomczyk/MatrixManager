@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Matrix Manager · Dashboard</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body class="dashboard-page dashboard-quickref-page">
+    <header>
+      <div>
+        <h1>Dashboard</h1>
+        <p>Quick reference for your team load, tracked employees, and pending requests.</p>
+      </div>
+      <nav>
+        <a href="/planning">Projects</a>
+        <a href="/people">Employees</a>
+        <a href="/staffing">Assignments</a>
+        <a href="/orgs">Organizations</a>
+        <a href="/canvas">Canvas</a>
+        <a href="/forecast">Forecast</a>
+        <form method="post" action="/logout" class="logout-form">
+          <button type="submit" class="logout-button">Logout</button>
+        </form>
+      </nav>
+    </header>
+
+    <main class="dashboard-shell dashboard-quickref-shell">
+      <section class="card dashboard-intro-card">
+        <div class="section-head with-actions dashboard-intro-head">
+          <div>
+            <h2 id="dashboard-greeting">Your dashboard</h2>
+            <p id="dashboard-subtitle">See team utilization and the requests that need attention.</p>
+          </div>
+          <div class="dashboard-summary-pills" id="dashboard-summary-pills"></div>
+        </div>
+      </section>
+
+      <section class="dashboard-grid">
+        <section class="card dashboard-card dashboard-team-card">
+          <div class="section-head with-actions dashboard-card-head">
+            <div>
+              <h2>Team load</h2>
+              <p>Direct and indirect reports appear automatically. Tracked employees let you follow people outside your reporting chain.</p>
+            </div>
+            <div class="dashboard-track-controls">
+              <label class="dashboard-select-label" for="tracked-employee-select">Track employee</label>
+              <div class="dashboard-track-row">
+                <select id="tracked-employee-select">
+                  <option value="">Select employee to track</option>
+                </select>
+                <button type="button" id="tracked-employee-add" class="ghost-button">Add</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="dashboard-team-empty" class="panel hidden">
+            <strong>No linked employee record yet.</strong>
+            <p class="muted">Link this user account to an employee to automatically populate subordinates. You can still use tracked employees after that.</p>
+          </div>
+
+          <div class="dashboard-team-lists">
+            <div class="dashboard-team-group">
+              <div class="dashboard-group-head">
+                <h3>Your subordinates</h3>
+                <span class="badge" id="subordinates-count">0</span>
+              </div>
+              <div id="subordinates-list" class="dashboard-employee-list"></div>
+            </div>
+
+            <div class="dashboard-team-group">
+              <div class="dashboard-group-head">
+                <h3>Tracked employees</h3>
+                <span class="badge" id="tracked-count">0</span>
+              </div>
+              <div id="tracked-list" class="dashboard-employee-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card dashboard-card dashboard-requests-card">
+          <div class="section-head">
+            <h2>Pending requests</h2>
+            <p>Everything still in review that you submitted or need to approve.</p>
+          </div>
+
+          <div class="dashboard-request-columns">
+            <div class="dashboard-request-group">
+              <div class="dashboard-group-head">
+                <h3>Needs your approval</h3>
+                <span class="badge" id="approval-count">0</span>
+              </div>
+              <div id="approval-list" class="dashboard-request-list"></div>
+            </div>
+
+            <div class="dashboard-request-group">
+              <div class="dashboard-group-head">
+                <h3>Submitted by you</h3>
+                <span class="badge" id="submitted-count">0</span>
+              </div>
+              <div id="submitted-list" class="dashboard-request-list"></div>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <div id="toast" role="status" aria-live="polite"></div>
+
+    <script type="module" src="/static/dashboard.js"></script>
+  </body>
+</html>

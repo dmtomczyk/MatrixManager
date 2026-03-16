@@ -457,6 +457,7 @@ class UserAccount(SQLModel, table=True):
     last_name: Optional[str] = None
     email: Optional[str] = None
     profile_picture_url: Optional[str] = None
+    tracked_employee_ids_json: Optional[str] = None
     is_admin: bool = False
     is_active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -512,6 +513,51 @@ class AccountSettingsRead(SQLModel):
     auth_source: str = "env"
     is_admin: bool = False
     is_active: bool = True
+
+
+class DashboardEmployeeSummary(SQLModel):
+    id: int
+    name: str
+    organization_name: Optional[str] = None
+    manager_name: Optional[str] = None
+    capacity: float = 1.0
+    active_allocation: float = 0.0
+    active_allocation_percent: float = 0.0
+    capacity_percent: float = 100.0
+    load_status: str = "available"
+    is_direct_report: bool = False
+    is_indirect_report: bool = False
+    is_tracked: bool = False
+    active_assignment_count: int = 0
+
+
+class DashboardAssignmentSummary(SQLModel):
+    id: int
+    employee_name: Optional[str] = None
+    project_name: Optional[str] = None
+    start_date: date
+    end_date: date
+    allocation: float
+    status: str = "approved"
+    submitted_by_username: Optional[str] = None
+    pending_approver_usernames: list[str] = Field(default_factory=list)
+    requires_current_user_approval: bool = False
+    submitted_by_current_user: bool = False
+
+
+class DashboardRead(SQLModel):
+    username: str
+    employee_id: Optional[int] = None
+    employee_name: Optional[str] = None
+    direct_reports: list[DashboardEmployeeSummary] = Field(default_factory=list)
+    tracked_employees: list[DashboardEmployeeSummary] = Field(default_factory=list)
+    approval_items: list[DashboardAssignmentSummary] = Field(default_factory=list)
+    submitted_items: list[DashboardAssignmentSummary] = Field(default_factory=list)
+    available_tracking_candidates: list[EmployeeRead] = Field(default_factory=list)
+
+
+class DashboardTrackedEmployeesUpdate(SQLModel):
+    employee_ids: list[int] = Field(default_factory=list)
 
 
 class AccountSettingsUpdate(SQLModel):
@@ -625,6 +671,7 @@ GITHUB_REPO_URL = "https://github.com/dmtomczyk/matrixmanager"
 def render_app_nav(current_path: str, username: str) -> str:
     links = [
         ("/", "Home"),
+        ("/dashboard", "Dashboard"),
         ("/planning", "Projects"),
         ("/canvas", "Canvas"),
     ]
@@ -825,6 +872,8 @@ def run_migrations(bind_engine=engine) -> None:
                 connection.exec_driver_sql("ALTER TABLE useraccount ADD COLUMN email TEXT")
             if control_columns and "profile_picture_url" not in control_column_names:
                 connection.exec_driver_sql("ALTER TABLE useraccount ADD COLUMN profile_picture_url TEXT")
+            if control_columns and "tracked_employee_ids_json" not in control_column_names:
+                connection.exec_driver_sql("ALTER TABLE useraccount ADD COLUMN tracked_employee_ids_json TEXT")
             inbox_columns = connection.exec_driver_sql("PRAGMA table_info(inboxnotification)").fetchall() if connection.exec_driver_sql("SELECT name FROM sqlite_master WHERE type='table' AND name='inboxnotification'").fetchone() else []
             inbox_column_names = {row[1] for row in inbox_columns}
             if inbox_columns and "metadata_json" not in inbox_column_names:
@@ -885,6 +934,8 @@ def run_migrations(bind_engine=engine) -> None:
                         connection.exec_driver_sql("ALTER TABLE useraccount ADD COLUMN email TEXT")
                     if "profile_picture_url" not in user_column_names:
                         connection.exec_driver_sql("ALTER TABLE useraccount ADD COLUMN profile_picture_url TEXT")
+                    if "tracked_employee_ids_json" not in user_column_names:
+                        connection.exec_driver_sql("ALTER TABLE useraccount ADD COLUMN tracked_employee_ids_json TEXT")
                 inbox_exists = connection.exec_driver_sql("SELECT to_regclass('public.inboxnotification')").scalar()
                 if inbox_exists:
                     inbox_rows = connection.exec_driver_sql("SELECT column_name FROM information_schema.columns WHERE table_name = 'inboxnotification'").fetchall()
@@ -1868,6 +1919,193 @@ def get_user_account(username: str) -> Optional[UserAccount]:
         return session.exec(select(UserAccount).where(UserAccount.username == username)).first()
 
 
+def parse_tracked_employee_ids(raw_value: Optional[str]) -> list[int]:
+    if not raw_value:
+        return []
+    try:
+        payload = json.loads(raw_value)
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(payload, list):
+        return []
+    ids: list[int] = []
+    for item in payload:
+        try:
+            value = int(item)
+        except (TypeError, ValueError):
+            continue
+        if value not in ids:
+            ids.append(value)
+    return ids
+
+
+def encode_tracked_employee_ids(employee_ids: list[int]) -> str:
+    unique_ids: list[int] = []
+    for item in employee_ids:
+        if item not in unique_ids:
+            unique_ids.append(item)
+    return json.dumps(unique_ids)
+
+
+def get_subordinate_employee_ids(data_session: Session, manager_employee_id: int) -> tuple[set[int], set[int]]:
+    direct_ids: set[int] = set()
+    all_ids: set[int] = set()
+    queue: list[tuple[int, int]] = [(manager_employee_id, 0)]
+    while queue:
+        current_manager_id, depth = queue.pop(0)
+        reports = data_session.exec(select(Employee).where(Employee.manager_id == current_manager_id)).all()
+        for report in reports:
+            if report.id is None or report.id in all_ids:
+                continue
+            all_ids.add(report.id)
+            if depth == 0:
+                direct_ids.add(report.id)
+            queue.append((report.id, depth + 1))
+    return direct_ids, all_ids
+
+
+def build_dashboard_employee_summary(
+    *,
+    employee: Employee,
+    organization_name: Optional[str],
+    manager_name: Optional[str],
+    active_allocation: float,
+    active_assignment_count: int,
+    is_direct_report: bool = False,
+    is_indirect_report: bool = False,
+    is_tracked: bool = False,
+) -> DashboardEmployeeSummary:
+    capacity = employee.capacity if employee.capacity and employee.capacity > 0 else 1.0
+    active_allocation_percent = round(active_allocation * 100, 1)
+    capacity_percent = round(capacity * 100, 1)
+    ratio = active_allocation / capacity if capacity > 0 else active_allocation
+    if ratio > 1:
+        load_status = "overloaded"
+    elif ratio >= 0.9:
+        load_status = "near_capacity"
+    elif ratio <= 0.25:
+        load_status = "available"
+    else:
+        load_status = "balanced"
+    return DashboardEmployeeSummary(
+        id=employee.id or 0,
+        name=employee.name,
+        organization_name=organization_name,
+        manager_name=manager_name,
+        capacity=capacity,
+        active_allocation=round(active_allocation, 2),
+        active_allocation_percent=active_allocation_percent,
+        capacity_percent=capacity_percent,
+        load_status=load_status,
+        is_direct_report=is_direct_report,
+        is_indirect_report=is_indirect_report,
+        is_tracked=is_tracked,
+        active_assignment_count=active_assignment_count,
+    )
+
+
+def get_dashboard_data(username: str) -> DashboardRead:
+    user = get_user_account(username)
+    active_connection = get_active_db_connection_config()
+    data_engine = get_or_create_data_engine(active_connection)
+    with Session(control_engine) as control_session, Session(data_engine) as data_session:
+        employee_records = data_session.exec(select(Employee)).all()
+        employee_by_id = {employee.id: employee for employee in employee_records if employee.id is not None}
+        organizations = data_session.exec(select(Organization)).all()
+        organization_by_id = {org.id: org.name for org in organizations if org.id is not None}
+        today = datetime.now(timezone.utc).date()
+        active_assignments = data_session.exec(
+            select(Assignment).where(Assignment.start_date <= today, Assignment.end_date >= today)
+        ).all()
+        allocation_by_employee: dict[int, float] = {}
+        active_assignment_count_by_employee: dict[int, int] = {}
+        for assignment in active_assignments:
+            allocation_by_employee[assignment.employee_id] = allocation_by_employee.get(assignment.employee_id, 0.0) + float(assignment.allocation or 0.0)
+            active_assignment_count_by_employee[assignment.employee_id] = active_assignment_count_by_employee.get(assignment.employee_id, 0) + 1
+
+        direct_ids: set[int] = set()
+        subordinate_ids: set[int] = set()
+        current_employee = employee_by_id.get(user.employee_id) if user and user.employee_id is not None else None
+        if current_employee and current_employee.id is not None:
+            direct_ids, subordinate_ids = get_subordinate_employee_ids(data_session, current_employee.id)
+
+        tracked_ids = parse_tracked_employee_ids(user.tracked_employee_ids_json if user else None)
+        filtered_tracked_ids = [employee_id for employee_id in tracked_ids if employee_id in employee_by_id and employee_id not in subordinate_ids]
+
+        def employee_summary(employee_id: int, *, is_tracked: bool = False) -> Optional[DashboardEmployeeSummary]:
+            employee = employee_by_id.get(employee_id)
+            if not employee:
+                return None
+            manager_name = employee_by_id.get(employee.manager_id).name if employee.manager_id in employee_by_id else None
+            return build_dashboard_employee_summary(
+                employee=employee,
+                organization_name=organization_by_id.get(employee.organization_id),
+                manager_name=manager_name,
+                active_allocation=allocation_by_employee.get(employee_id, 0.0),
+                active_assignment_count=active_assignment_count_by_employee.get(employee_id, 0),
+                is_direct_report=employee_id in direct_ids,
+                is_indirect_report=employee_id in subordinate_ids and employee_id not in direct_ids,
+                is_tracked=is_tracked,
+            )
+
+        direct_reports = [employee_summary(employee_id) for employee_id in subordinate_ids]
+        direct_reports = [item for item in direct_reports if item is not None]
+        direct_reports.sort(key=lambda item: (not item.is_direct_report, item.name.lower()))
+
+        tracked_employees = [employee_summary(employee_id, is_tracked=True) for employee_id in filtered_tracked_ids]
+        tracked_employees = [item for item in tracked_employees if item is not None]
+        tracked_employees.sort(key=lambda item: item.name.lower())
+
+        assignment_rows = data_session.exec(select(Assignment).order_by(Assignment.start_date, Assignment.id)).all()
+        project_ids = {assignment.project_id for assignment in assignment_rows}
+        project_rows = data_session.exec(select(Project).where(Project.id.in_(project_ids))).all() if project_ids else []
+        project_by_id = {project.id: project.name for project in project_rows if project.id is not None}
+        approval_items: list[DashboardAssignmentSummary] = []
+        submitted_items: list[DashboardAssignmentSummary] = []
+        for assignment in assignment_rows:
+            if assignment.status != "in_review":
+                continue
+            serialized = serialize_assignment(data_session, assignment, current_username=username)
+            summary = DashboardAssignmentSummary(
+                id=serialized.id,
+                employee_name=serialized.employee_name,
+                project_name=serialized.project_name or project_by_id.get(assignment.project_id),
+                start_date=serialized.start_date,
+                end_date=serialized.end_date,
+                allocation=serialized.allocation,
+                status=serialized.status,
+                submitted_by_username=serialized.submitted_by_username,
+                pending_approver_usernames=serialized.pending_approver_usernames,
+                requires_current_user_approval=serialized.requires_current_user_approval,
+                submitted_by_current_user=serialized.submitted_by_current_user,
+            )
+            if serialized.requires_current_user_approval:
+                approval_items.append(summary)
+            if serialized.submitted_by_current_user:
+                submitted_items.append(summary)
+
+        excluded_ids = set(subordinate_ids) | set(filtered_tracked_ids)
+        if current_employee and current_employee.id is not None:
+            excluded_ids.add(current_employee.id)
+        available_tracking_candidates = [
+            serialize_employee(data_session, employee)
+            for employee in employee_records
+            if employee.id is not None and employee.id not in excluded_ids
+        ]
+        available_tracking_candidates.sort(key=lambda item: item.name.lower())
+
+        return DashboardRead(
+            username=username,
+            employee_id=current_employee.id if current_employee and current_employee.id is not None else None,
+            employee_name=current_employee.name if current_employee else None,
+            direct_reports=direct_reports,
+            tracked_employees=tracked_employees,
+            approval_items=approval_items,
+            submitted_items=submitted_items,
+            available_tracking_candidates=available_tracking_candidates,
+        )
+
+
 def get_management_chain_usernames(employee_id: int) -> list[str]:
     active_connection = get_active_db_connection_config()
     data_engine = get_or_create_data_engine(active_connection)
@@ -2273,9 +2511,17 @@ def serve_forecast(request: Request) -> str:
     )
 
 
-@app.get("/dashboard")
-def redirect_dashboard_to_forecast() -> RedirectResponse:
-    return RedirectResponse(url="/forecast", status_code=307)
+@app.get("/dashboard", response_class=HTMLResponse)
+def serve_dashboard(request: Request) -> str:
+    return serve_html_page(
+        "dashboard.html",
+        {
+            'href="/static/styles.css"': f'href="{static_asset_url("styles.css")}"',
+            'src="/static/dashboard.js"': f'src="{static_asset_url("dashboard.js")}"',
+        },
+        current_path=request.url.path,
+        username=get_session_username(request.cookies.get(SESSION_COOKIE_NAME)),
+    )
 
 
 @app.get("/inbox", response_class=HTMLResponse)
@@ -3796,6 +4042,30 @@ async def upload_account_profile_picture(
     session.commit()
     session.refresh(user)
     return get_account_settings(username, session)
+
+
+@app.get("/dashboard-api", response_model=DashboardRead)
+def read_dashboard(request: Request):
+    username = get_request_username(request)
+    return get_dashboard_data(username)
+
+
+@app.put("/dashboard-api/tracked-employees", response_model=DashboardRead)
+def update_dashboard_tracked_employees(
+    payload: DashboardTrackedEmployeesUpdate,
+    request: Request,
+    session: Session = Depends(get_control_session),
+):
+    username = get_request_username(request)
+    user = session.exec(select(UserAccount).where(UserAccount.username == username)).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="This account is not backed by a Matrix Manager user record")
+    user.tracked_employee_ids_json = encode_tracked_employee_ids(payload.employee_ids)
+    user.updated_at = datetime.now(timezone.utc)
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return get_dashboard_data(username)
 
 
 @app.get("/db-connections", response_model=List[DBConnectionRead])
