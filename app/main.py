@@ -452,6 +452,10 @@ class UserAccount(SQLModel, table=True):
     username: str
     password_hash: str
     employee_id: Optional[int] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+    profile_picture_url: Optional[str] = None
     is_admin: bool = False
     is_active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -462,12 +466,20 @@ class UserAccountCreate(SQLModel):
     username: str
     password: str
     employee_id: Optional[int] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+    profile_picture_url: Optional[str] = None
     is_admin: bool = False
 
 
 class UserAccountUpdate(SQLModel):
     password: Optional[str] = None
     employee_id: Optional[int] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+    profile_picture_url: Optional[str] = None
     is_admin: Optional[bool] = None
     is_active: Optional[bool] = None
 
@@ -477,11 +489,34 @@ class UserAccountRead(SQLModel):
     username: str
     employee_id: Optional[int] = None
     employee_name: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+    profile_picture_url: Optional[str] = None
     is_admin: bool
     is_active: bool
     created_at: datetime
     updated_at: datetime
     auth_source: str = "database"
+
+
+class AccountSettingsRead(SQLModel):
+    username: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+    profile_picture_url: Optional[str] = None
+    mm_user_account: bool = False
+    auth_source: str = "env"
+    is_admin: bool = False
+    is_active: bool = True
+
+
+class AccountSettingsUpdate(SQLModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+    profile_picture_url: Optional[str] = None
 
 
 class InboxNotification(SQLModel, table=True):
@@ -678,6 +713,7 @@ def render_app_nav(current_path: str, username: str) -> str:
               </div>
             </div>
             <a href="/inbox" class="account-menu-link">Inbox</a>
+            <a href="/account-settings" class="account-menu-link">Account Settings</a>
             <form method="post" action="/logout" class="logout-form">
               <button type="submit" class="logout-button">Logout</button>
             </form>
@@ -724,7 +760,7 @@ def build_login_page(error: str = "", next_path: str = "/") -> str:
 
 def is_html_request(request: Request) -> bool:
     accept = request.headers.get("accept", "")
-    return "text/html" in accept or request.url.path in {"/", "/planning", "/demands", "/people", "/staffing", "/orgs", "/job-codes", "/canvas", "/dashboard", "/inbox", "/audit", "/users", "/db-management", "/runtime", "/docs", "/redoc"}
+    return "text/html" in accept or request.url.path in {"/", "/planning", "/demands", "/people", "/staffing", "/orgs", "/job-codes", "/canvas", "/dashboard", "/inbox", "/account-settings", "/audit", "/users", "/db-management", "/runtime", "/docs", "/redoc"}
 
 
 def create_db_and_tables(bind_engine=engine) -> None:
@@ -771,6 +807,14 @@ def run_migrations(bind_engine=engine) -> None:
             control_column_names = {row[1] for row in control_columns}
             if control_columns and "employee_id" not in control_column_names:
                 connection.exec_driver_sql("ALTER TABLE useraccount ADD COLUMN employee_id INTEGER")
+            if control_columns and "first_name" not in control_column_names:
+                connection.exec_driver_sql("ALTER TABLE useraccount ADD COLUMN first_name TEXT")
+            if control_columns and "last_name" not in control_column_names:
+                connection.exec_driver_sql("ALTER TABLE useraccount ADD COLUMN last_name TEXT")
+            if control_columns and "email" not in control_column_names:
+                connection.exec_driver_sql("ALTER TABLE useraccount ADD COLUMN email TEXT")
+            if control_columns and "profile_picture_url" not in control_column_names:
+                connection.exec_driver_sql("ALTER TABLE useraccount ADD COLUMN profile_picture_url TEXT")
             inbox_columns = connection.exec_driver_sql("PRAGMA table_info(inboxnotification)").fetchall() if connection.exec_driver_sql("SELECT name FROM sqlite_master WHERE type='table' AND name='inboxnotification'").fetchone() else []
             inbox_column_names = {row[1] for row in inbox_columns}
             if inbox_columns and "metadata_json" not in inbox_column_names:
@@ -823,6 +867,14 @@ def run_migrations(bind_engine=engine) -> None:
                     user_column_names = {row[0] for row in user_rows}
                     if "employee_id" not in user_column_names:
                         connection.exec_driver_sql("ALTER TABLE useraccount ADD COLUMN employee_id INTEGER")
+                    if "first_name" not in user_column_names:
+                        connection.exec_driver_sql("ALTER TABLE useraccount ADD COLUMN first_name TEXT")
+                    if "last_name" not in user_column_names:
+                        connection.exec_driver_sql("ALTER TABLE useraccount ADD COLUMN last_name TEXT")
+                    if "email" not in user_column_names:
+                        connection.exec_driver_sql("ALTER TABLE useraccount ADD COLUMN email TEXT")
+                    if "profile_picture_url" not in user_column_names:
+                        connection.exec_driver_sql("ALTER TABLE useraccount ADD COLUMN profile_picture_url TEXT")
                 inbox_exists = connection.exec_driver_sql("SELECT to_regclass('public.inboxnotification')").scalar()
                 if inbox_exists:
                     inbox_rows = connection.exec_driver_sql("SELECT column_name FROM information_schema.columns WHERE table_name = 'inboxnotification'").fetchall()
@@ -1086,11 +1138,39 @@ def serialize_user_account(user: UserAccount) -> UserAccountRead:
         username=user.username,
         employee_id=user.employee_id,
         employee_name=employee_name,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        email=user.email,
+        profile_picture_url=user.profile_picture_url,
         is_admin=user.is_admin,
         is_active=user.is_active,
         created_at=user.created_at,
         updated_at=user.updated_at,
         auth_source="database",
+    )
+
+
+def get_account_settings(username: str, session: Session) -> AccountSettingsRead:
+    user = session.exec(select(UserAccount).where(UserAccount.username == username)).first()
+    if user:
+        serialized = serialize_user_account(user)
+        return AccountSettingsRead(
+            username=serialized.username,
+            first_name=serialized.first_name,
+            last_name=serialized.last_name,
+            email=serialized.email,
+            profile_picture_url=serialized.profile_picture_url,
+            mm_user_account=True,
+            auth_source=serialized.auth_source,
+            is_admin=serialized.is_admin,
+            is_active=serialized.is_active,
+        )
+    return AccountSettingsRead(
+        username=username,
+        mm_user_account=False,
+        auth_source="env",
+        is_admin=is_admin_username(username),
+        is_active=True,
     )
 
 
@@ -2180,6 +2260,19 @@ def serve_inbox(request: Request) -> str:
         {
             'href="/static/styles.css"': f'href="{static_asset_url("styles.css")}"',
             'src="/static/inbox.js"': f'src="{static_asset_url("inbox.js")}"',
+        },
+        current_path=request.url.path,
+        username=get_session_username(request.cookies.get(SESSION_COOKIE_NAME)),
+    )
+
+
+@app.get("/account-settings", response_class=HTMLResponse)
+def serve_account_settings_page(request: Request) -> str:
+    return serve_html_page(
+        "account-settings.html",
+        {
+            'href="/static/styles.css"': f'href="{static_asset_url("styles.css")}"',
+            'src="/static/account-settings.js"': f'src="{static_asset_url("account-settings.js")}"',
         },
         current_path=request.url.path,
         username=get_session_username(request.cookies.get(SESSION_COOKIE_NAME)),
@@ -3555,6 +3648,10 @@ def create_user(user: UserAccountCreate, request: Request, session: Session = De
         username=username,
         password_hash=hash_password(user.password),
         employee_id=user.employee_id,
+        first_name=(user.first_name or "").strip() or None,
+        last_name=(user.last_name or "").strip() or None,
+        email=(user.email or "").strip() or None,
+        profile_picture_url=(user.profile_picture_url or "").strip() or None,
         is_admin=user.is_admin,
         is_active=True,
     )
@@ -3585,6 +3682,9 @@ def update_user(user_id: int, update: UserAccountUpdate, request: Request, sessi
         with Session(data_engine) as data_session:
             if not data_session.get(Employee, data["employee_id"]):
                 raise HTTPException(status_code=400, detail="Linked employee not found")
+    for text_field in ("first_name", "last_name", "email", "profile_picture_url"):
+        if text_field in data:
+            data[text_field] = (data[text_field] or "").strip() or None
     for key, value in data.items():
         setattr(user, key, value)
     user.updated_at = datetime.now(timezone.utc)
@@ -3606,6 +3706,29 @@ def delete_user(user_id: int, request: Request, session: Session = Depends(get_c
         raise HTTPException(status_code=400, detail="You cannot delete your current user")
     session.delete(user)
     session.commit()
+
+
+@app.get("/account-settings-api", response_model=AccountSettingsRead)
+def read_account_settings(request: Request, session: Session = Depends(get_control_session)):
+    username = get_request_username(request)
+    return get_account_settings(username, session)
+
+
+@app.put("/account-settings-api", response_model=AccountSettingsRead)
+def update_account_settings(update: AccountSettingsUpdate, request: Request, session: Session = Depends(get_control_session)):
+    username = get_request_username(request)
+    user = session.exec(select(UserAccount).where(UserAccount.username == username)).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="This account is not backed by a Matrix Manager user record")
+    data = update.model_dump(exclude_unset=True)
+    for field_name in ("first_name", "last_name", "email", "profile_picture_url"):
+        if field_name in data:
+            setattr(user, field_name, (data[field_name] or "").strip() or None)
+    user.updated_at = datetime.now(timezone.utc)
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return get_account_settings(username, session)
 
 
 @app.get("/db-connections", response_model=List[DBConnectionRead])

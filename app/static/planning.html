@@ -27,33 +27,27 @@
 
     <main>
       <section id="projects" class="card">
-        <div class="section-head">
-          <h2>Projects</h2>
-          <p>Manage active initiatives and the demand windows you plan against.</p>
-        </div>
-        <div class="layout">
-          <div>
-            <table>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Dates</th>
-                  <th>Description</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="project-table"></tbody>
-            </table>
+        <div class="section-head with-actions">
+          <div class="section-copy">
+            <h2>Projects</h2>
+            <p>Manage active initiatives and the demand windows you plan against.</p>
           </div>
-          <form id="project-form" class="panel">
-            <h3>Add / Update Project</h3>
-            <input type="hidden" name="entity_id" id="project-id" />
-            <label><span class="label-text required-field">Name</span><input name="name" required /></label>
-            <label>Description<textarea name="description" rows="2"></textarea></label>
-            <label>Start Date<input type="date" name="start_date" /></label>
-            <label>End Date<input type="date" name="end_date" /></label>
-            <button type="submit">Save Project</button>
-          </form>
+          <div class="header-actions">
+            <button type="button" id="create-project" class="compact-toolbar-button">Create New</button>
+          </div>
+        </div>
+        <div class="table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Dates</th>
+                <th>Description</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="project-table"></tbody>
+          </table>
         </div>
       </section>
 
@@ -83,8 +77,30 @@
           <div id="allocation-chart-empty" class="muted">Add people and assignments to see this graph.</div>
         </div>
       </section>
-
     </main>
+
+    <div id="project-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="project-form-title">
+      <div class="modal-card modal-card-form">
+        <div class="modal-head">
+          <div>
+            <h3 id="project-form-title">Add Project</h3>
+            <p id="project-form-status" class="muted small-text">Create or update one project at a time.</p>
+          </div>
+          <button type="button" id="project-modal-close" class="modal-close-button" aria-label="Close project form">×</button>
+        </div>
+        <form id="project-form" class="panel modal-form-panel">
+          <input type="hidden" name="entity_id" id="project-id" />
+          <label><span class="label-text required-field">Name</span><input name="name" required /></label>
+          <label>Description<textarea name="description" rows="2"></textarea></label>
+          <label>Start Date<input type="date" name="start_date" /></label>
+          <label>End Date<input type="date" name="end_date" /></label>
+          <div class="panel-actions-row modal-actions-row">
+            <button type="submit" id="project-submit">Save Project</button>
+            <button type="button" class="secondary" id="project-form-reset">Clear</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <div id="toast" role="status" aria-live="polite"></div>
 

@@ -141,6 +141,7 @@ const renderOrganizations = () => {
         <td>${headcounts[org.id] || 0}</td>
         <td>${org.child_organization_count || 0}</td>
         <td class="actions employee-row-actions">
+          <button type="button" class="table-action-button" data-action="create-child-org" data-id="${org.id}">Create child</button>
           <button type="button" class="table-action-button" data-action="edit-org" data-id="${org.id}">Edit</button>
           <button type="button" class="table-action-button table-action-button-secondary" data-action="delete-org" data-id="${org.id}">Delete</button>
         </td>
@@ -243,6 +244,17 @@ const handleOrgTableClick = (event) => {
   if (!btn) return;
   const { action, id } = btn.dataset;
   if (!id) return;
+  if (action === 'create-child-org') {
+    const parentOrg = organizations.find((o) => o.id === Number(id));
+    if (!parentOrg) return;
+    resetForm(orgForm, 'Save Organization');
+    renderParentOptions(parentOrg.id);
+    orgParentSelect.value = String(parentOrg.id);
+    if (orgFormTitle) orgFormTitle.textContent = 'Add Child Organization';
+    if (orgFormStatus) orgFormStatus.textContent = `Create a child organization under ${parentOrg.name}.`;
+    openOrgModal();
+    return;
+  }
   if (action === 'edit-org') {
     const org = organizations.find((o) => o.id === Number(id));
     if (!org) return;
