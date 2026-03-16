@@ -20,7 +20,15 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.53.2",
+    "@tailwindcss/postcss": "^4.2.1",
     "@vitejs/plugin-react": "^4.7.0",
+    "autoprefixer": "^10.4.27",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "postcss": "^8.5.8",
+    "tailwind-merge": "^3.5.0",
+    "tailwindcss": "^4.2.1",
+    "tailwindcss-animate": "^1.0.7",
     "vite": "^5.4.19"
   }
 }

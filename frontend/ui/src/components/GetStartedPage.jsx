@@ -35,73 +35,72 @@ const quickLinks = [
 
 export default function GetStartedPage() {
   return (
-    <main className="mm-home-shell">
-      <Card className="mm-hero-card">
+    <main className="mx-auto flex max-w-6xl flex-col gap-5 px-4 py-8">
+      <Card className="border-slate-200/90 bg-white/95">
         <CardHeader>
-          <CardTitle>How the model works</CardTitle>
-          <CardDescription>
+          <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary">Get Started</p>
+          <CardTitle className="text-3xl text-slate-950">How the model works</CardTitle>
+          <CardDescription className="max-w-3xl text-base leading-7">
             Matrix Management connects organizations, people, projects, and assignments into one staffing picture.
           </CardDescription>
         </CardHeader>
-        <CardContent className="mm-hero-grid">
+        <CardContent className="grid gap-4 lg:grid-cols-3">
           {principles.map((item) => (
-            <article key={item.title} className="mm-feature-card">
-              <h3>{item.title}</h3>
-              <p>{item.body}</p>
+            <article key={item.title} className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+              <h3 className="mb-2 text-base font-semibold text-slate-950">{item.title}</h3>
+              <p className="text-sm leading-6 text-slate-600">{item.body}</p>
             </article>
           ))}
         </CardContent>
       </Card>
 
-      <div className="mm-home-grid">
-        <Card>
+      <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+        <Card className="border-slate-200/90 bg-white/95">
           <CardHeader>
-            <CardTitle>Relationship map</CardTitle>
+            <CardTitle className="text-2xl text-slate-950">Relationship map</CardTitle>
             <CardDescription>Use this as the mental model for the app.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="mm-flow-row">
-              <div className="mm-flow-pill"><strong>Organizations</strong><span>Foundation</span></div>
-              <div className="mm-flow-arrow">→</div>
-              <div className="mm-flow-pill"><strong>Employees</strong><span>People</span></div>
-              <div className="mm-flow-arrow">→</div>
-              <div className="mm-flow-pill"><strong>Managers</strong><span>Structure</span></div>
-              <div className="mm-flow-arrow">→</div>
-              <div className="mm-flow-pill"><strong>Projects</strong><span>Work</span></div>
-              <div className="mm-flow-arrow">→</div>
-              <div className="mm-flow-pill"><strong>Assignments</strong><span>Execution</span></div>
+            <div className="flex flex-wrap items-center gap-3">
+              {['Organizations', 'Employees', 'Managers', 'Projects', 'Assignments'].map((item, index, items) => (
+                <React.Fragment key={item}>
+                  <div className="grid gap-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 shadow-sm">
+                    <strong className="text-sm text-slate-950">{item}</strong>
+                    <span className="text-xs uppercase tracking-[0.12em] text-slate-500">{['Foundation', 'People', 'Structure', 'Work', 'Execution'][index]}</span>
+                  </div>
+                  {index < items.length - 1 ? <span className="text-sm font-semibold text-slate-400">→</span> : null}
+                </React.Fragment>
+              ))}
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-slate-200/90 bg-white/95">
           <CardHeader>
-            <CardTitle>Quick links</CardTitle>
-            <CardDescription>Use these to move through the initial setup sequence quickly.</CardDescription>
+            <CardTitle className="text-2xl text-slate-950">Quick links</CardTitle>
+            <CardDescription>Move through the initial setup sequence quickly.</CardDescription>
           </CardHeader>
-          <CardContent className="mm-link-grid">
+          <CardContent className="grid gap-3">
             {quickLinks.map((link) => (
-              <a key={link.href} href={link.href} className="mm-link-card">
-                <strong>{link.label}</strong>
-                <span>Open</span>
+              <a key={link.href} href={link.href} className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900 transition-colors hover:bg-white">
+                <span>{link.label}</span>
+                <span className="text-primary">Open</span>
               </a>
             ))}
           </CardContent>
         </Card>
       </div>
 
-      <Card>
+      <Card className="border-slate-200/90 bg-white/95">
         <CardHeader>
-          <CardTitle>Create your first plan</CardTitle>
+          <CardTitle className="text-2xl text-slate-950">Create your first plan</CardTitle>
           <CardDescription>One simple path gets a brand-new workspace into a usable state quickly.</CardDescription>
         </CardHeader>
-        <CardContent className="mm-step-list">
+        <CardContent className="grid gap-3">
           {steps.map((step, index) => (
-            <div key={step} className="mm-step-item">
-              <div className="mm-step-number">{index + 1}</div>
-              <div>
-                <strong>{step}</strong>
-              </div>
+            <div key={step} className="grid grid-cols-[auto_1fr] items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700">{index + 1}</div>
+              <strong className="text-sm font-semibold text-slate-900">{step}</strong>
             </div>
           ))}
         </CardContent>
