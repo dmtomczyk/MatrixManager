@@ -1,0 +1,80 @@
+---
+title: Matrix Manager Primary Data DB Schema
+---
+
+erDiagram
+    ORGANIZATION {
+        int id PK
+        string name
+        string description
+    }
+
+    JOBCODE {
+        int id PK
+        string name
+        bool is_leader
+    }
+
+    EMPLOYEE {
+        int id PK
+        string name
+        int job_code_id FK
+        string employee_type
+        string location
+        float capacity
+        int organization_id FK
+        int manager_id FK
+    }
+
+    PROJECT {
+        int id PK
+        string name
+        string description
+        date start_date
+        date end_date
+    }
+
+    DEMAND {
+        int id PK
+        int project_id FK
+        string title
+        int organization_id FK
+        int job_code_id FK
+        string skill_notes
+        date start_date
+        date end_date
+        float required_allocation
+        string notes
+    }
+
+    ASSIGNMENT {
+        int id PK
+        int employee_id FK
+        int project_id FK
+        int demand_id FK
+        date start_date
+        date end_date
+        float allocation
+        string notes
+        string status
+        string submitted_by_username
+        string approved_by_username
+        string denied_by_username
+        datetime reviewed_at
+    }
+
+    ORGANIZATION ||--o{ EMPLOYEE : has
+    JOBCODE ||--o{ EMPLOYEE : assigned_to
+    EMPLOYEE ||--o{ EMPLOYEE : manages
+
+    PROJECT ||--o{ DEMAND : has
+    ORGANIZATION ||--o{ DEMAND : owns
+    JOBCODE ||--o{ DEMAND : requests
+
+    EMPLOYEE ||--o{ ASSIGNMENT : staffed_to
+    PROJECT ||--o{ ASSIGNMENT : assigned_to
+    DEMAND o|--o{ ASSIGNMENT : fulfills
+
+%% Cross-DB note:
+%% ASSIGNMENT.submitted_by_username / approved_by_username / denied_by_username are logical references
+%% to control DB USERACCOUNT.username values, not physical foreign keys.

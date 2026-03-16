@@ -1,0 +1,83 @@
+---
+title: Matrix Manager Control DB Schema
+---
+
+erDiagram
+    USERACCOUNT {
+        int id PK
+        string username
+        string password_hash
+        int employee_id "logical link to data DB employee.id"
+        bool is_admin
+        bool is_active
+        datetime created_at
+        datetime updated_at
+    }
+
+    DBCONNECTIONCONFIG {
+        int id PK
+        string name
+        string db_type
+        string sqlite_path
+        string postgres_host
+        int postgres_port
+        string postgres_database
+        string postgres_username
+        string postgres_password
+        string postgres_sslmode
+        bool is_active
+        datetime created_at
+        datetime updated_at
+    }
+
+    INBOXNOTIFICATION {
+        int id PK
+        string username
+        string title
+        string message
+        string metadata_json
+        bool is_read
+        datetime created_at
+    }
+
+    AUDITENTRY {
+        int id PK
+        string entity_type
+        int entity_id
+        string entity_label
+        string action
+        string actor_username
+        datetime occurred_at
+        string before_json
+        string after_json
+    }
+
+    RUNTIMEERRORLOG {
+        int id PK
+        datetime occurred_at
+        string path
+        string method
+        string username
+        string error_type
+        string message
+        string traceback_text
+    }
+
+    RUNTIMEHEALTHSNAPSHOT {
+        int id PK
+        datetime occurred_at
+        string overall_status
+        string control_db_status
+        string active_data_db_status
+        string docker_status
+        int error_count_last_hour
+        string details_json
+    }
+
+    USERACCOUNT ||--o{ INBOXNOTIFICATION : "username"
+    USERACCOUNT ||--o{ AUDITENTRY : "actor_username"
+    USERACCOUNT ||--o{ RUNTIMEERRORLOG : "username"
+
+%% Cross-DB note:
+%% USERACCOUNT.employee_id is an application-level reference to the primary data DB's EMPLOYEE.id.
+%% It is intentionally not a physical foreign key because user accounts live in the separate control DB.
