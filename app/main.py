@@ -670,12 +670,12 @@ GITHUB_REPO_URL = "https://github.com/dmtomczyk/matrixmanager"
 
 def render_app_nav(current_path: str, username: str) -> str:
     links = [
-        ("/", "Home"),
+        ("/", "Get Started"),
         ("/dashboard", "Dashboard"),
-        ("/planning", "Projects"),
         ("/canvas", "Canvas"),
     ]
     staffing_links = [
+        ("/planning", "Projects"),
         ("/forecast", "Forecast"),
         ("/demands", "Demands"),
         ("/staffing", "Assignments"),
