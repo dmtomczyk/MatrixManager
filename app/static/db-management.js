@@ -7,6 +7,7 @@ const sqliteFields = document.getElementById('sqlite-fields');
 const postgresFields = document.getElementById('postgres-fields');
 const clearButton = document.getElementById('db-clear-form');
 const createButton = document.getElementById('create-db-connection');
+const seedDefaultDataButton = document.getElementById('seed-default-data');
 const wipeDataDbButton = document.getElementById('wipe-data-db');
 const modal = document.getElementById('db-connection-modal');
 const modalClose = document.getElementById('db-modal-close');
@@ -70,12 +71,21 @@ table.addEventListener('click', async (event) => {
 });
 typeSelect.addEventListener('change', syncTypeFields);
 createButton?.addEventListener('click', () => { resetForm(); openModal(); });
+seedDefaultDataButton?.addEventListener('click', async () => {
+  if (!confirm('Re-run the default starter seed data in the active data DB? Existing matching starter records may be updated or recreated.')) return;
+  try {
+    await apiFetch('/seed-default-data', { method: 'POST' });
+    showToast('Default data seeded');
+  } catch (err) {
+    alert(err.message);
+  }
+});
 wipeDataDbButton?.addEventListener('click', async () => {
-  const confirmation = window.prompt('This will permanently erase all data in the active data DB. Type WIPE DATA DB to continue.');
+  const confirmation = window.prompt('This will permanently erase all rows from the active data DB tables, but will keep the database and schema. Type WIPE DATA DB to continue.');
   if (confirmation === null) return;
   try {
     await apiFetch('/db-management/wipe-data-db', { method: 'POST', body: JSON.stringify({ confirmation_text: confirmation }) });
-    showToast('Data DB wiped');
+    showToast('Data DB tables emptied');
   } catch (err) {
     alert(err.message);
   }

@@ -906,12 +906,15 @@ def get_control_session() -> Generator[Session, None, None]:
 def wipe_primary_data_db() -> None:
     active_connection = get_active_db_connection_config()
     data_engine = get_or_create_data_engine(active_connection)
-    data_tables = [Assignment.__table__, Demand.__table__, Project.__table__, Employee.__table__, Organization.__table__, JobCode.__table__]
-    for table in data_tables:
-        table.drop(bind=data_engine, checkfirst=True)
-    for table in [Organization.__table__, JobCode.__table__, Employee.__table__, Project.__table__, Demand.__table__, Assignment.__table__]:
-        table.create(bind=data_engine, checkfirst=True)
-    run_migrations(data_engine)
+    engine_url = str(data_engine.url)
+    with data_engine.begin() as connection:
+        if engine_url.startswith("sqlite"):
+            connection.exec_driver_sql("PRAGMA foreign_keys=OFF")
+            for table_name in ("assignment", "demand", "project", "employee", "organization", "jobcode"):
+                connection.exec_driver_sql(f"DELETE FROM {table_name}")
+            connection.exec_driver_sql("PRAGMA foreign_keys=ON")
+        else:
+            connection.exec_driver_sql("TRUNCATE TABLE assignment, demand, project, employee, organization, jobcode RESTART IDENTITY CASCADE")
 
 
 def build_connection_summary(connection: DBConnectionConfig) -> str:
