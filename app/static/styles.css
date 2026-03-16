@@ -1263,6 +1263,20 @@ table tbody tr:hover {
   gap: 6px;
 }
 
+.account-avatar-inline {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: #fff;
+}
+
+.account-avatar-inline-panel {
+  width: 34px;
+  height: 34px;
+}
+
 .runtime-recommendations-panel ul {
   margin: 10px 0 0 18px;
   padding: 0;

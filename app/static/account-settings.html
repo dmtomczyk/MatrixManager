@@ -45,11 +45,15 @@
           </div>
           <form id="account-settings-form" class="panel">
             <label>Profile Picture URL<input name="profile_picture_url" id="account-profile-picture-url" placeholder="https://example.com/avatar.png" /></label>
+            <label>Profile Picture Upload<input type="file" id="account-profile-picture-file" accept="image/*" /></label>
+            <p class="muted small-text">Uploads are limited to image files smaller than 20MB.</p>
             <label><span class="label-text required-field">Username</span><input name="username" id="account-username" readonly /></label>
             <label>First Name<input name="first_name" id="account-first-name" /></label>
             <label>Last Name<input name="last_name" id="account-last-name" /></label>
             <label>Email<input name="email" id="account-email" type="email" /></label>
             <label>MM User Account<input name="mm_user_account" id="account-mm-user-account" readonly /></label>
+            <label>Current Password<input name="current_password" id="account-current-password" type="password" placeholder="Required only when changing password" /></label>
+            <label>New Password<input name="new_password" id="account-new-password" type="password" placeholder="Leave blank to keep current password" /></label>
             <p id="account-settings-help" class="muted small-text">If this signed-in account is backed by a Matrix Manager user record, you can update these fields here.</p>
             <div class="panel-actions-row">
               <button type="submit" id="account-settings-submit">Save Account Settings</button>

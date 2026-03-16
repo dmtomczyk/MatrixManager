@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any, Generator, List, Optional, Set
 from urllib.parse import quote, quote_plus
 
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -31,6 +31,7 @@ ROOT_DIR = BASE_DIR.parent
 DB_PATH = Path(os.getenv("MATRIX_SQLITE_PATH", str(ROOT_DIR / "matrix.db"))).expanduser()
 CONTROL_DB_PATH = Path(os.getenv("MATRIX_CONTROL_DB_PATH", str(ROOT_DIR / "matrixmanager_control.db"))).expanduser()
 STATIC_DIR = BASE_DIR / "static"
+ACCOUNT_UPLOADS_DIR = STATIC_DIR / "uploads" / "account-avatars"
 SESSION_COOKIE_NAME = "matrixmanager_session"
 MATRIX_INSTALL_MODE = os.getenv("MATRIX_INSTALL_MODE", "sqlite").strip().lower()
 MATRIX_ACTIVE_DB_TYPE = os.getenv("MATRIX_ACTIVE_DB_TYPE", MATRIX_INSTALL_MODE).strip().lower()
@@ -506,6 +507,7 @@ class AccountSettingsRead(SQLModel):
     last_name: Optional[str] = None
     email: Optional[str] = None
     profile_picture_url: Optional[str] = None
+    display_name: Optional[str] = None
     mm_user_account: bool = False
     auth_source: str = "env"
     is_admin: bool = False
@@ -517,6 +519,8 @@ class AccountSettingsUpdate(SQLModel):
     last_name: Optional[str] = None
     email: Optional[str] = None
     profile_picture_url: Optional[str] = None
+    current_password: Optional[str] = None
+    new_password: Optional[str] = None
 
 
 class InboxNotification(SQLModel, table=True):
@@ -1150,6 +1154,11 @@ def serialize_user_account(user: UserAccount) -> UserAccountRead:
     )
 
 
+def build_account_display_name(username: str, first_name: Optional[str] = None, last_name: Optional[str] = None) -> str:
+    full_name = " ".join(part for part in [first_name or "", last_name or ""] if part.strip()).strip()
+    return full_name or username
+
+
 def get_account_settings(username: str, session: Session) -> AccountSettingsRead:
     user = session.exec(select(UserAccount).where(UserAccount.username == username)).first()
     if user:
@@ -1160,6 +1169,7 @@ def get_account_settings(username: str, session: Session) -> AccountSettingsRead
             last_name=serialized.last_name,
             email=serialized.email,
             profile_picture_url=serialized.profile_picture_url,
+            display_name=build_account_display_name(serialized.username, serialized.first_name, serialized.last_name),
             mm_user_account=True,
             auth_source=serialized.auth_source,
             is_admin=serialized.is_admin,
@@ -1167,6 +1177,7 @@ def get_account_settings(username: str, session: Session) -> AccountSettingsRead
         )
     return AccountSettingsRead(
         username=username,
+        display_name=build_account_display_name(username),
         mm_user_account=False,
         auth_source="env",
         is_admin=is_admin_username(username),
@@ -3724,6 +3735,48 @@ def update_account_settings(update: AccountSettingsUpdate, request: Request, ses
     for field_name in ("first_name", "last_name", "email", "profile_picture_url"):
         if field_name in data:
             setattr(user, field_name, (data[field_name] or "").strip() or None)
+    new_password = (data.get("new_password") or "").strip()
+    current_password = data.get("current_password") or ""
+    if new_password:
+        if not current_password:
+            raise HTTPException(status_code=400, detail="Current password is required to set a new password")
+        if not verify_password(current_password, user.password_hash):
+            raise HTTPException(status_code=400, detail="Current password is incorrect")
+        if len(new_password) < 8:
+            raise HTTPException(status_code=400, detail="New password must be at least 8 characters")
+        user.password_hash = hash_password(new_password)
+    user.updated_at = datetime.now(timezone.utc)
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return get_account_settings(username, session)
+
+
+@app.post("/account-settings-api/profile-picture", response_model=AccountSettingsRead)
+async def upload_account_profile_picture(
+    request: Request,
+    file: UploadFile = File(...),
+    session: Session = Depends(get_control_session),
+):
+    username = get_request_username(request)
+    user = session.exec(select(UserAccount).where(UserAccount.username == username)).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="This account is not backed by a Matrix Manager user record")
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Profile picture upload must be an image")
+    payload = await file.read()
+    if len(payload) > 20 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Profile picture must be smaller than 20MB")
+    ACCOUNT_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+    original_name = file.filename or "avatar"
+    suffix = Path(original_name).suffix.lower()
+    if suffix not in {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"}:
+        suffix = ".png"
+    safe_username = re.sub(r"[^a-zA-Z0-9_-]", "-", username)
+    filename = f"{safe_username}-{int(time.time())}{suffix}"
+    destination = ACCOUNT_UPLOADS_DIR / filename
+    destination.write_bytes(payload)
+    user.profile_picture_url = f"/static/uploads/account-avatars/{filename}"
     user.updated_at = datetime.now(timezone.utc)
     session.add(user)
     session.commit()

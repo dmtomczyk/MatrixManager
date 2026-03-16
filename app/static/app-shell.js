@@ -25,6 +25,31 @@ const ensureAccountCounters = (accountTrigger) => {
   return counterRow;
 };
 
+const updateAccountIdentityState = async () => {
+  const accountTrigger = document.querySelector('.account-menu-trigger');
+  const accountUsername = document.querySelector('.account-menu-username');
+  const accountMetaStrong = document.querySelector('.account-menu-meta strong');
+  const accountIcon = document.querySelector('.account-icon');
+  const accountIconPanel = document.querySelector('.account-icon.account-icon-panel');
+  if (!accountTrigger || !accountUsername) return;
+  try {
+    const response = await fetch('/account-settings-api', { headers: { Accept: 'application/json' } });
+    if (!response.ok) return;
+    const account = await response.json();
+    const displayName = account.display_name || account.username;
+    accountUsername.textContent = displayName;
+    if (accountMetaStrong) accountMetaStrong.textContent = displayName;
+    accountTrigger.dataset.username = account.username || '';
+    if (account.profile_picture_url) {
+      const imageMarkup = `<img src="${account.profile_picture_url}" alt="${displayName}" class="account-avatar-inline" />`;
+      if (accountIcon) accountIcon.outerHTML = imageMarkup;
+      if (accountIconPanel) accountIconPanel.outerHTML = imageMarkup.replace('account-avatar-inline', 'account-avatar-inline account-avatar-inline-panel');
+    }
+  } catch (_) {
+    // Non-fatal enhancement.
+  }
+};
+
 const updateAccountNotificationState = async () => {
   const accountMenu = document.querySelector('details.account-menu');
   const accountTrigger = document.querySelector('.account-menu-trigger');
@@ -79,8 +104,12 @@ const updateAccountNotificationState = async () => {
 };
 
 window.refreshAccountNotificationState = updateAccountNotificationState;
+window.refreshAccountIdentityState = updateAccountIdentityState;
 document.addEventListener('account-notifications-changed', () => {
   updateAccountNotificationState();
+});
+document.addEventListener('account-identity-changed', () => {
+  updateAccountIdentityState();
 });
 
 document.addEventListener('click', (event) => {
@@ -92,4 +121,5 @@ document.addEventListener('keydown', (event) => {
   closeOpenMenus();
 });
 
+updateAccountIdentityState();
 updateAccountNotificationState();
