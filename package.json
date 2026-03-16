@@ -10,7 +10,7 @@
     "db:seed": "./.venv/bin/python scripts/seed_sample_data.py",
     "dev:api": "./.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload",
     "dev:ui": "vite --config frontend/ui/vite.config.mjs",
-    "dev": "bash -lc 'trap \"kill 0\" EXIT; npm run dev:api & npm run dev:ui & wait'",
+    "dev": "bash -lc 'trap \"kill 0\" EXIT; ./.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload & ./node_modules/.bin/vite --config frontend/ui/vite.config.mjs & wait'",
     "build:ui": "vite build --config frontend/ui/vite.config.mjs"
   },
   "dependencies": {
