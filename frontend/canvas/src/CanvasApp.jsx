@@ -6,8 +6,11 @@ import {
   MiniMap,
   Panel,
   MarkerType,
+  Handle,
+  Position,
   useEdgesState,
   useNodesState,
+  useReactFlow,
 } from '@xyflow/react';
 
 const apiFetch = async (url, options = {}) => {
@@ -29,23 +32,30 @@ const todayIso = () => new Date().toISOString().split('T')[0];
 
 function EmployeeNode({ data }) {
   return (
-    <div className={`rf-card rf-card-employee${data.over ? ' is-over' : ''}${data.isSelected ? ' is-selected' : ''}`}>
-      <div className="rf-card-title">{data.label}</div>
-      <div className="rf-card-meta">{data.role || data.employeeType || 'Employee'}</div>
-      <div className="rf-card-meta">{formatPct(data.allocation)} allocated · {formatPct(data.capacity)} cap</div>
-      {data.organizationName ? <div className="rf-card-meta">{data.organizationName}</div> : null}
-    </div>
+    <>
+      <Handle type="target" position={Position.Left} className="rf-handle rf-handle-target" />
+      <div className={`rf-card rf-card-employee${data.over ? ' is-over' : ''}${data.isSelected ? ' is-selected' : ''}`}>
+        <div className="rf-card-title">{data.label}</div>
+        <div className="rf-card-meta">{data.role || data.employeeType || 'Employee'}</div>
+        <div className="rf-card-meta">{formatPct(data.allocation)} allocated · {formatPct(data.capacity)} cap</div>
+        {data.organizationName ? <div className="rf-card-meta">{data.organizationName}</div> : null}
+      </div>
+      <Handle type="source" position={Position.Right} className="rf-handle rf-handle-source" />
+    </>
   );
 }
 
 function ProjectNode({ data }) {
   return (
-    <div className={`rf-card rf-card-project${data.isSelected ? ' is-selected' : ''}`}>
-      <div className="rf-card-title">{data.label}</div>
-      <div className="rf-card-meta">{formatDate(data.startDate)} → {formatDate(data.endDate)}</div>
-      <div className="rf-card-meta">{Number(data.activeFte || 0).toFixed(2)} FTE active</div>
-      <div className="rf-card-meta">{data.assignmentCount || 0} assignment{data.assignmentCount === 1 ? '' : 's'}</div>
-    </div>
+    <>
+      <Handle type="target" position={Position.Left} className="rf-handle rf-handle-target" />
+      <div className={`rf-card rf-card-project${data.isSelected ? ' is-selected' : ''}`}>
+        <div className="rf-card-title">{data.label}</div>
+        <div className="rf-card-meta">{formatDate(data.startDate)} → {formatDate(data.endDate)}</div>
+        <div className="rf-card-meta">{Number(data.activeFte || 0).toFixed(2)} FTE active</div>
+        <div className="rf-card-meta">{data.assignmentCount || 0} assignment{data.assignmentCount === 1 ? '' : 's'}</div>
+      </div>
+    </>
   );
 }
 
@@ -237,7 +247,7 @@ const defaultProjectForm = { name: '', description: '', start_date: '', end_date
 const defaultEmployeeForm = { name: '', role: '', employee_type: 'IC', manager_id: '', location: '', capacity: 1 };
 const defaultAssignmentForm = { employee_id: '', project_id: '', start_date: todayIso(), end_date: todayIso(), allocation: 100, notes: '' };
 
-export default function CanvasApp() {
+function CanvasAppInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [data, setData] = useState({ organizations: [], employees: [], projects: [], assignments: [] });
@@ -255,7 +265,9 @@ export default function CanvasApp() {
   const [assignmentFormState, setAssignmentFormState] = useState({ open: false, values: defaultAssignmentForm });
   const [removeAssignmentState, setRemoveAssignmentState] = useState({ open: false, assignmentId: '' });
   const [projectTimeline, setProjectTimeline] = useState(null);
+  const [draggedEmployeeId, setDraggedEmployeeId] = useState(null);
   const flowWrapperRef = useRef(null);
+  const reactFlow = useReactFlow();
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -349,13 +361,25 @@ export default function CanvasApp() {
   const onNodeDragStop = useCallback(async (_event, node) => {
     if (!node?.id?.startsWith('employee-')) return;
     const employeeId = Number(node.id.replace('employee-', ''));
+    const employee = data.employees.find((emp) => emp.id === employeeId);
+    if (!employee) return;
+
+    const projectNodes = nodes.filter((item) => item.id.startsWith('project-'));
+    const overlappingProject = projectNodes.find((item) => {
+      const withinX = node.position.x >= item.position.x - 120 && node.position.x <= item.position.x + 280;
+      const withinY = node.position.y >= item.position.y - 90 && node.position.y <= item.position.y + 190;
+      return withinX && withinY;
+    });
+    if (overlappingProject) {
+      openCreateAssignment(employeeId, Number(overlappingProject.id.replace('project-', '')));
+      return;
+    }
+
     const orgNodes = nodes.filter((item) => item.id.startsWith('org-'));
     const nearestOrg = orgNodes
       .map((orgNode) => ({ orgId: Number(orgNode.id.replace('org-', '')), yDistance: Math.abs(orgNode.position.y - node.position.y) }))
       .sort((a, b) => a.yDistance - b.yDistance)[0];
-    if (!nearestOrg) return;
-    const employee = data.employees.find((emp) => emp.id === employeeId);
-    if (!employee || employee.organization_id === nearestOrg.orgId) return;
+    if (!nearestOrg || employee.organization_id === nearestOrg.orgId) return;
     try {
       await apiFetch(`/employees/${employeeId}`, { method: 'PUT', body: JSON.stringify({ organization_id: nearestOrg.orgId }) });
       setToast(`${employee.name} moved to ${data.organizations.find((org) => org.id === nearestOrg.orgId)?.name || 'organization'}`);
@@ -385,6 +409,39 @@ export default function CanvasApp() {
     event.preventDefault();
     setContextMenu({ x: event.clientX, y: event.clientY });
   };
+
+  const onEmployeeSidebarDragStart = (employeeId) => setDraggedEmployeeId(employeeId);
+  const onEmployeeSidebarDragEnd = () => setDraggedEmployeeId(null);
+
+  const onCanvasDragOver = useCallback((event) => {
+    if (!draggedEmployeeId) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+  }, [draggedEmployeeId]);
+
+  const onCanvasDrop = useCallback((event) => {
+    if (!draggedEmployeeId) return;
+    event.preventDefault();
+    const target = event.target.closest('.react-flow__node');
+    if (!target) {
+      setDraggedEmployeeId(null);
+      return;
+    }
+    const nodeId = target.getAttribute('data-id') || '';
+    if (nodeId.startsWith('project-')) {
+      openCreateAssignment(draggedEmployeeId, Number(nodeId.replace('project-', '')));
+    } else if (nodeId.startsWith('org-')) {
+      const orgId = Number(nodeId.replace('org-', ''));
+      apiFetch(`/employees/${draggedEmployeeId}`, { method: 'PUT', body: JSON.stringify({ organization_id: orgId }) })
+        .then(() => {
+          const employee = data.employees.find((emp) => emp.id === draggedEmployeeId);
+          setToast(`${employee?.name || 'Employee'} moved to ${data.organizations.find((org) => org.id === orgId)?.name || 'organization'}`);
+          return refresh();
+        })
+        .catch((err) => setError(err.message));
+    }
+    setDraggedEmployeeId(null);
+  }, [draggedEmployeeId, data, refresh]);
 
   const submitOrgForm = async (event) => {
     event.preventDefault();
@@ -518,6 +575,9 @@ export default function CanvasApp() {
                   <button
                     key={employee.id}
                     type="button"
+                    draggable
+                    onDragStart={() => onEmployeeSidebarDragStart(employee.id)}
+                    onDragEnd={onEmployeeSidebarDragEnd}
                     className={`canvas-react-resource${selectedNodeId === `employee-${employee.id}` ? ' is-selected' : ''}`}
                     onClick={() => {
                       setSelectedEdge(null);
@@ -569,7 +629,7 @@ export default function CanvasApp() {
           </section>
         </aside>
 
-        <section className="canvas-react-stage" ref={flowWrapperRef} onContextMenu={onContextMenu}>
+        <section className={`canvas-react-stage${draggedEmployeeId ? ' is-drop-active' : ''}`} ref={flowWrapperRef} onContextMenu={onContextMenu} onDragOver={onCanvasDragOver} onDrop={onCanvasDrop}>
           {loading ? <div className="canvas-react-loading">Loading canvas…</div> : null}
           <ReactFlow
             nodes={nodes}
@@ -722,4 +782,8 @@ export default function CanvasApp() {
       ) : null}
     </main>
   );
+}
+
+export default function CanvasApp() {
+  return <CanvasAppInner />;
 }

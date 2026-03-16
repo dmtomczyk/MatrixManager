@@ -179,6 +179,10 @@ body {
   box-shadow: var(--canvas-shadow);
 }
 
+.canvas-react-stage.is-drop-active {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12), var(--canvas-shadow);
+}
+
 .canvas-react-loading {
   position: absolute;
   inset: 0;
@@ -403,6 +407,22 @@ body {
 
 .react-flow__node {
   border-radius: 16px;
+}
+
+.rf-handle {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #ffffff;
+  background: var(--canvas-blue);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+
+.rf-handle-target {
+  left: -7px;
+}
+
+.rf-handle-source {
+  right: -7px;
 }
 
 .react-flow__edge.selected .react-flow__edge-path {
