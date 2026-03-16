@@ -7,6 +7,7 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: var(--background);
 }
 
 header {
@@ -14,22 +15,7 @@ header {
 }
 
 :root {
-  --canvas-bg: radial-gradient(circle at 1px 1px, rgba(15, 23, 42, 0.1) 1px, transparent 0);
-}
-
-body {
-  background: var(--background);
-}
-
-.canvas-shell {
-  width: 100%;
-  max-width: 100%;
-  margin: 0;
-  padding: 0 24px 24px;
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  --canvas-bg: radial-gradient(circle at 1px 1px, rgba(15, 23, 42, 0.08) 1px, transparent 0);
 }
 
 .canvas-toolbar {
@@ -43,13 +29,17 @@ body {
 .canvas-stage {
   position: relative;
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 22px;
   flex: 1 1 auto;
   width: 100%;
   min-height: 320px;
   height: 100%;
   overflow: hidden;
-  background: var(--surface);
+  background: linear-gradient(180deg, #fbfdff, #f8fafc);
+}
+
+.canvas-stage-connecting {
+  box-shadow: inset 0 0 0 2px rgba(37, 99, 235, 0.16);
 }
 
 .canvas-content {
@@ -58,7 +48,7 @@ body {
   width: 3600px;
   height: 2400px;
   background-image: var(--canvas-bg);
-  background-size: 64px 64px;
+  background-size: 56px 56px;
   transform: translate(0px, 0px);
   cursor: grab;
 }
@@ -67,67 +57,116 @@ body {
   cursor: grabbing;
 }
 
-.canvas-layer {
-  position: absolute;
+.canvas-stage,
+.canvas-stage * {
+  user-select: none;
 }
 
-.employee-node,
+.canvas-connections {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.canvas-connection-line {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.canvas-connection-line-hierarchy {
+  stroke: rgba(100, 116, 139, 0.45);
+  stroke-width: 2.5;
+}
+
+.canvas-connection-line-assignment {
+  stroke: rgba(37, 99, 235, 0.4);
+  stroke-width: 3.5;
+}
+
+.canvas-connection-draft {
+  stroke: rgba(59, 130, 246, 0.95);
+  stroke-width: 4;
+  stroke-dasharray: 10 8;
+}
+
+.canvas-connection-draft-manager {
+  stroke: rgba(71, 85, 105, 0.92);
+}
+
+.canvas-connection-hint {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 15;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.88);
+  color: white;
+  font-size: 0.84rem;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.18);
+}
+
+.org-lane,
 .project-box,
-.org-box,
 .employee-node-canvas {
   position: absolute;
-  border-radius: 16px;
-  padding: 12px 16px;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+  border-radius: 20px;
 }
 
-.employee-node {
-  background: #e0f2fe;
-  border: 1px solid #0ea5e9;
-  width: 180px;
-}
-
-.employee-node h4 {
-  margin: 0 0 4px;
-}
-
-.employee-node p {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--muted);
-}
-
-.org-box {
-  background: linear-gradient(180deg, #f8fbff, #eef6ff);
+.org-lane {
+  padding: 18px 18px 14px;
+  background: linear-gradient(180deg, rgba(239, 246, 255, 0.95), rgba(248, 250, 252, 0.95));
   border: 1px solid #bfdbfe;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
 }
 
-.org-box-head {
+.org-lane::after {
+  content: "";
+  position: absolute;
+  inset: 58px 16px 12px 16px;
+  border-radius: 16px;
+  border: 1px dashed rgba(59, 130, 246, 0.16);
+  pointer-events: none;
+}
+
+.org-lane-head {
   display: flex;
   justify-content: space-between;
   gap: 12px;
   align-items: flex-start;
+  margin-bottom: 10px;
 }
 
-.org-box h4 {
+.org-lane h4,
+.project-box h4 {
   margin: 0;
 }
 
 .employee-node-canvas {
-  width: 268px;
-  min-height: 58px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  background: #eff6ff;
-  border: 1px solid #93c5fd;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
   z-index: 2;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+
+.employee-node-canvas:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.12);
 }
 
 .employee-node-canvas.over {
-  background: #fff1f2;
   border-color: #fca5a5;
+  background: linear-gradient(180deg, #fff7f7, #fff);
 }
 
 .employee-node-copy {
@@ -142,20 +181,24 @@ body {
   display: block;
 }
 
+.employee-node-copy strong {
+  font-size: 0.92rem;
+}
+
 .employee-node-copy span {
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   color: var(--muted);
 }
 
 .employee-connect-handle {
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
   border-radius: 999px;
   padding: 0;
   background: #2563eb;
   color: white;
-  font-size: 1rem;
+  font-size: 0.95rem;
   line-height: 1;
   box-shadow: none;
 }
@@ -165,23 +208,32 @@ body {
 }
 
 .project-box {
-  background: #fff7ed;
+  padding: 16px;
+  background: linear-gradient(180deg, #fff7ed, #fffdf9);
   border: 1px solid #fdba74;
-  width: 280px;
   min-height: 180px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
 }
 
-.project-box h4 {
-  margin: 0;
+.project-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
 }
 
 .assignment-nodes {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  align-content: flex-start;
+}
+
+.assignment-nodes-empty {
+  min-height: 76px;
 }
 
 .assignment-node {
@@ -198,6 +250,17 @@ body {
   background: #fee2e2;
 }
 
+.canvas-target-hover {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.22), 0 12px 26px rgba(15, 23, 42, 0.12) !important;
+  border-color: #2563eb !important;
+}
+
+.project-box.project-box-droppable,
+.org-lane.org-box-droppable {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.24);
+}
+
 .context-menu {
   position: fixed;
   background: white;
@@ -206,6 +269,7 @@ body {
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.18);
   padding: 8px;
   z-index: 40;
+  color: var(--text);
 }
 
 .context-menu button {
@@ -215,10 +279,18 @@ body {
   background: none;
   border: none;
   padding: 8px 12px;
+  color: var(--text);
+  font-weight: 600;
 }
 
 .context-menu button:hover {
   background: rgba(15, 23, 42, 0.08);
+}
+
+.context-menu hr {
+  margin: 6px 0;
+  border: none;
+  border-top: 1px solid var(--border);
 }
 
 .hidden {
@@ -241,6 +313,10 @@ body {
   padding: 24px;
   width: min(420px, 90vw);
   position: relative;
+}
+
+.modal-content.modal-wide {
+  width: min(900px, 95vw);
 }
 
 .modal-close {
@@ -272,20 +348,36 @@ body {
   border: 1px solid var(--border);
 }
 
-.context-menu {
-  color: var(--text);
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 16px;
 }
 
-.context-menu button {
-  color: var(--text);
-  font-weight: 600;
+.modal-actions .danger {
+  background: #dc2626;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+}
+
+.chart-panel {
+  width: 100%;
+  height: 320px;
+}
+
+.chart-panel canvas {
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .canvas-legend {
   position: absolute;
   bottom: 16px;
   right: 16px;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.94);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 12px 16px;
@@ -334,12 +426,6 @@ body {
   background: #f87171;
 }
 
-.project-box.project-box-droppable,
-.org-box.org-box-droppable {
-  border-color: #10b981;
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.35);
-}
-
 .toolbar-actions {
   display: flex;
   align-items: center;
@@ -362,39 +448,6 @@ body {
   font-size: 0.9rem;
 }
 
-.canvas-stage,
-.canvas-stage * {
-  user-select: none;
-}
-
-.canvas-connections {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.canvas-connection-line {
-  fill: none;
-  stroke: rgba(37, 99, 235, 0.42);
-  stroke-width: 3;
-  stroke-linecap: round;
-}
-
-.canvas-connection-draft {
-  stroke: rgba(37, 99, 235, 0.8);
-  stroke-dasharray: 8 8;
-}
-
-.project-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: flex-start;
-}
-
 .project-details {
   border: 1px solid var(--border);
   background: white;
@@ -408,41 +461,6 @@ body {
 .project-details:hover {
   border-color: #2563eb;
   background: rgba(37, 99, 235, 0.12);
-}
-
-.chart-panel {
-  width: 100%;
-  height: 320px;
-}
-
-.chart-panel canvas {
-  width: 100% !important;
-  height: 100% !important;
-}
-
-.modal-content.modal-wide {
-  width: min(900px, 95vw);
-}
-
-.context-menu hr {
-  margin: 6px 0;
-  border: none;
-  border-top: 1px solid var(--border);
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 16px;
-}
-
-.modal-actions .danger {
-  background: #dc2626;
-  color: white;
-  border: none;
-  padding: 8px 14px;
-  border-radius: 8px;
 }
 
 .resource-list {
