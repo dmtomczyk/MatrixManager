@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Matrix Manager · Canvas</title>
     <link rel="stylesheet" href="/static/styles.css" />
-    <link rel="stylesheet" href="/static/canvas.css" />
+    <link rel="stylesheet" href="/static/canvas-react/canvas-react.css" />
   </head>
   <body class="canvas-page">
     <header>
@@ -26,73 +26,12 @@
       </nav>
     </header>
 
-        <main class="canvas-layout">
-      <aside class="resource-panel">
-        <div class="section-head">
-          <h2>Employees</h2>
-          <p>Expand managers to browse and drag direct reports onto projects.</p>
-        </div>
-        <label class="filter-control">Organization
-          <select id="canvas-org-filter">
-            <option value="">All</option>
-          </select>
-        </label>
-        <div id="resource-list" class="resource-list"></div>
-      </aside>
-      <div class="canvas-area">
-        <div class="canvas-toolbar">
-          <div>
-            <h2>Staffing canvas</h2>
-            <p>Drag to pan. Right-click anywhere for quick actions.</p>
-          </div>
-          <div class="toolbar-actions">
-            <label class="unit-toggle">Allocation units
-              <select id="allocation-units">
-                <option value="percent">Percent only</option>
-                <option value="percent-hours">Percent + hours</option>
-              </select>
-            </label>
-            <button type="button" id="reset-view" class="ghost-button">Reset view</button>
-          </div>
-        </div>
-        <div id="canvas-stage" class="canvas-stage">
-          <div id="canvas-content" class="canvas-content"></div>
-          <div class="canvas-legend">
-            <strong>Legend</strong>
-            <ul>
-              <li><span class="legend-swatch org"></span>Organization lane</li>
-              <li><span class="legend-swatch employee"></span>Employee node</li>
-              <li><span class="legend-swatch project"></span>Project box</li>
-              <li><span class="legend-swatch assignment"></span>Assignment chip</li>
-              <li><span class="legend-swatch over"></span>Over capacity</li>
-            </ul>
-          </div>
-        </div>
-
-        <div id="context-menu" class="context-menu hidden">
-          <button type="button" data-action="create-org">Create New Org</button>
-          <button type="button" data-action="create-project">Create project</button>
-          <button type="button" data-action="edit-project">Edit project</button>
-          <hr />
-          <button type="button" data-action="add-assignment">Add assignment</button>
-          <button type="button" data-action="remove-assignment">Remove assignment</button>
-          <hr />
-          <button type="button" data-action="edit-employee">Edit employee</button>
-        </div>
-
-        <div id="canvas-modal" class="modal hidden" role="dialog" aria-modal="true">
-          <div class="modal-content">
-            <button type="button" class="modal-close" id="modal-close" aria-label="Close">×</button>
-            <div id="modal-body"></div>
-          </div>
-        </div>
-      </div>
+    <main class="canvas-layout">
+      <section class="canvas-area">
+        <div id="root"></div>
+      </section>
     </main>
 
-
-    <div id="toast" role="status" aria-live="polite"></div>
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="module" src="/static/canvas.js"></script>
+    <script type="module" src="/static/canvas-react/canvas-react.js"></script>
   </body>
 </html>
