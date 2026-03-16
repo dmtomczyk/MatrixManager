@@ -1606,24 +1606,26 @@ def ensure_inbox_welcome_notification(username: str) -> None:
         session.commit()
 
 
-def get_assignment_review_actionable_state(metadata: Optional[dict[str, Any]]) -> bool:
+def get_assignment_review_state(metadata: Optional[dict[str, Any]]) -> tuple[bool, Optional[str]]:
     if not metadata or metadata.get("kind") != "assignment_review":
-        return False
+        return False, None
     assignment_id = metadata.get("assignment_id")
     if not assignment_id:
-        return False
+        return False, None
     active_connection = get_active_db_connection_config()
     data_engine = get_or_create_data_engine(active_connection)
     with Session(data_engine) as data_session:
         assignment = data_session.get(Assignment, assignment_id)
-        return bool(assignment and assignment.status == "in_review")
+        if not assignment:
+            return False, None
+        return assignment.status == "in_review", assignment.status
 
 
 def serialize_inbox_notification(notification: InboxNotification) -> InboxNotificationRead:
     metadata = json.loads(notification.metadata_json) if notification.metadata_json else None
-    is_actionable = get_assignment_review_actionable_state(metadata)
+    is_actionable, review_status = get_assignment_review_state(metadata)
     if metadata and metadata.get("kind") == "assignment_review":
-        metadata = {**metadata, "is_actionable": is_actionable}
+        metadata = {**metadata, "is_actionable": is_actionable, "review_status": review_status}
     return InboxNotificationRead(
         id=notification.id,
         username=notification.username,
