@@ -183,7 +183,7 @@ const buildGraph = ({ organizations, employees, projects, assignments, selectedN
         },
       });
 
-      if (employee.manager_id && employeeById.has(employee.manager_id) && orgEmployees.some((candidate) => candidate.id === employee.manager_id)) {
+      if (employee.manager_id && employeeById.has(employee.manager_id)) {
         edges.push({
           id: `manager-${employee.manager_id}-${employee.id}`,
           source: `employee-${employee.manager_id}`,
@@ -366,8 +366,8 @@ function CanvasAppInner() {
 
     const projectNodes = nodes.filter((item) => item.id.startsWith('project-'));
     const overlappingProject = projectNodes.find((item) => {
-      const withinX = node.position.x >= item.position.x - 120 && node.position.x <= item.position.x + 280;
-      const withinY = node.position.y >= item.position.y - 90 && node.position.y <= item.position.y + 190;
+      const withinX = node.position.x >= item.position.x - 140 && node.position.x <= item.position.x + 320;
+      const withinY = node.position.y >= item.position.y - 110 && node.position.y <= item.position.y + 210;
       return withinX && withinY;
     });
     if (overlappingProject) {
@@ -376,8 +376,14 @@ function CanvasAppInner() {
     }
 
     const orgNodes = nodes.filter((item) => item.id.startsWith('org-'));
-    const nearestOrg = orgNodes
-      .map((orgNode) => ({ orgId: Number(orgNode.id.replace('org-', '')), yDistance: Math.abs(orgNode.position.y - node.position.y) }))
+    const insideOrg = orgNodes.find((orgNode) => {
+      const orgWidth = Number(orgNode.style?.width || 280);
+      const withinX = node.position.x >= orgNode.position.x - 40 && node.position.x <= orgNode.position.x + orgWidth + 120;
+      const withinY = node.position.y >= orgNode.position.y - 30 && node.position.y <= orgNode.position.y + 260;
+      return withinX && withinY;
+    });
+    const nearestOrg = (insideOrg ? [{ orgId: Number(insideOrg.id.replace('org-', '')), yDistance: 0 }] : orgNodes
+      .map((orgNode) => ({ orgId: Number(orgNode.id.replace('org-', '')), yDistance: Math.abs(orgNode.position.y - node.position.y) })))
       .sort((a, b) => a.yDistance - b.yDistance)[0];
     if (!nearestOrg || employee.organization_id === nearestOrg.orgId) return;
     try {
@@ -436,6 +442,7 @@ function CanvasAppInner() {
         .then(() => {
           const employee = data.employees.find((emp) => emp.id === draggedEmployeeId);
           setToast(`${employee?.name || 'Employee'} moved to ${data.organizations.find((org) => org.id === orgId)?.name || 'organization'}`);
+          setSelectedNodeId(`employee-${draggedEmployeeId}`);
           return refresh();
         })
         .catch((err) => setError(err.message));

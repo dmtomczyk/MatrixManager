@@ -410,19 +410,19 @@ body {
 }
 
 .rf-handle {
-  width: 12px;
-  height: 12px;
-  border: 2px solid #ffffff;
+  width: 18px;
+  height: 18px;
+  border: 3px solid #ffffff;
   background: var(--canvas-blue);
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.28);
 }
 
 .rf-handle-target {
-  left: -7px;
+  left: -11px;
 }
 
 .rf-handle-source {
-  right: -7px;
+  right: -11px;
 }
 
 .react-flow__edge.selected .react-flow__edge-path {
