@@ -37,8 +37,11 @@
               <thead>
                 <tr>
                   <th>Name</th>
+                  <th>Parent</th>
+                  <th>Owner</th>
                   <th>Description</th>
                   <th>Headcount</th>
+                  <th>Child Orgs</th>
                   <th></th>
                 </tr>
               </thead>
@@ -49,6 +52,17 @@
             <h3>Add / Update Organization</h3>
             <input type="hidden" name="entity_id" id="org-entity-id" />
             <label><span class="label-text required-field">Name</span><input name="name" required /></label>
+            <label>Parent Organization
+              <select name="parent_organization_id" id="org-parent-organization">
+                <option value="">No parent</option>
+              </select>
+            </label>
+            <label>Organization Owner
+              <select name="owner_employee_id" id="org-owner-employee">
+                <option value="">No owner</option>
+              </select>
+            </label>
+            <p class="muted small-text">Owners must be leaders or current managers. Each organization can have at most one parent.</p>
             <label>Description<textarea name="description" rows="2"></textarea></label>
             <button type="submit">Save Organization</button>
           </form>

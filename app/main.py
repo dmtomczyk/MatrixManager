@@ -60,6 +60,8 @@ health_probe_thread_started = False
 class OrganizationBase(SQLModel):
     name: str
     description: Optional[str] = None
+    parent_organization_id: Optional[int] = Field(default=None, foreign_key="organization.id")
+    owner_employee_id: Optional[int] = Field(default=None, foreign_key="employee.id")
 
 
 class Organization(OrganizationBase, table=True):
@@ -72,11 +74,16 @@ class OrganizationCreate(OrganizationBase):
 
 class OrganizationRead(OrganizationBase):
     id: int
+    parent_organization_name: Optional[str] = None
+    owner_employee_name: Optional[str] = None
+    child_organization_count: int = 0
 
 
 class OrganizationUpdate(SQLModel):
     name: Optional[str] = None
     description: Optional[str] = None
+    parent_organization_id: Optional[int] = None
+    owner_employee_id: Optional[int] = None
 
 
 class JobCodeBase(SQLModel):
@@ -732,6 +739,12 @@ def run_migrations(bind_engine=engine) -> None:
                 connection.exec_driver_sql("ALTER TABLE employee ADD COLUMN employee_type TEXT DEFAULT 'IC'")
             if "job_code_id" not in column_names:
                 connection.exec_driver_sql("ALTER TABLE employee ADD COLUMN job_code_id INTEGER")
+            organization_columns = connection.exec_driver_sql("PRAGMA table_info(organization)").fetchall() if connection.exec_driver_sql("SELECT name FROM sqlite_master WHERE type='table' AND name='organization'").fetchone() else []
+            organization_column_names = {row[1] for row in organization_columns}
+            if organization_columns and "parent_organization_id" not in organization_column_names:
+                connection.exec_driver_sql("ALTER TABLE organization ADD COLUMN parent_organization_id INTEGER")
+            if organization_columns and "owner_employee_id" not in organization_column_names:
+                connection.exec_driver_sql("ALTER TABLE organization ADD COLUMN owner_employee_id INTEGER")
             demand_columns = connection.exec_driver_sql("PRAGMA table_info(demand)").fetchall() if connection.exec_driver_sql("SELECT name FROM sqlite_master WHERE type='table' AND name='demand'").fetchone() else []
             demand_column_names = {row[1] for row in demand_columns}
             if demand_columns and "organization_id" not in demand_column_names:
@@ -770,6 +783,14 @@ def run_migrations(bind_engine=engine) -> None:
                     connection.exec_driver_sql("ALTER TABLE employee ADD COLUMN employee_type TEXT DEFAULT 'IC'")
                 if "job_code_id" not in column_names:
                     connection.exec_driver_sql("ALTER TABLE employee ADD COLUMN job_code_id INTEGER")
+                organization_exists = connection.exec_driver_sql("SELECT to_regclass('public.organization')").scalar()
+                if organization_exists:
+                    organization_rows = connection.exec_driver_sql("SELECT column_name FROM information_schema.columns WHERE table_name = 'organization'").fetchall()
+                    organization_column_names = {row[0] for row in organization_rows}
+                    if "parent_organization_id" not in organization_column_names:
+                        connection.exec_driver_sql("ALTER TABLE organization ADD COLUMN parent_organization_id INTEGER")
+                    if "owner_employee_id" not in organization_column_names:
+                        connection.exec_driver_sql("ALTER TABLE organization ADD COLUMN owner_employee_id INTEGER")
                 demand_exists = connection.exec_driver_sql("SELECT to_regclass('public.demand')").scalar()
                 if demand_exists:
                     demand_rows = connection.exec_driver_sql("SELECT column_name FROM information_schema.columns WHERE table_name = 'demand'").fetchall()
@@ -2335,12 +2356,13 @@ def delete_job_code(job_code_id: int, request: Request, session: Session = Depen
 @app.get("/organizations", response_model=List[OrganizationRead])
 def list_organizations(session: Session = Depends(get_session)):
     organizations = session.exec(select(Organization).order_by(Organization.name)).all()
-    return organizations
+    return [serialize_organization(session, organization) for organization in organizations]
 
 
 @app.post("/organizations", response_model=OrganizationRead, status_code=201)
 def create_organization(organization: OrganizationCreate, request: Request, session: Session = Depends(get_session)):
-    db_org = Organization.from_orm(organization)
+    payload = validate_organization_payload(session, organization.dict())
+    db_org = Organization(**payload)
     session.add(db_org)
     session.commit()
     session.refresh(db_org)
@@ -2353,7 +2375,7 @@ def create_organization(organization: OrganizationCreate, request: Request, sess
         entity_label=db_org.name,
         after=audit_snapshot_from_model(db_org),
     )
-    return db_org
+    return serialize_organization(session, db_org)
 
 
 @app.put("/organizations/{organization_id}", response_model=OrganizationRead)
@@ -2362,7 +2384,10 @@ def update_organization(organization_id: int, update: OrganizationUpdate, reques
     if not organization:
         raise HTTPException(status_code=404, detail="Organization not found")
     before = audit_snapshot_from_model(organization)
-    for key, value in update.dict(exclude_unset=True).items():
+    payload = organization.dict()
+    payload.update(update.dict(exclude_unset=True))
+    validated = validate_organization_payload(session, payload, organization_id=organization_id)
+    for key, value in validated.items():
         setattr(organization, key, value)
     session.add(organization)
     session.commit()
@@ -2377,7 +2402,7 @@ def update_organization(organization_id: int, update: OrganizationUpdate, reques
         before=before,
         after=audit_snapshot_from_model(organization),
     )
-    return organization
+    return serialize_organization(session, organization)
 
 
 @app.delete("/organizations/{organization_id}", status_code=204)
@@ -2388,6 +2413,9 @@ def delete_organization(organization_id: int, request: Request, session: Session
     employee_count = session.exec(select(Employee).where(Employee.organization_id == organization_id)).first()
     if employee_count:
         raise HTTPException(status_code=400, detail="Cannot delete organization with assigned employees")
+    child_organization = session.exec(select(Organization).where(Organization.parent_organization_id == organization_id)).first()
+    if child_organization:
+        raise HTTPException(status_code=400, detail="Cannot delete organization with child organizations")
     before = audit_snapshot_from_model(organization)
     label = organization.name
     session.delete(organization)
@@ -2767,6 +2795,44 @@ def ensure_demand(session: Session, demand_id: int) -> Demand:
     return demand
 
 
+def creates_organization_cycle(session: Session, organization_id: int, parent_organization_id: int) -> bool:
+    seen: Set[int] = set()
+    current_id: Optional[int] = parent_organization_id
+    while current_id is not None:
+        if current_id == organization_id:
+            return True
+        if current_id in seen:
+            return True
+        seen.add(current_id)
+        current = session.get(Organization, current_id)
+        if not current:
+            return False
+        current_id = current.parent_organization_id
+    return False
+
+
+def validate_organization_payload(session: Session, payload: dict[str, Any], *, organization_id: Optional[int] = None) -> dict[str, Any]:
+    name = (payload.get("name") or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Organization name is required")
+    payload["name"] = name
+    payload["description"] = (payload.get("description") or "").strip() or None
+    parent_organization_id = payload.get("parent_organization_id")
+    owner_employee_id = payload.get("owner_employee_id")
+    if parent_organization_id is not None:
+        ensure_organization(session, parent_organization_id)
+        if organization_id is not None and parent_organization_id == organization_id:
+            raise HTTPException(status_code=400, detail="Organization cannot be its own parent")
+        if organization_id is not None and creates_organization_cycle(session, organization_id, parent_organization_id):
+            raise HTTPException(status_code=400, detail="Organization hierarchy creates a cycle")
+    if owner_employee_id is not None:
+        owner = ensure_employee(session, owner_employee_id)
+        direct_report_exists = session.exec(select(Employee).where(Employee.manager_id == owner_employee_id)).first()
+        if owner.employee_type != "L" and not direct_report_exists:
+            raise HTTPException(status_code=400, detail="Organization owner must be a leader or manager")
+    return payload
+
+
 def validate_employee_type(employee_type: str) -> str:
     if employee_type not in {"IC", "L"}:
         raise HTTPException(status_code=400, detail="Employee type must be IC or L")
@@ -2855,6 +2921,22 @@ def validate_demand_payload(session: Session, payload: dict[str, Any]) -> dict[s
     payload["skill_notes"] = (payload.get("skill_notes") or "").strip() or None
     payload["notes"] = (payload.get("notes") or "").strip() or None
     return payload
+
+
+def serialize_organization(session: Session, organization: Organization) -> OrganizationRead:
+    parent_organization = session.get(Organization, organization.parent_organization_id) if organization.parent_organization_id is not None else None
+    owner_employee = session.get(Employee, organization.owner_employee_id) if organization.owner_employee_id is not None else None
+    child_organization_count = len(session.exec(select(Organization).where(Organization.parent_organization_id == organization.id)).all())
+    return OrganizationRead(
+        id=organization.id,
+        name=organization.name,
+        description=organization.description,
+        parent_organization_id=organization.parent_organization_id,
+        parent_organization_name=parent_organization.name if parent_organization else None,
+        owner_employee_id=organization.owner_employee_id,
+        owner_employee_name=owner_employee.name if owner_employee else None,
+        child_organization_count=child_organization_count,
+    )
 
 
 def serialize_demand(session: Session, demand: Demand) -> DemandRead:
