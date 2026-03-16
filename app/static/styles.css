@@ -702,6 +702,10 @@ main {
   gap: 32px;
 }
 
+body.modal-open {
+  overflow: hidden;
+}
+
 .card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -1138,6 +1142,83 @@ table tbody tr:hover {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.table-shell {
+  overflow: auto;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.56);
+  backdrop-filter: blur(3px);
+  z-index: 100;
+}
+
+.modal-card {
+  width: min(640px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.28);
+}
+
+.modal-card-form {
+  padding: 22px;
+}
+
+.modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.modal-head h3 {
+  margin: 0;
+}
+
+.modal-head .small-text {
+  margin-bottom: 0;
+}
+
+.modal-close-button {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  padding: 0;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  font-size: 1.35rem;
+  line-height: 1;
+  box-shadow: none;
+}
+
+.modal-close-button:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.modal-form-panel {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+}
+
+.modal-actions-row {
+  margin-top: 6px;
 }
 
 .runtime-recommendations-panel ul {

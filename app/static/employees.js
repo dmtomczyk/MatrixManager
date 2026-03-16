@@ -17,6 +17,10 @@ const employeeCapacityInput = document.querySelector('#employee-capacity');
 const selectAllEmployeesCheckbox = document.querySelector('#select-all-employees');
 const expandAllVisibleButton = document.querySelector('#expand-all-visible');
 const collapseAllVisibleButton = document.querySelector('#collapse-all-visible');
+const createEmployeeButton = document.querySelector('#create-employee');
+const bulkEditEmployeesButton = document.querySelector('#bulk-edit-employees');
+const employeeModal = document.querySelector('#employee-modal');
+const employeeModalCloseButton = document.querySelector('#employee-modal-close');
 const toast = document.querySelector('#toast');
 
 let organizations = [];
@@ -25,6 +29,7 @@ let employees = [];
 let expandedEmployees = new Set();
 let selectedEmployees = new Set();
 let activeEmployeeMode = 'create';
+let lastFocusedElement = null;
 
 const escapeHtml = (value = '') => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char] || char));
 const apiFetch = async (url, options = {}) => {
@@ -95,6 +100,23 @@ const updateTypePreview = () => {
   if (!employeeTypeInput) return;
   employeeTypeInput.value = getCurrentEmployeeTypeValue();
 };
+const openEmployeeModal = () => {
+  if (!employeeModal) return;
+  lastFocusedElement = document.activeElement;
+  employeeModal.classList.remove('hidden');
+  document.body.classList.add('modal-open');
+  window.setTimeout(() => {
+    const preferredTarget = employeeNameInput.disabled ? employeeJobCodeSelect : employeeNameInput;
+    preferredTarget?.focus();
+  }, 0);
+};
+const closeEmployeeModal = ({ reset = false, restoreFocus = true } = {}) => {
+  if (!employeeModal) return;
+  employeeModal.classList.add('hidden');
+  document.body.classList.remove('modal-open');
+  if (reset) clearEmployeeForm();
+  if (restoreFocus && lastFocusedElement instanceof HTMLElement) lastFocusedElement.focus();
+};
 const updateOrganizationSelect = () => {
   const options = organizations.map((org) => `<option value="${org.id}">${escapeHtml(org.name)}</option>`).join('');
   const previousOrg = employeeOrganizationSelect.value;
@@ -145,6 +167,12 @@ const syncManagerFieldState = () => {
   }
   employeeManagerHelp.textContent = isIc ? 'Required for IC job codes. Optional for leader job codes.' : 'Optional for leader job codes.';
 };
+const syncBulkEditButtonState = () => {
+  if (!bulkEditEmployeesButton) return;
+  const count = selectedEmployees.size;
+  bulkEditEmployeesButton.disabled = count < 2;
+  bulkEditEmployeesButton.textContent = count >= 2 ? `Bulk edit selected (${count})` : 'Bulk edit selected';
+};
 const resetEmployeeFormFields = () => {
   employeeForm.reset();
   employeeForm.querySelector('input[name="entity_id"]').value = '';
@@ -163,6 +191,7 @@ const syncEmployeeFormMode = () => {
   const mode = getEmployeeFormMode();
   if (activeEmployeeMode === mode) {
     syncManagerFieldState();
+    syncBulkEditButtonState();
     return;
   }
   activeEmployeeMode = mode;
@@ -183,6 +212,7 @@ const syncEmployeeFormMode = () => {
     updateOrganizationSelect();
     updateJobCodeSelect();
     updateManagerSelect();
+    syncBulkEditButtonState();
     return;
   }
   if (mode === 'edit') {
@@ -198,6 +228,7 @@ const syncEmployeeFormMode = () => {
     updateOrganizationSelect();
     updateJobCodeSelect();
     updateManagerSelect(employeeManagerSelect.value || '', getCurrentEmployeeId());
+    syncBulkEditButtonState();
     return;
   }
   employeeFormTitle.textContent = 'Add Employee';
@@ -213,6 +244,7 @@ const syncEmployeeFormMode = () => {
   updateOrganizationSelect();
   updateJobCodeSelect();
   updateManagerSelect();
+  syncBulkEditButtonState();
 };
 const clearEmployeeForm = () => {
   employeeForm.reset();
@@ -299,13 +331,13 @@ const loadEmployees = async () => {
   renderEmployees();
   if (getCurrentEmployeeId()) {
     const current = employees.find((employee) => employee.id === getCurrentEmployeeId());
-    if (current) populateEmployeeForm(current.id);
+    if (current) populateEmployeeForm(current.id, { openModal: false });
     else clearEmployeeForm();
   } else {
     updateManagerSelect(employeeManagerSelect?.value || '', null);
   }
 };
-const populateEmployeeForm = (id) => {
+const populateEmployeeForm = (id, { openModal = true } = {}) => {
   const employee = employees.find((e) => e.id === Number(id));
   if (!employee) return;
   selectedEmployees.clear();
@@ -322,6 +354,20 @@ const populateEmployeeForm = (id) => {
   updateManagerSelect(employee.manager_id || '', employee.id);
   syncManagerFieldState();
   renderEmployees();
+  if (openModal) openEmployeeModal();
+};
+const startCreateEmployee = () => {
+  clearEmployeeForm();
+  openEmployeeModal();
+};
+const startBulkEditEmployees = () => {
+  if (selectedEmployees.size < 2) {
+    alert('Select at least two employees to use multi-edit.');
+    return;
+  }
+  activeEmployeeMode = '';
+  syncEmployeeFormMode();
+  openEmployeeModal();
 };
 const buildBulkUpdatePayload = () => {
   const payload = {};
@@ -352,7 +398,7 @@ employeeForm.addEventListener('submit', async (event) => {
       }
       showToast(`Updated ${selectedEmployees.size} employees`);
       selectedEmployees.clear();
-      clearEmployeeForm();
+      closeEmployeeModal({ reset: true, restoreFocus: false });
       await loadEmployees();
     } catch (err) {
       alert(err.message);
@@ -381,7 +427,7 @@ employeeForm.addEventListener('submit', async (event) => {
       await apiFetch('/employees', { method: 'POST', body: JSON.stringify(payload) });
       showToast('Employee added');
     }
-    clearEmployeeForm();
+    closeEmployeeModal({ reset: true, restoreFocus: false });
     await loadEmployees();
   } catch (err) {
     alert(err.message);
@@ -416,12 +462,15 @@ employeeTable.addEventListener('click', async (event) => {
     renderEmployees();
     return;
   }
-  if (action === 'edit-employee') populateEmployeeForm(id);
+  if (action === 'edit-employee') {
+    populateEmployeeForm(id);
+    return;
+  }
   if (action === 'delete-employee') {
     if (!confirm('Delete this employee and related assignments? Direct reports will become unassigned.')) return;
     await apiFetch(`/employees/${id}`, { method: 'DELETE' });
     selectedEmployees.delete(Number(id));
-    if (String(getCurrentEmployeeId()) === String(id)) clearEmployeeForm();
+    if (String(getCurrentEmployeeId()) === String(id)) closeEmployeeModal({ reset: true, restoreFocus: false });
     showToast('Employee deleted');
     await loadEmployees();
   }
@@ -444,7 +493,7 @@ employeeFormSecondaryAction.addEventListener('click', () => {
   if (getEmployeeFormMode() === 'bulk') {
     selectedEmployees.clear();
     renderEmployees();
-    clearEmployeeForm();
+    closeEmployeeModal({ reset: true });
     return;
   }
   clearEmployeeForm();
@@ -468,10 +517,28 @@ employeeJobCodeSelect.addEventListener('change', () => {
 employeeOrgFilter.addEventListener('change', () => {
   renderEmployees();
 });
+createEmployeeButton?.addEventListener('click', () => {
+  startCreateEmployee();
+});
+bulkEditEmployeesButton?.addEventListener('click', () => {
+  startBulkEditEmployees();
+});
+employeeModalCloseButton?.addEventListener('click', () => {
+  closeEmployeeModal({ reset: true });
+});
+employeeModal?.addEventListener('click', (event) => {
+  if (event.target === employeeModal) closeEmployeeModal({ reset: true });
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && employeeModal && !employeeModal.classList.contains('hidden')) {
+    closeEmployeeModal({ reset: true });
+  }
+});
 (async function init() {
   await loadOrganizations();
   await loadJobCodes();
   clearEmployeeForm();
   await loadEmployees();
   syncManagerFieldState();
+  syncBulkEditButtonState();
 })();
