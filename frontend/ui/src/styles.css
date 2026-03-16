@@ -1,12 +1,16 @@
 :root {
-  --mm-bg: linear-gradient(180deg, #f8fbff 0%, #f2f7fb 100%);
-  --mm-surface: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-  --mm-border: #d9e2ec;
+  --mm-bg: #f4f7fb;
+  --mm-bg-accent: #eef4fb;
+  --mm-surface: #ffffff;
+  --mm-surface-alt: #f8fbff;
+  --mm-border: #d7e0ea;
+  --mm-border-strong: #c5d2e0;
   --mm-text: #0f172a;
   --mm-muted: #526274;
   --mm-primary: #2563eb;
   --mm-primary-foreground: #ffffff;
-  --mm-shadow: 0 14px 36px rgba(15, 23, 42, 0.08);
+  --mm-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+  --mm-shadow-soft: 0 4px 14px rgba(15, 23, 42, 0.04);
 }
 
 html, body, #root {
@@ -15,7 +19,9 @@ html, body, #root {
 
 body {
   margin: 0;
-  background: var(--mm-bg);
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.06), transparent 32%),
+    linear-gradient(180deg, var(--mm-bg) 0%, var(--mm-bg-accent) 100%);
   color: var(--mm-text);
 }
 
@@ -24,10 +30,17 @@ body {
   padding: 24px 0 8px;
 }
 
+.mm-login-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(360px, 440px);
+  gap: 18px;
+  align-items: stretch;
+}
+
 .mm-card {
   border: 1px solid var(--mm-border);
-  border-radius: 20px;
-  background: var(--mm-surface);
+  border-radius: 18px;
+  background: linear-gradient(180deg, var(--mm-surface) 0%, var(--mm-surface-alt) 100%);
   box-shadow: var(--mm-shadow);
 }
 
@@ -41,32 +54,40 @@ body {
 
 .mm-card-title {
   margin: 0;
-  font-size: 1.55rem;
+  font-size: 1.45rem;
   line-height: 1.2;
+  letter-spacing: -0.02em;
 }
 
 .mm-card-description {
   margin: 8px 0 0;
   color: var(--mm-muted);
+  line-height: 1.5;
 }
 
 .mm-btn {
   appearance: none;
-  border: none;
   border-radius: 12px;
   padding: 11px 16px;
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+  transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.mm-btn:hover {
+  transform: translateY(-1px);
 }
 
 .mm-btn-default {
-  background: var(--mm-primary);
+  border: 1px solid #1d4ed8;
+  background: linear-gradient(180deg, #2563eb, #1d4ed8);
   color: var(--mm-primary-foreground);
+  box-shadow: 0 10px 18px rgba(37, 99, 235, 0.18);
 }
 
 .mm-btn-default:hover {
-  background: #1d4ed8;
+  background: linear-gradient(180deg, #1d4ed8, #1e40af);
 }
 
 .mm-input {
@@ -92,6 +113,10 @@ body {
   font-weight: 600;
 }
 
+.mm-label span {
+  color: var(--mm-text);
+}
+
 .mm-form-grid {
   display: grid;
   gap: 14px;
@@ -110,9 +135,44 @@ body {
   color: #b91c1c;
 }
 
+.mm-login-intro-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.mm-login-intro-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(180deg, #60a5fa, #2563eb);
+}
+
+.mm-login-intro-list {
+  display: grid;
+  gap: 12px;
+}
+
+.mm-info-row {
+  border: 1px solid var(--mm-border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.78);
+  padding: 14px 16px;
+  box-shadow: var(--mm-shadow-soft);
+}
+
+.mm-info-row strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.mm-info-row span {
+  color: var(--mm-muted);
+  line-height: 1.45;
+}
+
 .mm-login-card {
   max-width: 440px;
-  margin: 0 auto;
 }
 
 .mm-login-header {
@@ -120,13 +180,13 @@ body {
 }
 
 .mm-login-logo {
-  width: 64px;
-  height: 64px;
+  width: 62px;
+  height: 62px;
   margin: 0 auto 10px;
 }
 
 .mm-login-title {
-  font-size: 1.85rem;
+  font-size: 1.8rem;
 }
 
 .mm-login-github {
@@ -142,11 +202,12 @@ body {
   color: var(--mm-text);
   font-weight: 700;
   box-sizing: border-box;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.86);
 }
 
 .mm-login-github:hover {
   background: #f8fafc;
+  border-color: var(--mm-border-strong);
 }
 
 .mm-hero-card {
@@ -161,10 +222,12 @@ body {
 
 .mm-feature-card,
 .mm-flow-pill,
-.mm-step-item {
+.mm-step-item,
+.mm-link-card {
   border: 1px solid var(--mm-border);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.82);
+  box-shadow: var(--mm-shadow-soft);
 }
 
 .mm-feature-card {
@@ -184,8 +247,9 @@ body {
 
 .mm-home-grid {
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
+  grid-template-columns: 1.2fr 0.8fr;
   gap: 18px;
+  margin-bottom: 18px;
 }
 
 .mm-flow-row {
@@ -203,14 +267,40 @@ body {
 
 .mm-flow-pill span {
   color: var(--mm-muted);
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
 }
 
 .mm-flow-arrow {
   color: var(--mm-muted);
   font-weight: 700;
+}
+
+.mm-link-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.mm-link-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 13px 14px;
+  text-decoration: none;
+  color: var(--mm-text);
+}
+
+.mm-link-card span {
+  color: var(--mm-primary);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.mm-link-card:hover {
+  border-color: var(--mm-border-strong);
+  background: #ffffff;
 }
 
 .mm-step-list {
@@ -239,8 +329,13 @@ body {
 }
 
 @media (max-width: 960px) {
+  .mm-login-layout,
   .mm-hero-grid,
   .mm-home-grid {
     grid-template-columns: 1fr;
+  }
+
+  .mm-login-card {
+    max-width: none;
   }
 }

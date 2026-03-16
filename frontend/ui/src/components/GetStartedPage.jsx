@@ -25,6 +25,14 @@ const steps = [
   'Review the outputs in Canvas and Forecast',
 ];
 
+const quickLinks = [
+  { label: 'Organizations', href: '/orgs' },
+  { label: 'Job Codes', href: '/job-codes' },
+  { label: 'Employees', href: '/people' },
+  { label: 'Projects', href: '/planning' },
+  { label: 'Assignments', href: '/staffing' },
+];
+
 export default function GetStartedPage() {
   return (
     <main className="mm-home-shell">
@@ -68,21 +76,36 @@ export default function GetStartedPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Create your first plan</CardTitle>
-            <CardDescription>One simple path gets a brand-new workspace into a usable state quickly.</CardDescription>
+            <CardTitle>Quick links</CardTitle>
+            <CardDescription>Use these to move through the initial setup sequence quickly.</CardDescription>
           </CardHeader>
-          <CardContent className="mm-step-list">
-            {steps.map((step, index) => (
-              <div key={step} className="mm-step-item">
-                <div className="mm-step-number">{index + 1}</div>
-                <div>
-                  <strong>{step}</strong>
-                </div>
-              </div>
+          <CardContent className="mm-link-grid">
+            {quickLinks.map((link) => (
+              <a key={link.href} href={link.href} className="mm-link-card">
+                <strong>{link.label}</strong>
+                <span>Open</span>
+              </a>
             ))}
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Create your first plan</CardTitle>
+          <CardDescription>One simple path gets a brand-new workspace into a usable state quickly.</CardDescription>
+        </CardHeader>
+        <CardContent className="mm-step-list">
+          {steps.map((step, index) => (
+            <div key={step} className="mm-step-item">
+              <div className="mm-step-number">{index + 1}</div>
+              <div>
+                <strong>{step}</strong>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
     </main>
   );
 }
