@@ -783,7 +783,6 @@ def render_app_nav(current_path: str, username: str) -> str:
 
 
 def build_login_page(error: str = "", next_path: str = "/") -> str:
-    styles_href = static_asset_url("styles.css")
     favicon_href = static_asset_url("images/matrix-manager-favicon.ico")
     logo_href = static_asset_url("images/matrix-manager-favicon.svg")
     safe_next = next_path if next_path.startswith("/") else "/"
@@ -800,13 +799,11 @@ def build_login_page(error: str = "", next_path: str = "/") -> str:
     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
     <title>Matrix Manager · Login</title>
     <link rel=\"icon\" href=\"{favicon_href}\" sizes=\"any\" />
-    <link rel=\"stylesheet\" href=\"{styles_href}\" />
 {ui_react_head_markup()}  </head>
   <body class=\"login-page\">
     <div id=\"root\" data-page=\"login\"></div>
     <script id=\"mm-react-props\" type=\"application/json\">{boot_payload}</script>
 {ui_react_script_markup()}
-    {build_app_footer()}
   </body>
 </html>"""
 
@@ -1692,6 +1689,7 @@ def serve_html_page(
     replacements: Optional[dict[str, str]] = None,
     current_path: Optional[str] = None,
     username: Optional[str] = None,
+    inject_shell: bool = True,
 ) -> str:
     html = (STATIC_DIR / filename).read_text(encoding="utf-8")
     replacements = replacements or {}
@@ -1710,7 +1708,7 @@ def serve_html_page(
             flags=re.DOTALL,
         )
     footer_markup = f"    {build_app_footer()}\n"
-    if current_path and username:
+    if inject_shell and current_path and username:
         replacements[BASE_NAV_MARKUP] = render_app_nav(current_path=current_path, username=username)
         replacements["</body>"] = f'{footer_markup}    <script src="{static_asset_url("app-shell.js")}"></script>\n  </body>'
     for old, new in replacements.items():
@@ -2460,12 +2458,12 @@ def serve_home(request: Request) -> str:
     return serve_html_page(
         "home.html",
         {
-            'href="/static/styles.css"': f'href="{static_asset_url("styles.css")}"',
             '    <link rel="stylesheet" href="/static/ui-react/ui-react.css" />\n': ui_react_head_markup(),
             '    <script type="module" src="/static/ui-react/ui-react.js"></script>': ui_react_script_markup(),
         },
         current_path=request.url.path,
         username=get_session_username(request.cookies.get(SESSION_COOKIE_NAME)),
+        inject_shell=False,
     )
 
 
@@ -2526,12 +2524,12 @@ def serve_canvas(request: Request) -> str:
     return serve_html_page(
         "canvas.html",
         {
-            'href="/static/styles.css"': f'href="{static_asset_url("styles.css")}"',
             '    <link rel="stylesheet" href="/static/ui-react/ui-react.css" />\n': ui_react_head_markup(),
             '    <script type="module" src="/static/ui-react/ui-react.js"></script>': ui_react_script_markup(),
         },
         current_path=request.url.path,
         username=get_session_username(request.cookies.get(SESSION_COOKIE_NAME)),
+        inject_shell=False,
     )
 
 
