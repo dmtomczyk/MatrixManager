@@ -13,7 +13,6 @@ import {
   type EdgeMouseHandler,
   type Node,
   type NodeMouseHandler,
-  type NodeProps,
   useEdgesState,
   useNodesState,
   useReactFlow,
