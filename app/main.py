@@ -2455,14 +2455,20 @@ def logout():
 
 @app.get("/", response_class=HTMLResponse)
 def serve_home(request: Request) -> str:
+    username = get_session_username(request.cookies.get(SESSION_COOKIE_NAME))
+    boot_payload = json.dumps({
+        "currentUser": username or "",
+        "currentPath": request.url.path,
+    })
     return serve_html_page(
         "home.html",
         {
             '    <link rel="stylesheet" href="/static/ui-react/ui-react.css" />\n': ui_react_head_markup(),
             '    <script type="module" src="/static/ui-react/ui-react.js"></script>': ui_react_script_markup(),
+            '<script id="mm-react-props" type="application/json">{}</script>': f'<script id="mm-react-props" type="application/json">{boot_payload}</script>',
         },
         current_path=request.url.path,
-        username=get_session_username(request.cookies.get(SESSION_COOKIE_NAME)),
+        username=username,
         inject_shell=False,
     )
 
@@ -2521,14 +2527,20 @@ def serve_assignments(request: Request) -> str:
 
 @app.get("/canvas", response_class=HTMLResponse)
 def serve_canvas(request: Request) -> str:
+    username = get_session_username(request.cookies.get(SESSION_COOKIE_NAME))
+    boot_payload = json.dumps({
+        "currentUser": username or "",
+        "currentPath": request.url.path,
+    })
     return serve_html_page(
         "canvas.html",
         {
             '    <link rel="stylesheet" href="/static/ui-react/ui-react.css" />\n': ui_react_head_markup(),
             '    <script type="module" src="/static/ui-react/ui-react.js"></script>': ui_react_script_markup(),
+            '<script id="mm-react-props" type="application/json">{}</script>': f'<script id="mm-react-props" type="application/json">{boot_payload}</script>',
         },
         current_path=request.url.path,
-        username=get_session_username(request.cookies.get(SESSION_COOKIE_NAME)),
+        username=username,
         inject_shell=False,
     )
 

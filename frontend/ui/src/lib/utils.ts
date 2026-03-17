@@ -10,6 +10,11 @@ export interface LoginPageProps {
   githubUrl?: string;
 }
 
+export interface AuthenticatedPageProps {
+  currentUser?: string;
+  currentPath?: string;
+}
+
 export interface BootPayload {
   page: BootPage;
   props: Record<string, unknown>;
