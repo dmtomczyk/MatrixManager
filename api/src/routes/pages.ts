@@ -1,236 +1,89 @@
 import type { FastifyPluginAsync, FastifyReply } from 'fastify';
 import { getSessionUsername } from '../auth/session.js';
 import {
+  createAssignment,
+  createDemand,
   createEmployee,
   createJobCode,
   createOrganization,
+  createProject,
+  deleteAssignment,
+  deleteDemand,
   deleteEmployee,
   deleteJobCode,
   deleteOrganization,
+  deleteProject,
   formatWorkforceError,
+  getDashboardData,
+  getForecastData,
+  listAssignments,
+  listDemands,
   listEmployees,
   listJobCodes,
   listOrganizations,
+  listProjects,
+  updateAssignment,
+  updateDashboardTrackedEmployees,
+  updateDemand,
   updateEmployee,
   updateJobCode,
-  updateOrganization
+  updateOrganization,
+  updateProject
 } from '../features/workforce/service.js';
 import { buildGetStartedPage } from '../ui/get-started-page.js';
 import { buildLoginPage } from '../ui/login-page.js';
 import { renderAppChrome } from '../ui/chrome.js';
-import { buildEmployeesPage, buildJobCodesPage, buildOrganizationsPage } from '../ui/workforce-pages.js';
+import { buildAssignmentsPage, buildDashboardPage, buildDemandsPage, buildEmployeesPage, buildForecastPage, buildJobCodesPage, buildOrganizationsPage, buildProjectsPage } from '../ui/workforce-pages.js';
 
-function renderLogin(app: Parameters<FastifyPluginAsync>[0], error = '', next = '/') {
-  return buildLoginPage({
-    error,
-    next,
-    logoHref: app.config.logoHref,
-    githubUrl: app.config.githubRepoUrl
-  });
-}
-
-function redirectWithFlash(reply: FastifyReply, path: string, message: string) {
-  return reply.redirect(path + '?flash=' + encodeURIComponent(message));
-}
-
-function asBody(body: unknown): Record<string, unknown> {
-  return (body ?? {}) as Record<string, unknown>;
-}
-
-function checkboxValue(value: unknown): boolean {
-  return value === 'on' || value === 'true' || value === true;
-}
+function renderLogin(app: Parameters<FastifyPluginAsync>[0], error = '', next = '/') { return buildLoginPage({ error, next, logoHref: app.config.logoHref, githubUrl: app.config.githubRepoUrl }); }
+function redirectWithFlash(reply: FastifyReply, path: string, message: string) { return reply.redirect(path + '?flash=' + encodeURIComponent(message)); }
+function asBody(body: unknown): Record<string, unknown> { return (body ?? {}) as Record<string, unknown>; }
+function checkboxValue(value: unknown): boolean { return value === 'on' || value === 'true' || value === true; }
+function numberOrNull(value: unknown) { return value === '' || value == null ? null : Number(value); }
+function numberOrDefault(value: unknown, fallback: number) { return value === '' || value == null ? fallback : Number(value); }
+function stringOrNull(value: unknown) { const text = String(value ?? '').trim(); return text || null; }
 
 export const pageRoutes: FastifyPluginAsync = async (app) => {
-  app.get('/', async (request, reply) => {
-    const username = getSessionUsername(request);
-    if (!username) {
-      return reply.redirect('/login?next=%2F');
-    }
-    return reply.type('text/html; charset=utf-8').send(buildGetStartedPage(username));
-  });
+  app.get('/', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2F'); return reply.type('text/html; charset=utf-8').send(buildGetStartedPage(username)); });
+  app.get('/canvas', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fcanvas'); const chrome = renderAppChrome(username, '/canvas'); const uiDevUrl = app.config.uiDevUrl.replace(/\/$/, ''); const bootPayload = JSON.stringify({ currentUser: username, currentPath: '/canvas' }).replaceAll('<', '\u003c'); return reply.type('text/html; charset=utf-8').send(`<!doctype html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>Matrix Manager · Canvas</title><style>*{box-sizing:border-box}body{font-family:Inter,system-ui,sans-serif;background:#f8fafc;color:#0f172a;margin:0}${chrome.css}#root{min-height:100vh}.notice{max-width:1100px;margin:16px auto 0;padding:0 16px;color:#64748b;font-size:14px}</style><script type="module">import RefreshRuntime from "${uiDevUrl}/@react-refresh";RefreshRuntime.injectIntoGlobalHook(window);window.$RefreshReg$=()=>{};window.$RefreshSig$=()=>(type)=>type;window.__vite_plugin_react_preamble_installed__=true;</script><script type="module" src="${uiDevUrl}/@vite/client"></script></head><body>${chrome.html}<div class="notice">Canvas is using the React UI against the TypeScript auth flow.</div><div id="root" data-page="canvas"></div><script id="mm-react-props" type="application/json">${bootPayload}</script><script type="module" src="${uiDevUrl}/src/main.tsx"></script></body></html>`); });
+  app.get('/login', async (request, reply) => { if (getSessionUsername(request)) return reply.redirect('/'); const next = typeof request.query === 'object' && request.query && 'next' in request.query ? String((request.query as Record<string, unknown>).next ?? '/') : '/'; return reply.type('text/html; charset=utf-8').send(renderLogin(app, '', next)); });
 
-  app.get('/canvas', async (request, reply) => {
-    const username = getSessionUsername(request);
-    if (!username) {
-      return reply.redirect('/login?next=%2Fcanvas');
-    }
-    const chrome = renderAppChrome(username, '/canvas');
-    const uiDevUrl = app.config.uiDevUrl.replace(/\/$/, '');
-    const bootPayload = JSON.stringify({ currentUser: username, currentPath: '/canvas' }).replaceAll('<', '\u003c');
-    return reply.type('text/html; charset=utf-8').send(`<!doctype html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>Matrix Manager · Canvas</title><style>*{box-sizing:border-box}body{font-family:Inter,system-ui,sans-serif;background:#f8fafc;color:#0f172a;margin:0}${chrome.css}#root{min-height:100vh}.notice{max-width:1100px;margin:16px auto 0;padding:0 16px;color:#64748b;font-size:14px}</style><script type="module">import RefreshRuntime from "${uiDevUrl}/@react-refresh";RefreshRuntime.injectIntoGlobalHook(window);window.$RefreshReg$=()=>{};window.$RefreshSig$=()=>(type)=>type;window.__vite_plugin_react_preamble_installed__=true;</script><script type="module" src="${uiDevUrl}/@vite/client"></script></head><body>${chrome.html}<div class="notice">Canvas is using the React UI against the TypeScript auth flow.</div><div id="root" data-page="canvas"></div><script id="mm-react-props" type="application/json">${bootPayload}</script><script type="module" src="${uiDevUrl}/src/main.tsx"></script></body></html>`);
-  });
+  app.get('/orgs', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Forgs'); return reply.type('text/html; charset=utf-8').send(buildOrganizationsPage(username, listOrganizations(), String((request.query as Record<string, unknown> | undefined)?.flash ?? ''))); });
+  app.post('/orgs/create', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Forgs'); try { const body = asBody(request.body); createOrganization({ name: String(body.name ?? '').trim(), description: stringOrNull(body.description) }); return redirectWithFlash(reply, '/orgs', 'Organization created.'); } catch (error) { return redirectWithFlash(reply, '/orgs', formatWorkforceError(error).detail); } });
+  app.post('/orgs/:organizationId/update', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Forgs'); try { const organizationId = Number((request.params as { organizationId: string }).organizationId); const body = asBody(request.body); updateOrganization(organizationId, { name: String(body.name ?? '').trim(), description: stringOrNull(body.description) }); return redirectWithFlash(reply, '/orgs', 'Organization updated.'); } catch (error) { return redirectWithFlash(reply, '/orgs', formatWorkforceError(error).detail); } });
+  app.post('/orgs/:organizationId/delete', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Forgs'); const organizationId = Number((request.params as { organizationId: string }).organizationId); const result = deleteOrganization(organizationId); return redirectWithFlash(reply, '/orgs', result.ok ? 'Organization deleted.' : result.detail); });
 
-  app.get('/login', async (request, reply) => {
-    if (getSessionUsername(request)) {
-      return reply.redirect('/');
-    }
+  app.get('/job-codes', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fjob-codes'); return reply.type('text/html; charset=utf-8').send(buildJobCodesPage(username, listJobCodes(), String((request.query as Record<string, unknown> | undefined)?.flash ?? ''))); });
+  app.post('/job-codes/create', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fjob-codes'); try { const body = asBody(request.body); createJobCode({ name: String(body.name ?? '').trim(), is_leader: checkboxValue(body.is_leader) }); return redirectWithFlash(reply, '/job-codes', 'Job code created.'); } catch (error) { return redirectWithFlash(reply, '/job-codes', formatWorkforceError(error).detail); } });
+  app.post('/job-codes/:jobCodeId/update', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fjob-codes'); try { const jobCodeId = Number((request.params as { jobCodeId: string }).jobCodeId); const body = asBody(request.body); updateJobCode(jobCodeId, { name: String(body.name ?? '').trim(), is_leader: checkboxValue(body.is_leader) }); return redirectWithFlash(reply, '/job-codes', 'Job code updated.'); } catch (error) { return redirectWithFlash(reply, '/job-codes', formatWorkforceError(error).detail); } });
+  app.post('/job-codes/:jobCodeId/delete', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fjob-codes'); const jobCodeId = Number((request.params as { jobCodeId: string }).jobCodeId); const result = deleteJobCode(jobCodeId); return redirectWithFlash(reply, '/job-codes', result.ok ? 'Job code deleted.' : result.detail); });
 
-    const next = typeof request.query === 'object' && request.query && 'next' in request.query
-      ? String((request.query as Record<string, unknown>).next ?? '/')
-      : '/';
+  app.get('/people', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fpeople'); return reply.type('text/html; charset=utf-8').send(buildEmployeesPage(username, listEmployees(), listOrganizations(), listJobCodes(), String((request.query as Record<string, unknown> | undefined)?.flash ?? ''))); });
+  app.post('/people/create', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fpeople'); try { const body = asBody(request.body); createEmployee({ name: String(body.name ?? '').trim(), organization_id: Number(body.organization_id), job_code_id: Number(body.job_code_id), role: stringOrNull(body.role), location: stringOrNull(body.location), manager_id: numberOrNull(body.manager_id), capacity: numberOrDefault(body.capacity, 1) }); return redirectWithFlash(reply, '/people', 'Employee created.'); } catch (error) { return redirectWithFlash(reply, '/people', formatWorkforceError(error).detail); } });
+  app.post('/people/:employeeId/update', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fpeople'); try { const employeeId = Number((request.params as { employeeId: string }).employeeId); const body = asBody(request.body); updateEmployee(employeeId, { name: String(body.name ?? '').trim(), organization_id: Number(body.organization_id), job_code_id: Number(body.job_code_id), role: stringOrNull(body.role), location: stringOrNull(body.location), manager_id: numberOrNull(body.manager_id), capacity: numberOrDefault(body.capacity, 1) }); return redirectWithFlash(reply, '/people', 'Employee updated.'); } catch (error) { return redirectWithFlash(reply, '/people', formatWorkforceError(error).detail); } });
+  app.post('/people/:employeeId/delete', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fpeople'); const employeeId = Number((request.params as { employeeId: string }).employeeId); const result = deleteEmployee(employeeId); return redirectWithFlash(reply, '/people', result.ok ? 'Employee deleted.' : result.detail); });
 
-    return reply.type('text/html; charset=utf-8').send(renderLogin(app, '', next));
-  });
+  app.get('/planning', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fplanning'); return reply.type('text/html; charset=utf-8').send(buildProjectsPage(username, listProjects(), String((request.query as Record<string, unknown> | undefined)?.flash ?? ''))); });
+  app.post('/planning/create', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fplanning'); try { const body = asBody(request.body); createProject({ name: String(body.name ?? '').trim(), description: stringOrNull(body.description), start_date: stringOrNull(body.start_date), end_date: stringOrNull(body.end_date) }); return redirectWithFlash(reply, '/planning', 'Project created.'); } catch (error) { return redirectWithFlash(reply, '/planning', formatWorkforceError(error).detail); } });
+  app.post('/planning/:projectId/update', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fplanning'); try { const projectId = Number((request.params as { projectId: string }).projectId); const body = asBody(request.body); updateProject(projectId, { name: String(body.name ?? '').trim(), description: stringOrNull(body.description), start_date: stringOrNull(body.start_date), end_date: stringOrNull(body.end_date) }); return redirectWithFlash(reply, '/planning', 'Project updated.'); } catch (error) { return redirectWithFlash(reply, '/planning', formatWorkforceError(error).detail); } });
+  app.post('/planning/:projectId/delete', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fplanning'); const projectId = Number((request.params as { projectId: string }).projectId); const result = deleteProject(projectId); return redirectWithFlash(reply, '/planning', result.ok ? 'Project deleted.' : result.detail); });
 
-  app.get('/orgs', async (request, reply) => {
-    const username = getSessionUsername(request);
-    if (!username) return reply.redirect('/login?next=%2Forgs');
-    return reply.type('text/html; charset=utf-8').send(buildOrganizationsPage(username, listOrganizations(), String((request.query as Record<string, unknown> | undefined)?.flash ?? '')));
-  });
+  app.get('/demands', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fdemands'); return reply.type('text/html; charset=utf-8').send(buildDemandsPage(username, listDemands(), listProjects(), listOrganizations(), listJobCodes(), String((request.query as Record<string, unknown> | undefined)?.flash ?? ''))); });
+  app.post('/demands/create', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fdemands'); try { const body = asBody(request.body); createDemand({ project_id: Number(body.project_id), title: String(body.title ?? '').trim(), organization_id: numberOrNull(body.organization_id), job_code_id: numberOrNull(body.job_code_id), skill_notes: stringOrNull(body.skill_notes), start_date: String(body.start_date ?? ''), end_date: String(body.end_date ?? ''), required_allocation: numberOrDefault(body.required_allocation, 1), notes: stringOrNull(body.notes) }); return redirectWithFlash(reply, '/demands', 'Demand created.'); } catch (error) { return redirectWithFlash(reply, '/demands', formatWorkforceError(error).detail); } });
+  app.post('/demands/:demandId/update', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fdemands'); try { const demandId = Number((request.params as { demandId: string }).demandId); const body = asBody(request.body); updateDemand(demandId, { project_id: Number(body.project_id), title: String(body.title ?? '').trim(), organization_id: numberOrNull(body.organization_id), job_code_id: numberOrNull(body.job_code_id), skill_notes: stringOrNull(body.skill_notes), start_date: String(body.start_date ?? ''), end_date: String(body.end_date ?? ''), required_allocation: numberOrDefault(body.required_allocation, 1), notes: stringOrNull(body.notes) }); return redirectWithFlash(reply, '/demands', 'Demand updated.'); } catch (error) { return redirectWithFlash(reply, '/demands', formatWorkforceError(error).detail); } });
+  app.post('/demands/:demandId/delete', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fdemands'); const demandId = Number((request.params as { demandId: string }).demandId); const result = deleteDemand(demandId); return redirectWithFlash(reply, '/demands', result.ok ? 'Demand deleted.' : result.detail); });
 
-  app.post('/orgs/create', async (request, reply) => {
-    const username = getSessionUsername(request);
-    if (!username) return reply.redirect('/login?next=%2Forgs');
-    try {
-      const body = asBody(request.body);
-      createOrganization({
-        name: String(body.name ?? '').trim(),
-        description: String(body.description ?? '').trim() || null
-      });
-      return redirectWithFlash(reply, '/orgs', 'Organization created.');
-    } catch (error) {
-      return redirectWithFlash(reply, '/orgs', formatWorkforceError(error).detail);
-    }
-  });
+  app.get('/staffing', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fstaffing'); return reply.type('text/html; charset=utf-8').send(buildAssignmentsPage(username, listAssignments(), listEmployees(), listProjects(), listDemands(), String((request.query as Record<string, unknown> | undefined)?.flash ?? ''))); });
+  app.post('/staffing/create', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fstaffing'); try { const body = asBody(request.body); createAssignment({ employee_id: Number(body.employee_id), project_id: Number(body.project_id), demand_id: numberOrNull(body.demand_id), start_date: String(body.start_date ?? ''), end_date: String(body.end_date ?? ''), allocation: numberOrDefault(body.allocation, 1), notes: stringOrNull(body.notes) }); return redirectWithFlash(reply, '/staffing', 'Assignment created.'); } catch (error) { return redirectWithFlash(reply, '/staffing', formatWorkforceError(error).detail); } });
+  app.post('/staffing/:assignmentId/update', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fstaffing'); try { const assignmentId = Number((request.params as { assignmentId: string }).assignmentId); const body = asBody(request.body); updateAssignment(assignmentId, { employee_id: Number(body.employee_id), project_id: Number(body.project_id), demand_id: numberOrNull(body.demand_id), start_date: String(body.start_date ?? ''), end_date: String(body.end_date ?? ''), allocation: numberOrDefault(body.allocation, 1), notes: stringOrNull(body.notes) }); return redirectWithFlash(reply, '/staffing', 'Assignment updated.'); } catch (error) { return redirectWithFlash(reply, '/staffing', formatWorkforceError(error).detail); } });
+  app.post('/staffing/:assignmentId/delete', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fstaffing'); const assignmentId = Number((request.params as { assignmentId: string }).assignmentId); const result = deleteAssignment(assignmentId); return redirectWithFlash(reply, '/staffing', result.ok ? 'Assignment deleted.' : result.detail); });
 
-  app.post('/orgs/:organizationId/update', async (request, reply) => {
-    const username = getSessionUsername(request);
-    if (!username) return reply.redirect('/login?next=%2Forgs');
-    try {
-      const organizationId = Number((request.params as { organizationId: string }).organizationId);
-      const body = asBody(request.body);
-      updateOrganization(organizationId, {
-        name: String(body.name ?? '').trim(),
-        description: String(body.description ?? '').trim() || null
-      });
-      return redirectWithFlash(reply, '/orgs', 'Organization updated.');
-    } catch (error) {
-      return redirectWithFlash(reply, '/orgs', formatWorkforceError(error).detail);
-    }
-  });
+  app.get('/dashboard', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fdashboard'); return reply.type('text/html; charset=utf-8').send(buildDashboardPage(username, getDashboardData(username), String((request.query as Record<string, unknown> | undefined)?.flash ?? ''))); });
+  app.post('/dashboard/tracked/add', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fdashboard'); try { const employeeId = Number(asBody(request.body).employee_id); const current = getDashboardData(username); updateDashboardTrackedEmployees(username, { employee_ids: [...new Set(current.tracked_employees.map((employee) => employee.id).concat(employeeId))] }); return redirectWithFlash(reply, '/dashboard', 'Employee added to tracked list.'); } catch (error) { return redirectWithFlash(reply, '/dashboard', formatWorkforceError(error).detail); } });
+  app.post('/dashboard/tracked/remove', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fdashboard'); try { const employeeId = Number(asBody(request.body).employee_id); const current = getDashboardData(username); updateDashboardTrackedEmployees(username, { employee_ids: current.tracked_employees.map((employee) => employee.id).filter((id) => id !== employeeId) }); return redirectWithFlash(reply, '/dashboard', 'Employee removed from tracked list.'); } catch (error) { return redirectWithFlash(reply, '/dashboard', formatWorkforceError(error).detail); } });
+  app.get('/forecast', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fforecast'); return reply.type('text/html; charset=utf-8').send(buildForecastPage(username, getForecastData(), String((request.query as Record<string, unknown> | undefined)?.flash ?? ''))); });
 
-  app.post('/orgs/:organizationId/delete', async (request, reply) => {
-    const username = getSessionUsername(request);
-    if (!username) return reply.redirect('/login?next=%2Forgs');
-    const organizationId = Number((request.params as { organizationId: string }).organizationId);
-    const result = deleteOrganization(organizationId);
-    return redirectWithFlash(reply, '/orgs', result.ok ? 'Organization deleted.' : result.detail);
-  });
-
-  app.get('/job-codes', async (request, reply) => {
-    const username = getSessionUsername(request);
-    if (!username) return reply.redirect('/login?next=%2Fjob-codes');
-    return reply.type('text/html; charset=utf-8').send(buildJobCodesPage(username, listJobCodes(), String((request.query as Record<string, unknown> | undefined)?.flash ?? '')));
-  });
-
-  app.post('/job-codes/create', async (request, reply) => {
-    const username = getSessionUsername(request);
-    if (!username) return reply.redirect('/login?next=%2Fjob-codes');
-    try {
-      const body = asBody(request.body);
-      createJobCode({
-        name: String(body.name ?? '').trim(),
-        is_leader: checkboxValue(body.is_leader)
-      });
-      return redirectWithFlash(reply, '/job-codes', 'Job code created.');
-    } catch (error) {
-      return redirectWithFlash(reply, '/job-codes', formatWorkforceError(error).detail);
-    }
-  });
-
-  app.post('/job-codes/:jobCodeId/update', async (request, reply) => {
-    const username = getSessionUsername(request);
-    if (!username) return reply.redirect('/login?next=%2Fjob-codes');
-    try {
-      const jobCodeId = Number((request.params as { jobCodeId: string }).jobCodeId);
-      const body = asBody(request.body);
-      updateJobCode(jobCodeId, {
-        name: String(body.name ?? '').trim(),
-        is_leader: checkboxValue(body.is_leader)
-      });
-      return redirectWithFlash(reply, '/job-codes', 'Job code updated.');
-    } catch (error) {
-      return redirectWithFlash(reply, '/job-codes', formatWorkforceError(error).detail);
-    }
-  });
-
-  app.post('/job-codes/:jobCodeId/delete', async (request, reply) => {
-    const username = getSessionUsername(request);
-    if (!username) return reply.redirect('/login?next=%2Fjob-codes');
-    const jobCodeId = Number((request.params as { jobCodeId: string }).jobCodeId);
-    const result = deleteJobCode(jobCodeId);
-    return redirectWithFlash(reply, '/job-codes', result.ok ? 'Job code deleted.' : result.detail);
-  });
-
-  app.get('/people', async (request, reply) => {
-    const username = getSessionUsername(request);
-    if (!username) return reply.redirect('/login?next=%2Fpeople');
-    return reply.type('text/html; charset=utf-8').send(buildEmployeesPage(username, listEmployees(), listOrganizations(), listJobCodes(), String((request.query as Record<string, unknown> | undefined)?.flash ?? '')));
-  });
-
-  app.post('/people/create', async (request, reply) => {
-    const username = getSessionUsername(request);
-    if (!username) return reply.redirect('/login?next=%2Fpeople');
-    try {
-      const body = asBody(request.body);
-      createEmployee({
-        name: String(body.name ?? '').trim(),
-        organization_id: Number(body.organization_id),
-        job_code_id: Number(body.job_code_id),
-        role: String(body.role ?? '').trim() || null,
-        location: String(body.location ?? '').trim() || null,
-        manager_id: body.manager_id ? Number(body.manager_id) : null,
-        capacity: Number(body.capacity || 1)
-      });
-      return redirectWithFlash(reply, '/people', 'Employee created.');
-    } catch (error) {
-      return redirectWithFlash(reply, '/people', formatWorkforceError(error).detail);
-    }
-  });
-
-  app.post('/people/:employeeId/update', async (request, reply) => {
-    const username = getSessionUsername(request);
-    if (!username) return reply.redirect('/login?next=%2Fpeople');
-    try {
-      const employeeId = Number((request.params as { employeeId: string }).employeeId);
-      const body = asBody(request.body);
-      updateEmployee(employeeId, {
-        name: String(body.name ?? '').trim(),
-        organization_id: Number(body.organization_id),
-        job_code_id: Number(body.job_code_id),
-        role: String(body.role ?? '').trim() || null,
-        location: String(body.location ?? '').trim() || null,
-        manager_id: body.manager_id ? Number(body.manager_id) : null,
-        capacity: Number(body.capacity || 1)
-      });
-      return redirectWithFlash(reply, '/people', 'Employee updated.');
-    } catch (error) {
-      return redirectWithFlash(reply, '/people', formatWorkforceError(error).detail);
-    }
-  });
-
-  app.post('/people/:employeeId/delete', async (request, reply) => {
-    const username = getSessionUsername(request);
-    if (!username) return reply.redirect('/login?next=%2Fpeople');
-    const employeeId = Number((request.params as { employeeId: string }).employeeId);
-    const result = deleteEmployee(employeeId);
-    return redirectWithFlash(reply, '/people', result.ok ? 'Employee deleted.' : result.detail);
-  });
-
-  app.get('/session', async (request, reply) => {
-    const username = getSessionUsername(request);
-    if (!username) {
-      return reply.redirect('/login?next=%2Fsession');
-    }
-
-    return {
-      authenticated: true,
-      username
-    };
-  });
+  app.get('/session', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fsession'); return { authenticated: true, username }; });
 };
 
-export function renderLoginError(app: Parameters<FastifyPluginAsync>[0], error: string, next: string) {
-  return renderLogin(app, error, next);
-}
+export function renderLoginError(app: Parameters<FastifyPluginAsync>[0], error: string, next: string) { return renderLogin(app, error, next); }

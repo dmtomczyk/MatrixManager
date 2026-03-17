@@ -1,244 +1,37 @@
 import { renderAppChrome } from './chrome.js';
 
-interface OrganizationView {
-  id: number;
-  name: string;
-  description?: string | null;
-  child_organization_count?: number;
-  employee_count?: number;
-}
+type IdName = { id: number; name: string };
 
-interface JobCodeView {
-  id: number;
-  name: string;
-  is_leader: boolean;
-  assigned_employee_count?: number;
-}
+interface OrganizationView extends IdName { description?: string | null; child_organization_count?: number; employee_count?: number; }
+interface JobCodeView extends IdName { is_leader: boolean; assigned_employee_count?: number; }
+interface EmployeeView extends IdName { employee_type?: string | null; job_code_id?: number | null; job_code_name?: string | null; organization_id?: number; organization_name?: string | null; manager_id?: number | null; manager_name?: string | null; role?: string | null; location?: string | null; capacity?: number | null; active_assignment_count?: number; active_allocation_percent?: number; capacity_percent?: number; load_status?: string; }
+interface ProjectView extends IdName { description?: string | null; start_date?: string | null; end_date?: string | null; assignment_count?: number; demand_count?: number; assigned_allocation?: number; demanded_allocation?: number; }
+interface DemandView { id: number; title: string; project_id: number; project_name?: string | null; organization_id?: number | null; organization_name?: string | null; job_code_id?: number | null; job_code_name?: string | null; skill_notes?: string | null; start_date: string; end_date: string; required_allocation: number; fulfilled_allocation?: number; remaining_allocation?: number; notes?: string | null; }
+interface AssignmentView { id: number; employee_id: number; employee_name?: string | null; project_id: number; project_name?: string | null; demand_id?: number | null; demand_title?: string | null; start_date: string; end_date: string; allocation: number; notes?: string | null; organization_name?: string | null; }
+interface DashboardView { username: string; employee_name?: string | null; direct_reports: EmployeeView[]; tracked_employees: EmployeeView[]; submitted_items: AssignmentView[]; available_tracking_candidates: EmployeeView[]; }
+interface ForecastProjectView extends ProjectView { demand_total: number; assignment_total: number; gap_total: number; demand_rows: DemandView[]; assignment_rows: AssignmentView[]; }
 
-interface EmployeeView {
-  id: number;
-  name: string;
-  employee_type?: string | null;
-  job_code_id?: number | null;
-  job_code_name?: string | null;
-  organization_id: number;
-  organization_name?: string | null;
-  manager_id?: number | null;
-  manager_name?: string | null;
-  role?: string | null;
-  location?: string | null;
-  capacity?: number | null;
-}
-
-function escapeHtml(input: string): string {
-  return input
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
+function escapeHtml(input: string): string { return input.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;'); }
+const fmt = (n?: number | null) => n == null ? '—' : Number(n).toFixed(2);
+const pct = (n?: number | null) => n == null ? '—' : `${Math.round(n)}%`;
 
 function layout(title: string, currentUser: string, currentPath: string, body: string, flash = ''): string {
   const chrome = renderAppChrome(currentUser, currentPath);
-  return `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>${escapeHtml(title)}</title>
-    <style>
-      *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,sans-serif;background:#f8fafc;color:#0f172a}
-      ${chrome.css}
-      .wrap{max-width:1200px;margin:0 auto;padding:28px 16px 44px}.meta{color:#64748b;font-size:14px;margin:6px 0 0}
-      h1{margin:0 0 8px;font-size:38px}.lead{color:#475569;max-width:760px;line-height:1.7}
-      .grid{display:grid;grid-template-columns:380px minmax(0,1fr);gap:20px;align-items:start;margin-top:24px}
-      .card{background:white;border:1px solid #e2e8f0;border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(15,23,42,.05)}
-      label{display:block;margin:14px 0 6px;font-size:14px;font-weight:600} input,textarea,select{width:100%;padding:12px 14px;border:1px solid #cbd5e1;border-radius:10px;font:inherit;background:white}
-      button.primary,.button-link{margin-top:16px;padding:12px 14px;border:0;border-radius:10px;background:#0f172a;color:white;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;justify-content:center;align-items:center}
-      button.secondary{padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;background:white;color:#0f172a;font-weight:600;cursor:pointer}
-      button.danger{padding:10px 12px;border:1px solid #fecaca;border-radius:10px;background:#fff1f2;color:#b91c1c;font-weight:600;cursor:pointer}
-      table{width:100%;border-collapse:collapse} th,td{text-align:left;padding:12px 10px;border-bottom:1px solid #e2e8f0;vertical-align:top} th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#64748b}
-      .flash{margin:0 0 16px;border:1px solid #bbf7d0;background:#f0fdf4;color:#166534;border-radius:12px;padding:12px 14px}
-      .empty{color:#64748b}.section-title{margin:0 0 12px;font-size:22px}.row-form{display:grid;gap:10px}.actions{display:flex;gap:8px;flex-wrap:wrap}.subtle{color:#64748b;font-size:13px}
-      .stack{display:grid;gap:12px}.checkbox{display:flex;gap:10px;align-items:center;margin-top:14px}.checkbox input{width:auto}
-      @media (max-width: 980px){.grid{grid-template-columns:1fr}}
-    </style>
-  </head>
-  <body>
-    ${chrome.html}
-    <main class="wrap">
-      ${flash ? `<div class="flash">${escapeHtml(flash)}</div>` : ''}
-      ${body}
-      <div class="meta">Signed in as <strong>${escapeHtml(currentUser)}</strong></div>
-    </main>
-  </body>
-</html>`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>${escapeHtml(title)}</title><style>*{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,sans-serif;background:#f8fafc;color:#0f172a}${chrome.css}.wrap{max-width:1260px;margin:0 auto;padding:28px 16px 44px}.meta{color:#64748b;font-size:14px;margin:6px 0 0}h1{margin:0 0 8px;font-size:38px}.lead{color:#475569;max-width:860px;line-height:1.7}.grid{display:grid;grid-template-columns:380px minmax(0,1fr);gap:20px;align-items:start;margin-top:24px}.card{background:white;border:1px solid #e2e8f0;border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(15,23,42,.05)}label{display:block;margin:14px 0 6px;font-size:14px;font-weight:600} input,textarea,select{width:100%;padding:12px 14px;border:1px solid #cbd5e1;border-radius:10px;font:inherit;background:white}button.primary,.button-link{margin-top:16px;padding:12px 14px;border:0;border-radius:10px;background:#0f172a;color:white;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;justify-content:center;align-items:center}button.secondary{padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;background:white;color:#0f172a;font-weight:600;cursor:pointer}button.danger{padding:10px 12px;border:1px solid #fecaca;border-radius:10px;background:#fff1f2;color:#b91c1c;font-weight:600;cursor:pointer}table{width:100%;border-collapse:collapse} th,td{text-align:left;padding:12px 10px;border-bottom:1px solid #e2e8f0;vertical-align:top} th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#64748b}.flash{margin:0 0 16px;border:1px solid #bbf7d0;background:#f0fdf4;color:#166534;border-radius:12px;padding:12px 14px}.empty{color:#64748b}.section-title{margin:0 0 12px;font-size:22px}.row-form{display:grid;gap:10px}.actions{display:flex;gap:8px;flex-wrap:wrap}.subtle{color:#64748b;font-size:13px}.stack{display:grid;gap:12px}.checkbox{display:flex;gap:10px;align-items:center;margin-top:14px}.checkbox input{width:auto}.cols-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.pill-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:20px}.pill{padding:14px 16px;border-radius:14px;background:#fff;border:1px solid #e2e8f0}.pill strong{display:block;font-size:28px}.mini-list{display:grid;gap:12px}.mini{border:1px solid #e2e8f0;border-radius:14px;padding:14px 16px;background:#fff}.mini h3{margin:0 0 4px;font-size:16px}.wide-card{margin-top:20px}.status{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:700}.status.over{background:#fee2e2;color:#991b1b}.status.high{background:#fef3c7;color:#92400e}.status.active{background:#dbeafe;color:#1d4ed8}.status.available{background:#dcfce7;color:#166534}@media (max-width: 980px){.grid{grid-template-columns:1fr}.pill-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.cols-2{grid-template-columns:1fr}}</style></head><body>${chrome.html}<main class="wrap">${flash ? `<div class="flash">${escapeHtml(flash)}</div>` : ''}${body}<div class="meta">Signed in as <strong>${escapeHtml(currentUser)}</strong></div></main></body></html>`;
 }
 
-export function buildOrganizationsPage(currentUser: string, organizations: OrganizationView[], flash = ''): string {
-  const rows = organizations.length
-    ? organizations.map((org) => `<tr>
-        <td><strong>${escapeHtml(org.name)}</strong><div class="subtle">ID ${org.id}</div></td>
-        <td>${escapeHtml(org.description || '—')}</td>
-        <td>${org.child_organization_count ?? 0}</td>
-        <td>${org.employee_count ?? 0}</td>
-        <td>
-          <div class="stack">
-            <form method="post" action="/orgs/${org.id}/update" class="row-form">
-              <input name="name" value="${escapeHtml(org.name)}" required />
-              <textarea name="description" rows="2">${escapeHtml(org.description || '')}</textarea>
-              <div class="actions"><button class="secondary" type="submit">Save</button></div>
-            </form>
-            <form method="post" action="/orgs/${org.id}/delete" onsubmit="return confirm('Delete ${escapeHtml(org.name)}?');">
-              <button class="danger" type="submit">Delete</button>
-            </form>
-          </div>
-        </td>
-      </tr>`).join('')
-    : '<tr><td colspan="5" class="empty">No organizations yet.</td></tr>';
+export function buildOrganizationsPage(currentUser: string, organizations: OrganizationView[], flash = ''): string { const rows = organizations.length ? organizations.map((org) => `<tr><td><strong>${escapeHtml(org.name)}</strong><div class="subtle">ID ${org.id}</div></td><td>${escapeHtml(org.description || '—')}</td><td>${org.child_organization_count ?? 0}</td><td>${org.employee_count ?? 0}</td><td><div class="stack"><form method="post" action="/orgs/${org.id}/update" class="row-form"><input name="name" value="${escapeHtml(org.name)}" required /><textarea name="description" rows="2">${escapeHtml(org.description || '')}</textarea><div class="actions"><button class="secondary" type="submit">Save</button></div></form><form method="post" action="/orgs/${org.id}/delete" onsubmit="return confirm('Delete ${escapeHtml(org.name)}?');"><button class="danger" type="submit">Delete</button></form></div></td></tr>`).join('') : '<tr><td colspan="5" class="empty">No organizations yet.</td></tr>'; return layout('Matrix Manager · Organizations', currentUser, '/orgs', `<h1>Organizations</h1><p class="lead">Create and maintain the structural homes for teams and reporting lines. This route is fully backed by the TypeScript workforce service.</p><div class="grid"><section class="card"><h2 class="section-title">Create organization</h2><form method="post" action="/orgs/create"><label for="name">Name</label><input id="name" name="name" required /><label for="description">Description</label><textarea id="description" name="description" rows="4"></textarea><button class="primary" type="submit">Create organization</button></form></section><section class="card"><h2 class="section-title">Current organizations</h2><table><thead><tr><th>Name</th><th>Description</th><th>Children</th><th>People</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table></section></div>`, flash); }
 
-  return layout('Matrix Manager · Organizations', currentUser, '/orgs', `
-    <h1>Organizations</h1>
-    <p class="lead">Create and maintain the structural homes for teams and reporting lines. This route is fully backed by the TypeScript workforce service.</p>
-    <div class="grid">
-      <section class="card">
-        <h2 class="section-title">Create organization</h2>
-        <form method="post" action="/orgs/create">
-          <label for="name">Name</label>
-          <input id="name" name="name" required />
-          <label for="description">Description</label>
-          <textarea id="description" name="description" rows="4"></textarea>
-          <button class="primary" type="submit">Create organization</button>
-        </form>
-      </section>
-      <section class="card">
-        <h2 class="section-title">Current organizations</h2>
-        <table>
-          <thead><tr><th>Name</th><th>Description</th><th>Children</th><th>People</th><th>Actions</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </section>
-    </div>
-  `, flash);
-}
+export function buildJobCodesPage(currentUser: string, jobCodes: JobCodeView[], flash = ''): string { const rows = jobCodes.length ? jobCodes.map((jobCode) => `<tr><td><strong>${escapeHtml(jobCode.name)}</strong><div class="subtle">ID ${jobCode.id}</div></td><td>${jobCode.is_leader ? 'Leader' : 'IC'}</td><td>${jobCode.assigned_employee_count ?? 0}</td><td><div class="stack"><form method="post" action="/job-codes/${jobCode.id}/update" class="row-form"><input name="name" value="${escapeHtml(jobCode.name)}" required /><label class="checkbox"><input type="checkbox" name="is_leader" ${jobCode.is_leader ? 'checked' : ''} /> Leader role</label><div class="actions"><button class="secondary" type="submit">Save</button></div></form><form method="post" action="/job-codes/${jobCode.id}/delete" onsubmit="return confirm('Delete ${escapeHtml(jobCode.name)}?');"><button class="danger" type="submit">Delete</button></form></div></td></tr>`).join('') : '<tr><td colspan="4" class="empty">No job codes yet.</td></tr>'; return layout('Matrix Manager · Job Codes', currentUser, '/job-codes', `<h1>Job Codes</h1><p class="lead">Define the reusable roles people can hold. Leader job codes allow employees using them to act as managers.</p><div class="grid"><section class="card"><h2 class="section-title">Create job code</h2><form method="post" action="/job-codes/create"><label for="name">Name</label><input id="name" name="name" required /><label class="checkbox"><input type="checkbox" name="is_leader" /> Leader role</label><button class="primary" type="submit">Create job code</button></form></section><section class="card"><h2 class="section-title">Current job codes</h2><table><thead><tr><th>Name</th><th>Type</th><th>Assigned</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table></section></div>`, flash); }
 
-export function buildJobCodesPage(currentUser: string, jobCodes: JobCodeView[], flash = ''): string {
-  const rows = jobCodes.length
-    ? jobCodes.map((jobCode) => `<tr>
-        <td><strong>${escapeHtml(jobCode.name)}</strong><div class="subtle">ID ${jobCode.id}</div></td>
-        <td>${jobCode.is_leader ? 'Leader' : 'IC'}</td>
-        <td>${jobCode.assigned_employee_count ?? 0}</td>
-        <td>
-          <div class="stack">
-            <form method="post" action="/job-codes/${jobCode.id}/update" class="row-form">
-              <input name="name" value="${escapeHtml(jobCode.name)}" required />
-              <label class="checkbox"><input type="checkbox" name="is_leader" ${jobCode.is_leader ? 'checked' : ''} /> Leader role</label>
-              <div class="actions"><button class="secondary" type="submit">Save</button></div>
-            </form>
-            <form method="post" action="/job-codes/${jobCode.id}/delete" onsubmit="return confirm('Delete ${escapeHtml(jobCode.name)}?');">
-              <button class="danger" type="submit">Delete</button>
-            </form>
-          </div>
-        </td>
-      </tr>`).join('')
-    : '<tr><td colspan="4" class="empty">No job codes yet.</td></tr>';
+export function buildEmployeesPage(currentUser: string, employees: EmployeeView[], organizations: OrganizationView[], jobCodes: JobCodeView[], flash = ''): string { const orgOptions = organizations.length ? organizations.map((org) => `<option value="${org.id}">${escapeHtml(org.name)}</option>`).join('') : '<option value="">Create an organization first</option>'; const jobCodeOptions = jobCodes.length ? jobCodes.map((jobCode) => `<option value="${jobCode.id}">${escapeHtml(jobCode.name)}${jobCode.is_leader ? ' · Leader' : ''}</option>`).join('') : '<option value="">Create a job code first</option>'; const managerOptions = ['<option value="">No manager</option>'].concat(employees.filter((employee) => employee.employee_type === 'L').map((employee) => `<option value="${employee.id}">${escapeHtml(employee.name)}</option>`)).join(''); const rows = employees.length ? employees.map((employee) => `<tr><td><strong>${escapeHtml(employee.name)}</strong><div class="subtle">ID ${employee.id}</div></td><td>${escapeHtml(employee.job_code_name || '—')}</td><td>${escapeHtml(employee.employee_type || '—')}</td><td>${escapeHtml(employee.organization_name || '—')}</td><td>${escapeHtml(employee.manager_name || '—')}</td><td>${escapeHtml(employee.location || '—')}</td><td>${employee.capacity ?? 1}</td><td><div class="stack"><form method="post" action="/people/${employee.id}/update" class="row-form"><input name="name" value="${escapeHtml(employee.name)}" required /><select name="job_code_id">${jobCodes.map((jobCode) => `<option value="${jobCode.id}" ${employee.job_code_id === jobCode.id ? 'selected' : ''}>${escapeHtml(jobCode.name)}${jobCode.is_leader ? ' · Leader' : ''}</option>`).join('')}</select><select name="organization_id">${organizations.map((org) => `<option value="${org.id}" ${employee.organization_id === org.id ? 'selected' : ''}>${escapeHtml(org.name)}</option>`).join('')}</select><select name="manager_id">${['<option value="">No manager</option>'].concat(employees.filter((item) => item.employee_type === 'L' && item.id !== employee.id).map((item) => `<option value="${item.id}" ${employee.manager_id === item.id ? 'selected' : ''}>${escapeHtml(item.name)}</option>`)).join('')}</select><input name="role" value="${escapeHtml(employee.role || '')}" placeholder="Role label (optional)" /><input name="location" value="${escapeHtml(employee.location || '')}" placeholder="Location" /><input name="capacity" type="number" min="0.1" step="0.1" value="${employee.capacity ?? 1}" /><div class="actions"><button class="secondary" type="submit">Save</button></div></form><form method="post" action="/people/${employee.id}/delete" onsubmit="return confirm('Delete ${escapeHtml(employee.name)}?');"><button class="danger" type="submit">Delete</button></form></div></td></tr>`).join('') : '<tr><td colspan="8" class="empty">No employees yet.</td></tr>'; return layout('Matrix Manager · Employees', currentUser, '/people', `<h1>Employees</h1><p class="lead">Add people to the model, place them inside organizations, and connect them to reusable job codes. This page is now TypeScript-backed for create, edit, and delete.</p><div class="grid"><section class="card"><h2 class="section-title">Create employee</h2><form method="post" action="/people/create"><label for="name">Name</label><input id="name" name="name" required /><label for="job_code_id">Job code</label><select id="job_code_id" name="job_code_id" ${jobCodes.length ? '' : 'disabled'} required>${jobCodeOptions}</select><label for="organization_id">Organization</label><select id="organization_id" name="organization_id" ${organizations.length ? '' : 'disabled'} required>${orgOptions}</select><label for="manager_id">Manager</label><select id="manager_id" name="manager_id">${managerOptions}</select><label for="role">Role label</label><input id="role" name="role" /><label for="location">Location</label><input id="location" name="location" /><label for="capacity">Capacity</label><input id="capacity" name="capacity" type="number" min="0.1" step="0.1" value="1" /><button class="primary" type="submit" ${organizations.length && jobCodes.length ? '' : 'disabled'}>Create employee</button></form></section><section class="card"><h2 class="section-title">Current employees</h2><table><thead><tr><th>Name</th><th>Job Code</th><th>Type</th><th>Organization</th><th>Manager</th><th>Location</th><th>Capacity</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table></section></div>`, flash); }
 
-  return layout('Matrix Manager · Job Codes', currentUser, '/job-codes', `
-    <h1>Job Codes</h1>
-    <p class="lead">Define the reusable roles people can hold. Leader job codes allow employees using them to act as managers.</p>
-    <div class="grid">
-      <section class="card">
-        <h2 class="section-title">Create job code</h2>
-        <form method="post" action="/job-codes/create">
-          <label for="name">Name</label>
-          <input id="name" name="name" required />
-          <label class="checkbox"><input type="checkbox" name="is_leader" /> Leader role</label>
-          <button class="primary" type="submit">Create job code</button>
-        </form>
-      </section>
-      <section class="card">
-        <h2 class="section-title">Current job codes</h2>
-        <table>
-          <thead><tr><th>Name</th><th>Type</th><th>Assigned</th><th>Actions</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </section>
-    </div>
-  `, flash);
-}
+export function buildProjectsPage(currentUser: string, projects: ProjectView[], flash = ''): string { const rows = projects.length ? projects.map((project) => `<tr><td><strong>${escapeHtml(project.name)}</strong><div class="subtle">ID ${project.id}</div></td><td>${escapeHtml(project.description || '—')}</td><td>${escapeHtml(project.start_date || '—')} → ${escapeHtml(project.end_date || '—')}</td><td>${project.demand_count ?? 0}</td><td>${project.assignment_count ?? 0}</td><td>${fmt(project.demanded_allocation)}</td><td>${fmt(project.assigned_allocation)}</td><td><div class="stack"><form method="post" action="/planning/${project.id}/update" class="row-form"><input name="name" value="${escapeHtml(project.name)}" required /><textarea name="description" rows="2">${escapeHtml(project.description || '')}</textarea><div class="cols-2"><input type="date" name="start_date" value="${escapeHtml(project.start_date || '')}" /><input type="date" name="end_date" value="${escapeHtml(project.end_date || '')}" /></div><div class="actions"><button class="secondary" type="submit">Save</button></div></form><form method="post" action="/planning/${project.id}/delete" onsubmit="return confirm('Delete ${escapeHtml(project.name)} and related TS demand/assignment data?');"><button class="danger" type="submit">Delete</button></form></div></td></tr>`).join('') : '<tr><td colspan="8" class="empty">No projects yet.</td></tr>'; return layout('Matrix Manager · Projects', currentUser, '/planning', `<h1>Projects</h1><p class="lead">Represent the work that needs staffing over time. This TypeScript page mirrors the legacy planning flow with server-rendered create, edit, and delete actions.</p><div class="grid"><section class="card"><h2 class="section-title">Create project</h2><form method="post" action="/planning/create"><label>Name</label><input name="name" required /><label>Description</label><textarea name="description" rows="4"></textarea><div class="cols-2"><div><label>Start date</label><input type="date" name="start_date" /></div><div><label>End date</label><input type="date" name="end_date" /></div></div><button class="primary" type="submit">Create project</button></form></section><section class="card"><h2 class="section-title">Current projects</h2><table><thead><tr><th>Name</th><th>Description</th><th>Dates</th><th>Demands</th><th>Assignments</th><th>Demand FTE</th><th>Assigned FTE</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table></section></div>`, flash); }
 
-export function buildEmployeesPage(currentUser: string, employees: EmployeeView[], organizations: OrganizationView[], jobCodes: JobCodeView[], flash = ''): string {
-  const orgOptions = organizations.length
-    ? organizations.map((org) => `<option value="${org.id}">${escapeHtml(org.name)}</option>`).join('')
-    : '<option value="">Create an organization first</option>';
-  const jobCodeOptions = jobCodes.length
-    ? jobCodes.map((jobCode) => `<option value="${jobCode.id}">${escapeHtml(jobCode.name)}${jobCode.is_leader ? ' · Leader' : ''}</option>`).join('')
-    : '<option value="">Create a job code first</option>';
-  const managerOptions = ['<option value="">No manager</option>']
-    .concat(employees.filter((employee) => employee.employee_type === 'L').map((employee) => `<option value="${employee.id}">${escapeHtml(employee.name)}</option>`)).join('');
-  const rows = employees.length
-    ? employees.map((employee) => `<tr>
-        <td><strong>${escapeHtml(employee.name)}</strong><div class="subtle">ID ${employee.id}</div></td>
-        <td>${escapeHtml(employee.job_code_name || '—')}</td>
-        <td>${escapeHtml(employee.employee_type || '—')}</td>
-        <td>${escapeHtml(employee.organization_name || '—')}</td>
-        <td>${escapeHtml(employee.manager_name || '—')}</td>
-        <td>${escapeHtml(employee.location || '—')}</td>
-        <td>${employee.capacity ?? 1}</td>
-        <td>
-          <div class="stack">
-            <form method="post" action="/people/${employee.id}/update" class="row-form">
-              <input name="name" value="${escapeHtml(employee.name)}" required />
-              <select name="job_code_id" id="employee-job-code">
-                ${jobCodes.map((jobCode) => `<option value="${jobCode.id}" ${employee.job_code_id === jobCode.id ? 'selected' : ''}>${escapeHtml(jobCode.name)}${jobCode.is_leader ? ' · Leader' : ''}</option>`).join('')}
-              </select>
-              <select name="organization_id">${organizations.map((org) => `<option value="${org.id}" ${employee.organization_id === org.id ? 'selected' : ''}>${escapeHtml(org.name)}</option>`).join('')}</select>
-              <select name="manager_id" id="employee-manager">${['<option value="">No manager</option>'].concat(employees.filter((item) => item.employee_type === 'L' && item.id !== employee.id).map((item) => `<option value="${item.id}" ${employee.manager_id === item.id ? 'selected' : ''}>${escapeHtml(item.name)}</option>`)).join('')}</select>
-              <input name="role" value="${escapeHtml(employee.role || '')}" placeholder="Role label (optional)" />
-              <input name="location" value="${escapeHtml(employee.location || '')}" placeholder="Location" />
-              <input name="capacity" type="number" min="0.1" step="0.1" value="${employee.capacity ?? 1}" />
-              <div class="actions"><button class="secondary" type="submit">Save</button></div>
-            </form>
-            <form method="post" action="/people/${employee.id}/delete" onsubmit="return confirm('Delete ${escapeHtml(employee.name)}?');">
-              <button class="danger" type="submit">Delete</button>
-            </form>
-          </div>
-        </td>
-      </tr>`).join('')
-    : '<tr><td colspan="8" class="empty">No employees yet.</td></tr>';
+export function buildDemandsPage(currentUser: string, demands: DemandView[], projects: ProjectView[], organizations: OrganizationView[], jobCodes: JobCodeView[], flash = ''): string { const projectOptions = projects.map((p) => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join(''); const organizationOptions = ['<option value="">Any organization</option>'].concat(organizations.map((o) => `<option value="${o.id}">${escapeHtml(o.name)}</option>`)).join(''); const jobCodeOptions = ['<option value="">Any job code</option>'].concat(jobCodes.map((j) => `<option value="${j.id}">${escapeHtml(j.name)}</option>`)).join(''); const rows = demands.length ? demands.map((demand) => `<tr><td><strong>${escapeHtml(demand.title)}</strong><div class="subtle">ID ${demand.id}</div></td><td>${escapeHtml(demand.project_name || '—')}</td><td>${escapeHtml(demand.organization_name || '—')}</td><td>${escapeHtml(demand.job_code_name || '—')}</td><td>${escapeHtml(demand.start_date)} → ${escapeHtml(demand.end_date)}</td><td>${fmt(demand.required_allocation)}</td><td>${fmt(demand.fulfilled_allocation)}</td><td>${fmt(demand.remaining_allocation)}</td><td><div class="stack"><form method="post" action="/demands/${demand.id}/update" class="row-form"><select name="project_id">${projects.map((p) => `<option value="${p.id}" ${demand.project_id === p.id ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('')}</select><input name="title" value="${escapeHtml(demand.title)}" required /><div class="cols-2"><select name="organization_id">${['<option value="">Any organization</option>'].concat(organizations.map((o) => `<option value="${o.id}" ${demand.organization_id === o.id ? 'selected' : ''}>${escapeHtml(o.name)}</option>`)).join('')}</select><select name="job_code_id">${['<option value="">Any job code</option>'].concat(jobCodes.map((j) => `<option value="${j.id}" ${demand.job_code_id === j.id ? 'selected' : ''}>${escapeHtml(j.name)}</option>`)).join('')}</select></div><input name="skill_notes" value="${escapeHtml(demand.skill_notes || '')}" placeholder="Skill notes" /><div class="cols-2"><input type="date" name="start_date" value="${escapeHtml(demand.start_date)}" required /><input type="date" name="end_date" value="${escapeHtml(demand.end_date)}" required /></div><input type="number" min="0.1" step="0.1" name="required_allocation" value="${demand.required_allocation}" /><textarea name="notes" rows="2">${escapeHtml(demand.notes || '')}</textarea><div class="actions"><button class="secondary" type="submit">Save</button></div></form><form method="post" action="/demands/${demand.id}/delete" onsubmit="return confirm('Delete ${escapeHtml(demand.title)}?');"><button class="danger" type="submit">Delete</button></form></div></td></tr>`).join('') : '<tr><td colspan="9" class="empty">No demands yet.</td></tr>'; return layout('Matrix Manager · Demands', currentUser, '/demands', `<h1>Demands</h1><p class="lead">Define staffing needs against projects with optional org/job-code targeting. Fulfilled and remaining allocation are computed from TypeScript assignment data.</p><div class="grid"><section class="card"><h2 class="section-title">Create demand</h2><form method="post" action="/demands/create"><label>Project</label><select name="project_id" ${projects.length ? '' : 'disabled'} required>${projectOptions || '<option value="">Create a project first</option>'}</select><label>Title</label><input name="title" required /><div class="cols-2"><div><label>Organization</label><select name="organization_id">${organizationOptions}</select></div><div><label>Job code</label><select name="job_code_id">${jobCodeOptions}</select></div></div><label>Skill notes</label><input name="skill_notes" /><div class="cols-2"><div><label>Start date</label><input type="date" name="start_date" required /></div><div><label>End date</label><input type="date" name="end_date" required /></div></div><label>Required allocation (FTE)</label><input type="number" min="0.1" step="0.1" name="required_allocation" value="1" required /><label>Notes</label><textarea name="notes" rows="4"></textarea><button class="primary" type="submit" ${projects.length ? '' : 'disabled'}>Create demand</button></form></section><section class="card"><h2 class="section-title">Current demands</h2><table><thead><tr><th>Title</th><th>Project</th><th>Org</th><th>Job Code</th><th>Dates</th><th>Need</th><th>Filled</th><th>Gap</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table></section></div>`, flash); }
 
-  return layout('Matrix Manager · Employees', currentUser, '/people', `
-    <h1>Employees</h1>
-    <p class="lead">Add people to the model, place them inside organizations, and connect them to reusable job codes. This page is now TypeScript-backed for create, edit, and delete.</p>
-    <div class="grid">
-      <section class="card">
-        <h2 class="section-title">Create employee</h2>
-        <form method="post" action="/people/create">
-          <label for="name">Name</label>
-          <input id="name" name="name" required />
-          <label for="job_code_id">Job code</label>
-          <select id="employee-job-code" name="job_code_id" ${jobCodes.length ? '' : 'disabled'} required>${jobCodeOptions}</select>
-          <label for="organization_id">Organization</label>
-          <select id="organization_id" name="organization_id" ${organizations.length ? '' : 'disabled'} required>${orgOptions}</select>
-          <label for="manager_id">Manager</label>
-          <select id="employee-manager" name="manager_id">${managerOptions}</select>
-          <label for="role">Role label</label>
-          <input id="role" name="role" />
-          <label for="location">Location</label>
-          <input id="location" name="location" />
-          <label for="capacity">Capacity</label>
-          <input id="capacity" name="capacity" type="number" min="0.1" step="0.1" value="1" />
-          <button class="primary" type="submit" ${organizations.length && jobCodes.length ? '' : 'disabled'}>Create employee</button>
-        </form>
-      </section>
-      <section class="card">
-        <h2 class="section-title">Current employees</h2>
-        <table>
-          <thead><tr><th>Name</th><th id="employee-job-code">Job Code</th><th id="employee-type">Type</th><th>Organization</th><th id="employee-manager">Manager</th><th>Location</th><th>Capacity</th><th>Actions</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </section>
-    </div>
-  `, flash);
-}
+export function buildAssignmentsPage(currentUser: string, assignments: AssignmentView[], employees: EmployeeView[], projects: ProjectView[], demands: DemandView[], flash = ''): string { const employeeOptions = employees.map((e) => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join(''); const projectOptions = projects.map((p) => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join(''); const demandOptions = ['<option value="">No linked demand</option>'].concat(demands.map((d) => `<option value="${d.id}">${escapeHtml(d.project_name || '')} · ${escapeHtml(d.title)}</option>`)).join(''); const rows = assignments.length ? assignments.map((assignment) => `<tr><td><strong>${escapeHtml(assignment.employee_name || '—')}</strong><div class="subtle">ID ${assignment.id}</div></td><td>${escapeHtml(assignment.project_name || '—')}</td><td>${escapeHtml(assignment.demand_title || '—')}</td><td>${escapeHtml(assignment.organization_name || '—')}</td><td>${escapeHtml(assignment.start_date)} → ${escapeHtml(assignment.end_date)}</td><td>${fmt(assignment.allocation)}</td><td>${escapeHtml(assignment.notes || '—')}</td><td><div class="stack"><form method="post" action="/staffing/${assignment.id}/update" class="row-form"><div class="cols-2"><select name="employee_id">${employees.map((e) => `<option value="${e.id}" ${assignment.employee_id === e.id ? 'selected' : ''}>${escapeHtml(e.name)}</option>`).join('')}</select><select name="project_id">${projects.map((p) => `<option value="${p.id}" ${assignment.project_id === p.id ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('')}</select></div><select name="demand_id">${['<option value="">No linked demand</option>'].concat(demands.filter((d) => d.project_id === assignment.project_id || d.id === assignment.demand_id).map((d) => `<option value="${d.id}" ${assignment.demand_id === d.id ? 'selected' : ''}>${escapeHtml(d.title)}</option>`)).join('')}</select><div class="cols-2"><input type="date" name="start_date" value="${escapeHtml(assignment.start_date)}" required /><input type="date" name="end_date" value="${escapeHtml(assignment.end_date)}" required /></div><input type="number" min="0.1" step="0.1" name="allocation" value="${assignment.allocation}" required /><textarea name="notes" rows="2">${escapeHtml(assignment.notes || '')}</textarea><div class="actions"><button class="secondary" type="submit">Save</button></div></form><form method="post" action="/staffing/${assignment.id}/delete" onsubmit="return confirm('Delete this assignment?');"><button class="danger" type="submit">Delete</button></form></div></td></tr>`).join('') : '<tr><td colspan="8" class="empty">No assignments yet.</td></tr>'; return layout('Matrix Manager · Assignments', currentUser, '/staffing', `<h1>Assignments</h1><p class="lead">Connect people to projects with dates and allocation. Capacity validation is enforced in the TypeScript service so overlapping work cannot silently overbook employees.</p><div class="grid"><section class="card"><h2 class="section-title">Create assignment</h2><form method="post" action="/staffing/create"><label>Employee</label><select name="employee_id" ${employees.length ? '' : 'disabled'} required>${employeeOptions || '<option value="">Create an employee first</option>'}</select><label>Project</label><select name="project_id" ${projects.length ? '' : 'disabled'} required>${projectOptions || '<option value="">Create a project first</option>'}</select><label>Demand</label><select name="demand_id">${demandOptions}</select><div class="cols-2"><div><label>Start date</label><input type="date" name="start_date" required /></div><div><label>End date</label><input type="date" name="end_date" required /></div></div><label>Allocation (FTE)</label><input type="number" min="0.1" step="0.1" name="allocation" value="1" required /><label>Notes</label><textarea name="notes" rows="4"></textarea><button class="primary" type="submit" ${employees.length && projects.length ? '' : 'disabled'}>Create assignment</button></form></section><section class="card"><h2 class="section-title">Current assignments</h2><table><thead><tr><th>Employee</th><th>Project</th><th>Demand</th><th>Org</th><th>Dates</th><th>Allocation</th><th>Notes</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table></section></div>`, flash); }
+
+export function buildDashboardPage(currentUser: string, dashboard: DashboardView, flash = ''): string { const pills = [{ label: 'Direct reports', value: dashboard.direct_reports.length }, { label: 'Tracked people', value: dashboard.tracked_employees.length }, { label: 'Submitted items', value: dashboard.submitted_items.length }, { label: 'Available to track', value: dashboard.available_tracking_candidates.length }].map((item) => `<div class="pill"><span class="subtle">${escapeHtml(item.label)}</span><strong>${item.value}</strong></div>`).join(''); const employeeCard = (employee: EmployeeView, removable = false) => `<article class="mini"><h3>${escapeHtml(employee.name)}</h3><div class="subtle">${escapeHtml(employee.organization_name || 'No organization')} · ${escapeHtml(employee.manager_name || 'No manager')}</div><div class="subtle">Active allocation ${pct(employee.active_allocation_percent)} of ${pct(employee.capacity_percent)} · ${employee.active_assignment_count ?? 0} assignment(s)</div><div style="margin-top:10px" class="status ${escapeHtml(employee.load_status || 'available')}">${escapeHtml(employee.load_status || 'available')}</div>${removable ? `<form method="post" action="/dashboard/tracked/remove" style="margin-top:10px"><input type="hidden" name="employee_id" value="${employee.id}" /><button class="secondary" type="submit">Stop tracking</button></form>` : ''}</article>`; const requestRows = dashboard.submitted_items.length ? dashboard.submitted_items.map((item) => `<tr><td>${escapeHtml(item.employee_name || '—')}</td><td>${escapeHtml(item.project_name || '—')}</td><td>${escapeHtml(item.start_date)} → ${escapeHtml(item.end_date)}</td><td>${fmt(item.allocation)}</td><td>${escapeHtml(item.notes || '—')}</td></tr>`).join('') : '<tr><td colspan="5" class="empty">No submitted assignment rows yet.</td></tr>'; return layout('Matrix Manager · Dashboard', currentUser, '/dashboard', `<h1>${escapeHtml(dashboard.employee_name ? `${dashboard.employee_name}'s dashboard` : 'Your dashboard')}</h1><p class="lead">Quick-reference team utilization and tracked staffing rows, now computed from the TypeScript data service instead of the legacy Python endpoint.</p><div class="pill-grid">${pills}</div><div class="grid wide-card"><section class="card"><h2 class="section-title">Track employee</h2><form method="post" action="/dashboard/tracked/add"><label>Employee</label><select name="employee_id">${dashboard.available_tracking_candidates.length ? dashboard.available_tracking_candidates.map((employee) => `<option value="${employee.id}">${escapeHtml(employee.name)}</option>`).join('') : '<option value="">No additional employees available</option>'}</select><button class="primary" type="submit" ${dashboard.available_tracking_candidates.length ? '' : 'disabled'}>Track employee</button></form><h2 class="section-title" style="margin-top:28px">Tracked employees</h2><div class="mini-list">${dashboard.tracked_employees.length ? dashboard.tracked_employees.map((employee) => employeeCard(employee, true)).join('') : '<p class="empty">No tracked employees yet.</p>'}</div></section><section class="card"><h2 class="section-title">Direct reports</h2><div class="mini-list">${dashboard.direct_reports.length ? dashboard.direct_reports.map((employee) => employeeCard(employee)).join('') : '<p class="empty">No direct reports mapped to this signed-in user yet.</p>'}</div></section></div><section class="card wide-card"><h2 class="section-title">Recent assignment rows</h2><table><thead><tr><th>Employee</th><th>Project</th><th>Dates</th><th>Allocation</th><th>Notes</th></tr></thead><tbody>${requestRows}</tbody></table></section>`, flash); }
+
+export function buildForecastPage(currentUser: string, forecast: ForecastProjectView[], flash = ''): string { const rows = forecast.length ? forecast.map((project) => `<tr><td><strong>${escapeHtml(project.name)}</strong></td><td>${fmt(project.demand_total)}</td><td>${fmt(project.assignment_total)}</td><td>${fmt(project.gap_total)}</td><td>${project.demand_rows.length}</td><td>${project.assignment_rows.length}</td><td>${escapeHtml(project.start_date || '—')} → ${escapeHtml(project.end_date || '—')}</td></tr>`).join('') : '<tr><td colspan="7" class="empty">No projects available for forecast rollup.</td></tr>'; const detailCards = forecast.map((project) => `<article class="mini"><h3>${escapeHtml(project.name)}</h3><div class="subtle">Demand ${fmt(project.demand_total)} · Assigned ${fmt(project.assignment_total)} · Gap ${fmt(project.gap_total)}</div><div class="subtle">${project.demand_rows.length} demand rows · ${project.assignment_rows.length} assignment rows</div></article>`).join(''); return layout('Matrix Manager · Forecast', currentUser, '/forecast', `<h1>Forecast</h1><p class="lead">Portfolio-level rollup view backed by the TypeScript store. This is intentionally simpler than the legacy chart page for now, but it gives usable project demand vs assignment coverage straight from TS data.</p><div class="grid"><section class="card"><h2 class="section-title">Project rollups</h2><div class="mini-list">${detailCards || '<p class="empty">No forecast data yet.</p>'}</div></section><section class="card"><h2 class="section-title">Summary table</h2><table><thead><tr><th>Project</th><th>Demand</th><th>Assigned</th><th>Gap</th><th>Demands</th><th>Assignments</th><th>Dates</th></tr></thead><tbody>${rows}</tbody></table></section></div>`, flash); }

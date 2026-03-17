@@ -5,12 +5,20 @@ export interface JsonStoreShape {
   organizations: Array<object>;
   jobCodes?: Array<object>;
   employees: Array<object>;
+  projects?: Array<object>;
+  demands?: Array<object>;
+  assignments?: Array<object>;
+  dashboard?: Record<string, object>;
 }
 
 const defaultState: JsonStoreShape = {
   organizations: [],
   jobCodes: [],
-  employees: []
+  employees: [],
+  projects: [],
+  demands: [],
+  assignments: [],
+  dashboard: {}
 };
 
 function ensureParentDir(filePath: string) {
@@ -27,7 +35,7 @@ export class JsonStore<T extends JsonStoreShape> {
       return structuredClone(this.initialState);
     }
     const raw = fs.readFileSync(this.filePath, 'utf8');
-    return JSON.parse(raw) as T;
+    return { ...structuredClone(this.initialState), ...JSON.parse(raw) } as T;
   }
 
   write(state: T): void {

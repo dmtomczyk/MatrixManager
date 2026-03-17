@@ -7,6 +7,10 @@ export const workforceStore = new JsonStore<WorkforceState>(
   {
     organizations: [],
     jobCodes: [],
-    employees: []
+    employees: [],
+    projects: [],
+    demands: [],
+    assignments: [],
+    dashboard: {}
   }
 );
