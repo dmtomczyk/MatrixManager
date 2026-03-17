@@ -4,38 +4,39 @@
 
 @layer base {
   :root {
-    --background: 214 30% 95%;
-    --foreground: 222 42% 12%;
+    --background: 210 20% 98%;
+    --foreground: 222 47% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 222 42% 12%;
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 42% 12%;
-    --primary: 217 69% 48%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 217 91% 45%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 210 30% 97%;
-    --secondary-foreground: 222 42% 12%;
-    --muted: 210 24% 95%;
-    --muted-foreground: 215 15% 42%;
-    --accent: 210 24% 95%;
-    --accent-foreground: 222 42% 12%;
-    --destructive: 0 72% 50%;
+    --secondary: 210 16% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 16% 96%;
+    --muted-foreground: 215 14% 44%;
+    --accent: 210 16% 96%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 72% 48%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214 24% 86%;
-    --input: 214 24% 86%;
-    --ring: 217 69% 48%;
-    --radius: 0.95rem;
+    --border: 214 18% 88%;
+    --input: 214 18% 88%;
+    --ring: 217 91% 45%;
+    --radius: 0.85rem;
 
-    --ops-bg-top: #f7f9fc;
-    --ops-bg-bottom: #eef3f8;
-    --ops-panel: rgba(255, 255, 255, 0.92);
-    --ops-panel-strong: rgba(255, 255, 255, 0.98);
-    --ops-border: rgba(148, 163, 184, 0.22);
-    --ops-border-strong: rgba(100, 116, 139, 0.28);
-    --ops-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
-    --ops-shadow-soft: 0 6px 18px rgba(15, 23, 42, 0.06);
-    --ops-blue-soft: rgba(59, 130, 246, 0.08);
-    --ops-blue-mid: rgba(59, 130, 246, 0.14);
-    --ops-grid: rgba(148, 163, 184, 0.18);
+    --ops-page: #f7f8fa;
+    --ops-panel: #ffffff;
+    --ops-panel-muted: #f8fafc;
+    --ops-ink: #0f172a;
+    --ops-copy: #475569;
+    --ops-line: #dbe2ea;
+    --ops-line-strong: #c7d2de;
+    --ops-accent: #2563eb;
+    --ops-accent-soft: #eff6ff;
+    --ops-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+    --ops-shadow-soft: 0 2px 10px rgba(15, 23, 42, 0.04);
+    --ops-grid: rgba(148, 163, 184, 0.16);
   }
 
   * {
@@ -51,10 +52,7 @@
   body {
     margin: 0;
     color: hsl(var(--foreground));
-    background:
-      radial-gradient(circle at top left, rgba(37, 99, 235, 0.08), transparent 28%),
-      radial-gradient(circle at top right, rgba(14, 165, 233, 0.05), transparent 24%),
-      linear-gradient(180deg, var(--ops-bg-top) 0%, var(--ops-bg-bottom) 100%);
+    background: linear-gradient(180deg, #fbfcfd 0%, var(--ops-page) 100%);
     -webkit-font-smoothing: antialiased;
     font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   }
@@ -76,75 +74,216 @@
   width: 100%;
   max-width: 72rem;
   margin: 0 auto;
-  padding: 2rem 1rem;
+  padding: 2.5rem 1rem;
 }
 
 .ops-hero-card {
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(10px);
+  border: 1px solid var(--ops-line);
+  background: var(--ops-panel);
   box-shadow: var(--ops-shadow);
 }
 
 .ops-soft-card {
-  border-radius: 1rem;
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  background: rgba(248, 250, 252, 0.82);
+  border-radius: 0.9rem;
+  border: 1px solid var(--ops-line);
+  background: var(--ops-panel-muted);
 }
 
 .ops-kicker {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.18em;
-  color: #1d4ed8;
-}
-
-.ops-section-title {
-  font-size: 1.5rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: #020617;
+  color: var(--ops-accent);
 }
 
 .ops-body {
-  font-size: 0.875rem;
-  line-height: 1.7;
-  color: #475569;
+  font-size: 0.92rem;
+  line-height: 1.65;
+  color: var(--ops-copy);
 }
 
 .ops-link-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-radius: 0.85rem;
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  background: rgba(255, 255, 255, 0.8);
-  padding: 0.75rem 1rem;
-  font-size: 0.875rem;
+  gap: 1rem;
+  border-radius: 0.8rem;
+  border: 1px solid var(--ops-line);
+  background: #fff;
+  padding: 0.85rem 1rem;
+  font-size: 0.92rem;
   font-weight: 600;
-  color: #0f172a;
-  transition: background 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+  color: var(--ops-ink);
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
 }
 
 .ops-link-card:hover {
-  background: rgba(255, 255, 255, 1);
+  border-color: var(--ops-line-strong);
   box-shadow: var(--ops-shadow-soft);
   transform: translateY(-1px);
+}
+
+.ops-login-shell {
+  width: 100%;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 3rem 1rem 2rem;
+  min-height: calc(100vh - 10rem);
+  display: grid;
+  gap: 1.5rem;
+  align-items: stretch;
+  grid-template-columns: minmax(0, 1.1fr) minmax(360px, 420px);
+}
+
+.ops-login-panel {
+  padding: 2.5rem;
+  border-radius: 1.2rem;
+  border: 1px solid #163b88;
+  background: linear-gradient(180deg, #0f2f6d 0%, #0f274f 100%);
+  color: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 20px 42px rgba(15, 39, 79, 0.18);
+}
+
+.ops-login-panel .ops-kicker {
+  color: rgba(191, 219, 254, 0.98);
+}
+
+.ops-login-title {
+  margin: 0.75rem 0 0;
+  max-width: 9ch;
+  font-size: clamp(2.4rem, 5vw, 4.25rem);
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+  font-weight: 700;
+}
+
+.ops-login-copy {
+  margin: 1rem 0 0;
+  max-width: 42rem;
+  font-size: 1rem;
+  line-height: 1.75;
+  color: rgba(226, 232, 240, 0.88);
+}
+
+.ops-login-feature-grid {
+  margin-top: 2rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.ops-login-feature {
+  padding: 1rem;
+  border-radius: 0.95rem;
+  border: 1px solid rgba(191, 219, 254, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.ops-login-feature h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.ops-login-feature p {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.6;
+  color: rgba(226, 232, 240, 0.82);
+}
+
+.ops-signin-card {
+  align-self: center;
+  border-radius: 1.1rem;
+  border: 1px solid var(--ops-line);
+  background: #fff;
+  box-shadow: var(--ops-shadow);
+}
+
+.ops-signin-card .text-base,
+.ops-signin-card .text-sm {
+  color: var(--ops-copy);
+}
+
+.ops-signin-actions {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.ops-subtle-link {
+  display: inline-flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  border: 1px solid var(--ops-line);
+  background: var(--ops-panel-muted);
+  padding: 0.8rem 1rem;
+  color: var(--ops-copy);
+  font-size: 0.92rem;
+  font-weight: 600;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+.ops-subtle-link:hover {
+  background: #fff;
+  border-color: var(--ops-line-strong);
+}
+
+.ops-home-hero {
+  display: grid;
+  gap: 1rem;
+}
+
+.ops-home-intro {
+  display: grid;
+  gap: 0.85rem;
+  max-width: 54rem;
+}
+
+.ops-home-intro .text-3xl {
+  letter-spacing: -0.03em;
+}
+
+.ops-steps-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.ops-step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.9rem 1rem;
+  border-radius: 0.9rem;
+  border: 1px solid var(--ops-line);
+  background: var(--ops-panel-muted);
+}
+
+.ops-step-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: var(--ops-accent-soft);
+  color: var(--ops-accent);
+  font-size: 0.88rem;
+  font-weight: 700;
 }
 
 .shadow-soft {
   box-shadow: var(--ops-shadow-soft);
 }
 
-.bg-ops-panel {
-  background: var(--ops-panel);
-}
-
 .canvas-react-shell {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 1.5rem 1rem 2rem;
+  padding: 1.75rem 1rem 2rem;
   min-height: calc(100vh - 9rem);
   display: flex;
   flex-direction: column;
@@ -159,18 +298,18 @@
 }
 
 .canvas-react-toolbar h2 {
-  margin: 0 0 0.25rem;
-  font-size: 1.875rem;
-  line-height: 1.1;
-  letter-spacing: -0.03em;
-  color: #0f172a;
+  margin: 0 0 0.35rem;
+  font-size: 2rem;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  color: var(--ops-ink);
 }
 
 .canvas-react-toolbar p {
   margin: 0;
   max-width: 52rem;
-  color: #64748b;
-  line-height: 1.6;
+  color: var(--ops-copy);
+  line-height: 1.65;
 }
 
 .canvas-react-actions {
@@ -184,11 +323,11 @@
   display: grid;
   gap: 0.35rem;
   min-width: 12rem;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #64748b;
+  color: var(--ops-copy);
 }
 
 .canvas-react-layout {
@@ -210,28 +349,27 @@
 .canvas-react-modal,
 .canvas-react-panel,
 .canvas-react-banner {
-  background: var(--ops-panel);
-  border: 1px solid var(--ops-border);
+  background: #fff;
+  border: 1px solid var(--ops-line);
   box-shadow: var(--ops-shadow);
-  backdrop-filter: blur(12px);
 }
 
 .canvas-react-sidecard {
-  border-radius: 1.1rem;
+  border-radius: 1rem;
   padding: 1rem;
 }
 
 .canvas-react-sidecard h3 {
   margin: 0;
   font-size: 1rem;
-  color: #0f172a;
+  color: var(--ops-ink);
 }
 
 .canvas-react-sidecard p,
 .canvas-react-inspector span,
 .canvas-react-resource span,
 .muted {
-  color: #64748b;
+  color: var(--ops-copy);
 }
 
 .section-head {
@@ -243,7 +381,7 @@
 .section-head p {
   margin: 0;
   font-size: 0.9rem;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
 .canvas-react-resource-list {
@@ -268,21 +406,21 @@
   display: grid;
   gap: 0.2rem;
   padding: 0.8rem 0.9rem;
-  border-radius: 0.95rem;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(248,250,252,0.95));
-  box-shadow: var(--ops-shadow-soft);
-  transition: border-color 140ms ease, transform 140ms ease, background 140ms ease;
+  border-radius: 0.8rem;
+  border: 1px solid var(--ops-line);
+  background: #fff;
+  box-shadow: none;
+  transition: border-color 140ms ease, background 140ms ease;
 }
 
 .canvas-react-resource:hover {
-  border-color: rgba(59, 130, 246, 0.28);
-  transform: translateY(-1px);
+  border-color: var(--ops-line-strong);
+  background: var(--ops-panel-muted);
 }
 
 .canvas-react-resource.is-selected {
-  border-color: rgba(59, 130, 246, 0.4);
-  background: linear-gradient(180deg, rgba(239,246,255,0.98), rgba(248,250,252,0.98));
+  border-color: rgba(37, 99, 235, 0.32);
+  background: var(--ops-accent-soft);
 }
 
 .canvas-react-inspector {
@@ -291,7 +429,7 @@
 }
 
 .canvas-react-inspector strong {
-  color: #0f172a;
+  color: var(--ops-ink);
 }
 
 .canvas-react-inspector-actions,
@@ -306,13 +444,12 @@
   position: relative;
   min-height: 42rem;
   overflow: hidden;
-  border-radius: 1.25rem;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,0.94), rgba(247,250,252,0.92));
+  border-radius: 1rem;
+  background: linear-gradient(180deg, #ffffff, #fafbfd);
 }
 
 .canvas-react-stage.is-drop-active {
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.18), var(--ops-shadow);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1), var(--ops-shadow);
 }
 
 .canvas-react-loading {
@@ -324,12 +461,11 @@
   justify-content: center;
   color: #334155;
   font-weight: 700;
-  background: rgba(248, 250, 252, 0.72);
-  backdrop-filter: blur(3px);
+  background: rgba(255, 255, 255, 0.78);
 }
 
 .canvas-react-banner {
-  border-radius: 0.9rem;
+  border-radius: 0.85rem;
   padding: 0.8rem 0.95rem;
   font-size: 0.95rem;
   font-weight: 600;
@@ -337,64 +473,63 @@
 
 .canvas-react-banner.is-error {
   color: #991b1b;
-  background: rgba(254, 242, 242, 0.92);
-  border-color: rgba(248, 113, 113, 0.28);
+  background: #fef2f2;
+  border-color: #fecaca;
 }
 
 .canvas-react-banner.is-toast {
   color: #1d4ed8;
-  background: rgba(239, 246, 255, 0.92);
-  border-color: rgba(96, 165, 250, 0.28);
+  background: #eff6ff;
+  border-color: #bfdbfe;
 }
 
 .canvas-react-panel {
-  border-radius: 0.9rem;
+  border-radius: 0.8rem;
   padding: 0.65rem 0.8rem;
   display: grid;
   gap: 0.35rem;
-  font-size: 0.85rem;
-  color: #475569;
+  font-size: 0.84rem;
+  color: var(--ops-copy);
 }
 
 .canvas-react-panel strong {
-  color: #0f172a;
+  color: var(--ops-ink);
 }
 
 .ghost-button,
 .danger-button,
 .canvas-react-form-actions button:last-child {
-  border: 1px solid rgba(148, 163, 184, 0.24);
-  border-radius: 0.8rem;
-  padding: 0.65rem 0.95rem;
+  border: 1px solid var(--ops-line);
+  border-radius: 0.72rem;
+  padding: 0.68rem 0.95rem;
   font-weight: 600;
   transition: 140ms ease;
 }
 
 .ghost-button {
-  color: #0f172a;
-  background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.96));
+  color: var(--ops-ink);
+  background: #fff;
 }
 
 .ghost-button:hover {
-  background: white;
-  border-color: rgba(100, 116, 139, 0.3);
+  border-color: var(--ops-line-strong);
+  background: var(--ops-panel-muted);
 }
 
 .canvas-react-form-actions button:last-child {
   color: white;
-  background: linear-gradient(180deg, #2563eb, #1d4ed8);
-  border-color: rgba(37, 99, 235, 0.35);
-  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.18);
+  background: var(--ops-accent);
+  border-color: var(--ops-accent);
 }
 
 .canvas-react-form-actions button:last-child:hover {
-  filter: brightness(1.03);
+  filter: brightness(1.04);
 }
 
 .danger-button {
   color: white;
-  background: linear-gradient(180deg, #dc2626, #b91c1c);
-  border-color: rgba(220, 38, 38, 0.4);
+  background: #dc2626;
+  border-color: #dc2626;
 }
 
 .canvas-react-context-menu {
@@ -402,10 +537,10 @@
   z-index: 100;
   min-width: 13rem;
   padding: 0.45rem;
-  border-radius: 0.9rem;
-  background: rgba(15, 23, 42, 0.96);
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.3);
+  border-radius: 0.8rem;
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.22);
 }
 
 .canvas-react-context-menu button {
@@ -414,7 +549,7 @@
   background: transparent;
   color: #e2e8f0;
   text-align: left;
-  border-radius: 0.7rem;
+  border-radius: 0.65rem;
   padding: 0.55rem 0.7rem;
 }
 
@@ -436,15 +571,14 @@
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background: rgba(15, 23, 42, 0.36);
-  backdrop-filter: blur(4px);
+  background: rgba(15, 23, 42, 0.28);
 }
 
 .canvas-react-modal {
   width: min(34rem, 100%);
-  border-radius: 1.1rem;
+  border-radius: 1rem;
   padding: 1.25rem;
-  background: var(--ops-panel-strong);
+  background: #fff;
 }
 
 .canvas-react-modal-wide {
@@ -453,8 +587,8 @@
 
 .canvas-react-modal h3 {
   margin: 0 0 1rem;
-  font-size: 1.25rem;
-  color: #0f172a;
+  font-size: 1.2rem;
+  color: var(--ops-ink);
 }
 
 .canvas-react-form {
@@ -475,11 +609,11 @@
 .canvas-react-form textarea,
 .canvas-react-inline-filter select {
   width: 100%;
-  border-radius: 0.8rem;
-  border: 1px solid rgba(148, 163, 184, 0.24);
-  background: rgba(255,255,255,0.98);
-  padding: 0.7rem 0.85rem;
-  color: #0f172a;
+  border-radius: 0.72rem;
+  border: 1px solid var(--ops-line);
+  background: #fff;
+  padding: 0.72rem 0.85rem;
+  color: var(--ops-ink);
   outline: none;
   transition: border-color 140ms ease, box-shadow 140ms ease;
 }
@@ -488,8 +622,8 @@
 .canvas-react-form select:focus,
 .canvas-react-form textarea:focus,
 .canvas-react-inline-filter select:focus {
-  border-color: rgba(59, 130, 246, 0.45);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+  border-color: rgba(37, 99, 235, 0.45);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.11);
 }
 
 .canvas-react-timeline-list {
@@ -503,16 +637,16 @@
   gap: 0.75rem;
   align-items: center;
   padding: 0.8rem 0.9rem;
-  border-radius: 0.9rem;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(248,250,252,0.94));
+  border-radius: 0.82rem;
+  border: 1px solid var(--ops-line);
+  background: var(--ops-panel-muted);
 }
 
 .rf-card {
-  border-radius: 0.95rem;
-  border: 1px solid rgba(148, 163, 184, 0.24);
-  background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.98));
-  color: #0f172a;
+  border-radius: 0.78rem;
+  border: 1px solid var(--ops-line);
+  background: #fff;
+  color: var(--ops-ink);
   box-shadow: var(--ops-shadow-soft);
 }
 
@@ -527,13 +661,13 @@
   height: 100%;
   padding: 0.7rem 0.8rem;
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.92), rgba(248,250,252,0.88)),
+    linear-gradient(180deg, #ffffff, #fafbfd),
     repeating-linear-gradient(
       0deg,
       transparent,
       transparent 54px,
-      rgba(148, 163, 184, 0.07) 54px,
-      rgba(148, 163, 184, 0.07) 55px
+      rgba(148, 163, 184, 0.06) 54px,
+      rgba(148, 163, 184, 0.06) 55px
     );
 }
 
@@ -541,23 +675,23 @@
   font-size: 0.84rem;
   font-weight: 800;
   letter-spacing: -0.01em;
-  color: #0f172a;
+  color: var(--ops-ink);
 }
 
 .rf-card-meta {
   font-size: 0.7rem;
   line-height: 1.35;
-  color: #64748b;
+  color: var(--ops-copy);
 }
 
 .rf-card.is-selected {
-  border-color: rgba(59, 130, 246, 0.42);
-  box-shadow: 0 0 0 3px rgba(59,130,246,0.12), var(--ops-shadow-soft);
+  border-color: rgba(37, 99, 235, 0.36);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1), var(--ops-shadow-soft);
 }
 
 .rf-card.is-over {
   border-color: rgba(239, 68, 68, 0.34);
-  background: linear-gradient(180deg, rgba(254,242,242,0.98), rgba(255,255,255,0.98));
+  background: #fff6f6;
 }
 
 .rf-handle {
@@ -565,8 +699,8 @@
   height: 10px;
   border-radius: 999px;
   border: 2px solid #fff;
-  background: #2563eb;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.28);
+  background: var(--ops-accent);
+  box-shadow: 0 2px 7px rgba(37, 99, 235, 0.2);
 }
 
 .rf-handle::before {
@@ -590,21 +724,21 @@
 
 .react-flow__controls,
 .react-flow__minimap {
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 0.9rem;
+  border: 1px solid var(--ops-line);
+  border-radius: 0.8rem;
   overflow: hidden;
-  background: rgba(255,255,255,0.96);
+  background: #fff;
   box-shadow: var(--ops-shadow-soft);
 }
 
 .react-flow__controls button {
-  background: rgba(255,255,255,0.98);
+  background: #fff;
   color: #334155;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+  border-bottom: 1px solid var(--ops-line);
 }
 
 .react-flow__controls button:hover {
-  background: rgba(248,250,252,1);
+  background: var(--ops-panel-muted);
 }
 
 .react-flow__background path {
@@ -616,6 +750,7 @@
 }
 
 @media (max-width: 1100px) {
+  .ops-login-shell,
   .canvas-react-layout {
     grid-template-columns: 1fr;
   }
@@ -630,6 +765,14 @@
 }
 
 @media (max-width: 720px) {
+  .ops-login-panel {
+    padding: 1.6rem;
+  }
+
+  .ops-login-feature-grid {
+    grid-template-columns: 1fr;
+  }
+
   .canvas-react-toolbar {
     flex-direction: column;
   }

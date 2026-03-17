@@ -13,26 +13,26 @@ interface QuickLink {
 
 const principles: Principle[] = [
   {
-    title: 'Organizations contain employees',
-    body: 'An organization is the home structure for your people. Every employee belongs to one organization, even if they work across multiple projects.',
+    title: 'Organizations anchor the model',
+    body: 'Every employee lives in a home organization. That gives your staffing plan a durable reporting and ownership structure.',
   },
   {
-    title: 'Managers lead reporting trees',
-    body: 'Employees with leader roles can manage people. Those direct reports can themselves be managers, giving you a hierarchy inside each organization.',
+    title: 'Managers shape hierarchy',
+    body: 'Reporting lines sit inside the org structure so leadership, approvals, and span of control remain visible.',
   },
   {
-    title: 'Projects pull people across the org',
-    body: 'Projects represent work demand. Assignments connect employees to projects with date ranges and allocation percentages so you can see utilization over time.',
+    title: 'Projects express work demand',
+    body: 'Projects become real planning objects once you connect people to them through time-bound assignments and allocation.',
   },
 ];
 
 const steps: string[] = [
-  'Define an organization',
-  'Set up job codes',
-  'Create employees',
+  'Create an organization',
+  'Define job codes',
+  'Add employees',
   'Create a project',
   'Assign employees to the project',
-  'Review the outputs in Canvas and Forecast',
+  'Review staffing in Canvas and Forecast',
 ];
 
 const quickLinks: QuickLink[] = [
@@ -48,18 +48,20 @@ const relationshipKinds = ['Foundation', 'People', 'Structure', 'Work', 'Executi
 
 export default function GetStartedPage() {
   return (
-    <main className="ops-page flex flex-col gap-5">
-      <Card className="ops-hero-card bg-white/95">
-        <CardHeader>
-          <p className="ops-kicker">Get Started</p>
-          <CardTitle className="text-3xl text-slate-950">How the model works</CardTitle>
-          <CardDescription className="max-w-3xl text-base leading-7">
-            Matrix Management connects organizations, people, projects, and assignments into one staffing picture.
-          </CardDescription>
+    <main className="ops-page flex flex-col gap-6">
+      <Card className="ops-hero-card">
+        <CardHeader className="ops-home-hero">
+          <div className="ops-home-intro">
+            <p className="ops-kicker">Get Started</p>
+            <CardTitle className="text-3xl text-slate-950">Build the planning model in the right order.</CardTitle>
+            <CardDescription className="max-w-3xl text-base leading-7">
+              Matrix Manager works best when you start with structure, then people, then work demand. Once those pieces are in place, the rest of the application becomes much easier to read.
+            </CardDescription>
+          </div>
         </CardHeader>
         <CardContent className="grid gap-4 lg:grid-cols-3">
           {principles.map((item) => (
-            <article key={item.title} className="ops-soft-card p-4">
+            <article key={item.title} className="ops-soft-card p-5">
               <h3 className="mb-2 text-base font-semibold text-slate-950">{item.title}</h3>
               <p className="ops-body">{item.body}</p>
             </article>
@@ -67,17 +69,17 @@ export default function GetStartedPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
-        <Card className="ops-hero-card bg-white/95">
+      <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+        <Card className="ops-hero-card">
           <CardHeader>
             <CardTitle className="text-2xl text-slate-950">Relationship map</CardTitle>
-            <CardDescription>Use this as the mental model for the app.</CardDescription>
+            <CardDescription>Use this as the basic mental model for how the application fits together.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap items-center gap-3">
               {relationshipItems.map((item, index) => (
                 <React.Fragment key={item}>
-                  <div className="ops-soft-card grid gap-1 px-4 py-3 shadow-sm">
+                  <div className="ops-soft-card grid gap-1 px-4 py-3 shadow-soft">
                     <strong className="text-sm text-slate-950">{item}</strong>
                     <span className="text-xs uppercase tracking-[0.12em] text-slate-500">{relationshipKinds[index]}</span>
                   </div>
@@ -88,10 +90,10 @@ export default function GetStartedPage() {
           </CardContent>
         </Card>
 
-        <Card className="ops-hero-card bg-white/95">
+        <Card className="ops-hero-card">
           <CardHeader>
             <CardTitle className="text-2xl text-slate-950">Quick links</CardTitle>
-            <CardDescription>Move through the initial setup sequence quickly.</CardDescription>
+            <CardDescription>Jump directly into the setup sequence.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3">
             {quickLinks.map((link) => (
@@ -104,15 +106,15 @@ export default function GetStartedPage() {
         </Card>
       </div>
 
-      <Card className="ops-hero-card bg-white/95">
+      <Card className="ops-hero-card">
         <CardHeader>
-          <CardTitle className="text-2xl text-slate-950">Create your first plan</CardTitle>
-          <CardDescription>One simple path gets a brand-new workspace into a usable state quickly.</CardDescription>
+          <CardTitle className="text-2xl text-slate-950">Recommended first pass</CardTitle>
+          <CardDescription>A small amount of setup unlocks the rest of the product quickly.</CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-3">
+        <CardContent className="ops-steps-list">
           {steps.map((step, index) => (
-            <div key={step} className="ops-soft-card grid grid-cols-[auto_1fr] items-center gap-3 px-4 py-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700">{index + 1}</div>
+            <div key={step} className="ops-step">
+              <div className="ops-step-index">{index + 1}</div>
               <strong className="text-sm font-semibold text-slate-900">{step}</strong>
             </div>
           ))}

@@ -5,39 +5,50 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import type { LoginPageProps } from '../lib/utils';
 
+const highlights = [
+  {
+    title: 'Organizations',
+    copy: 'Keep reporting lines and home teams grounded in one source of truth.',
+  },
+  {
+    title: 'Projects',
+    copy: 'Track work demand with dates, staffing pressure, and real planning context.',
+  },
+  {
+    title: 'Assignments',
+    copy: 'Connect people to work with allocation, timing, and manager visibility.',
+  },
+] as const;
+
 export default function LoginPage({ error = '', next = '/', logoHref = '', githubUrl = '' }: LoginPageProps) {
   return (
-    <main className="ops-page grid min-h-[calc(100vh-12rem)] items-center gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-      <Card className="ops-hero-card">
-        <CardHeader className="pb-4">
-          <p className="ops-kicker">Operations planning</p>
-          <CardTitle className="max-w-lg text-4xl tracking-tight text-slate-950">Staff planning without the spreadsheet sprawl.</CardTitle>
-          <CardDescription className="max-w-xl text-base leading-7">
-            Matrix Manager keeps organizations, people, projects, and assignments in one operating view so planning conversations stay grounded in the same data.
+    <main className="ops-login-shell">
+      <section className="ops-login-panel">
+        <p className="ops-kicker">Matrix Manager</p>
+        <h1 className="ops-login-title">Plan staffing like an operating system, not a spreadsheet.</h1>
+        <p className="ops-login-copy">
+          Matrix Manager gives organizations, people, projects, and assignments a single planning model so staffing conversations stay clear, auditable, and aligned.
+        </p>
+        <div className="ops-login-feature-grid">
+          {highlights.map((item) => (
+            <article key={item.title} className="ops-login-feature">
+              <h3>{item.title}</h3>
+              <p>{item.copy}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <Card className="ops-signin-card">
+        <CardHeader className="items-center text-center">
+          {logoHref ? <img src={logoHref} alt="Matrix Management" className="mb-2 h-14 w-14" /> : null}
+          <CardTitle className="text-[2rem] tracking-tight text-slate-950">Sign in</CardTitle>
+          <CardDescription className="max-w-sm text-[0.95rem] leading-6">
+            Access the current planning workspace and continue where you left off.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-3">
-          {[
-            ['Organizations', 'Keep reporting structure and home teams clear.'],
-            ['Projects', 'Track demand windows and staffing pressure over time.'],
-            ['Assignments', 'Connect people to work with dates and allocation.'],
-          ].map(([title, copy]) => (
-            <div key={title} className="ops-soft-card p-4">
-              <h3 className="mb-2 text-sm font-semibold text-slate-950">{title}</h3>
-              <p className="ops-body">{copy}</p>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      <Card className="ops-hero-card bg-white/95">
-        <CardHeader className="items-center text-center">
-          {logoHref ? <img src={logoHref} alt="Matrix Management" className="mb-3 h-16 w-16" /> : null}
-          <CardTitle className="text-3xl text-slate-950">Matrix Manager</CardTitle>
-          <CardDescription className="text-base">Sign in to continue.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {error ? <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">{error}</div> : null}
+        <CardContent className="ops-signin-actions">
+          {error ? <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">{error}</div> : null}
           <form method="post" action="/login" className="grid gap-4">
             <input type="hidden" name="next" value={next} />
             <div className="grid gap-2">
@@ -51,8 +62,8 @@ export default function LoginPage({ error = '', next = '/', logoHref = '', githu
             <Button type="submit" className="mt-1 w-full">Sign in</Button>
           </form>
           {githubUrl ? (
-            <a href={githubUrl} target="_blank" rel="noreferrer" className="mt-4 inline-flex w-full items-center justify-center rounded-md border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50">
-              GitHub
+            <a href={githubUrl} target="_blank" rel="noreferrer" className="ops-subtle-link">
+              View project on GitHub
             </a>
           ) : null}
         </CardContent>
