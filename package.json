@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "scripts": {
     "test:e2e": "playwright test",
+    "test:e2e:smoke": "PLAYWRIGHT_REUSE_EXISTING_SERVER=1 playwright test e2e/ts_first_smoke.spec.ts",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
     "db:reset": "cd api && npx tsx scripts/reset-db.ts",
