@@ -3,6 +3,7 @@ import { getSessionUsername } from '../auth/session.js';
 import { createEmployee, createOrganization, listEmployees, listOrganizations } from '../features/workforce/service.js';
 import { buildGetStartedPage } from '../ui/get-started-page.js';
 import { buildLoginPage } from '../ui/login-page.js';
+import { renderAppChrome } from '../ui/chrome.js';
 import { buildEmployeesPage, buildOrganizationsPage } from '../ui/workforce-pages.js';
 
 function renderLogin(app: Parameters<FastifyPluginAsync>[0], error = '', next = '/') {
@@ -28,7 +29,10 @@ export const pageRoutes: FastifyPluginAsync = async (app) => {
     if (!username) {
       return reply.redirect('/login?next=%2Fcanvas');
     }
-    return reply.type('text/html; charset=utf-8').send(`<!doctype html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>Matrix Manager · Canvas</title><style>body{font-family:Inter,system-ui,sans-serif;background:#f8fafc;color:#0f172a;margin:0}header{position:sticky;top:0;background:rgba(255,255,255,.95);backdrop-filter:blur(10px);border-bottom:1px solid #e2e8f0;padding:14px 18px;font-weight:700}#root{min-height:100vh}.notice{max-width:1100px;margin:16px auto 0;padding:0 16px;color:#64748b;font-size:14px}</style><script type="module">import RefreshRuntime from \"${app.config.uiDevUrl.replace(/\/$/, '')}/@react-refresh\";RefreshRuntime.injectIntoGlobalHook(window);window.$RefreshReg$=()=>{};window.$RefreshSig$=()=>(type)=>type;window.__vite_plugin_react_preamble_installed__=true;</script><script type="module" src="${app.config.uiDevUrl.replace(/\/$/, '')}/@vite/client"></script></head><body><header>Matrix Manager Canvas</header><div class="notice">Signed in as <strong>${username}</strong>. Canvas is using the React UI against the TypeScript auth flow.</div><div id="root" data-page="canvas"></div><script id="mm-react-props" type="application/json">${JSON.stringify({ currentUser: username, currentPath: '/canvas' }).replaceAll('<', '\u003c')}</script><script type="module" src="${app.config.uiDevUrl.replace(/\/$/, '')}/src/main.tsx"></script></body></html>`);
+    const chrome = renderAppChrome(username, '/canvas');
+    const uiDevUrl = app.config.uiDevUrl.replace(/\/$/, '');
+    const bootPayload = JSON.stringify({ currentUser: username, currentPath: '/canvas' }).replaceAll('<', '\u003c');
+    return reply.type('text/html; charset=utf-8').send(`<!doctype html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>Matrix Manager · Canvas</title><style>*{box-sizing:border-box}body{font-family:Inter,system-ui,sans-serif;background:#f8fafc;color:#0f172a;margin:0}${chrome.css}#root{min-height:100vh}.notice{max-width:1100px;margin:16px auto 0;padding:0 16px;color:#64748b;font-size:14px}</style><script type="module">import RefreshRuntime from \"${uiDevUrl}/@react-refresh\";RefreshRuntime.injectIntoGlobalHook(window);window.$RefreshReg$=()=>{};window.$RefreshSig$=()=>(type)=>type;window.__vite_plugin_react_preamble_installed__=true;</script><script type="module" src="${uiDevUrl}/@vite/client"></script></head><body>${chrome.html}<div class="notice">Canvas is using the React UI against the TypeScript auth flow.</div><div id="root" data-page="canvas"></div><script id="mm-react-props" type="application/json">${bootPayload}</script><script type="module" src="${uiDevUrl}/src/main.tsx"></script></body></html>`);
   });
 
   app.get('/login', async (request, reply) => {
