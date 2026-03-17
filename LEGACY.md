@@ -22,6 +22,7 @@ The Python backend remains in-repo only to support:
 
 - behavior comparison during cleanup
 - edge-case reference while finishing deprecation
+- the still-unported Docker/install runtime packaging path
 - staged removal instead of risky one-shot deletion
 
 ## Rule of thumb

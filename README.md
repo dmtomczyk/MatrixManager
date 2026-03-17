@@ -31,6 +31,8 @@ Useful follow-up commands:
 ./uninstall.sh
 ```
 
+Note: this install/runtime path is still the **legacy packaging surface** and currently boots the legacy Python container runtime. The repo's primary development and test path is already TypeScript-first; see `docs/ts-first-runtime-and-test-audit-2026-03-17.md` for the current keep/port/delete plan.
+
 If you want to inspect settings first, check:
 
 - `.env.example`
@@ -77,7 +79,7 @@ For local development, the TypeScript stack uses the repo-local TS persistence f
 The old Python backend is no longer part of the normal local development flow.
 If you still need to inspect the remaining legacy implementation files during cleanup, treat them as reference material only.
 
-See [`LEGACY.md`](./LEGACY.md) for the current deprecation/removal status.
+See [`LEGACY.md`](./LEGACY.md) for the current deprecation/removal status, and `docs/ts-first-runtime-and-test-audit-2026-03-17.md` for the runtime/test migration audit.
 
 ## What the app includes
 
@@ -89,7 +91,8 @@ See [`LEGACY.md`](./LEGACY.md) for the current deprecation/removal status.
 - audit log
 - database management UI
 - TypeScript API with SQLite-backed migrated persistence
-- Docker / docker-compose support
+- Docker / docker-compose support (currently still aligned to the legacy runtime packaging path)
+- Playwright coverage for the TS-first dev stack
 - legacy backend retained temporarily for staged cleanup
 
 ## Demo / screenshots
@@ -120,5 +123,6 @@ For a human-readable dependency inventory with rationale, production/dev split, 
 
 If you are opening this repo for the first time, start with either:
 
-- **Production-style install:** `./install.sh && ./start.sh`
+- **Production-style install:** `./install.sh && ./start.sh` *(legacy packaging path pending TS runtime port)*
 - **Source/dev install:** `npm install && (cd api && npm install) && npm run dev`
+- **TS-first smoke test:** `npm run test:e2e:smoke`

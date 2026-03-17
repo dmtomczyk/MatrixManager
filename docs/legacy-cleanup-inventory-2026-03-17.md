@@ -148,9 +148,14 @@ Why not yet:
 
 ## Recommendation
 
-Proceed immediately with the **low-risk deletion pass** only.
+Proceed with two things in parallel:
+
+1. low-risk deletion of generated Python cache artifacts
+2. TS-first replacement work for runtime packaging and remaining legacy tests
 
 Do **not** remove the legacy backend implementation, Python utility scripts, or installer/runtime materials until:
 - TS-native reset/seed exists
 - TS-native test coverage is stronger
 - deployment/runtime strategy is explicitly moved off the Python backend
+
+See also: `docs/ts-first-runtime-and-test-audit-2026-03-17.md` for the concrete keep/port/delete classification and Python-test replacement strategy.
