@@ -3,6 +3,11 @@ import react from '@vitejs/plugin-react';
 import { resolve } from 'node:path';
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@': resolve(process.cwd(), 'frontend/ui/src'),
+    },
+  },
   plugins: [react()],
   root: resolve(process.cwd(), 'frontend/ui'),
   server: {
