@@ -1,3 +1,5 @@
+import { renderAppChrome } from './chrome.js';
+
 interface OrganizationView {
   id: number;
   name: string;
@@ -25,7 +27,8 @@ function escapeHtml(input: string): string {
     .replaceAll("'", '&#39;');
 }
 
-function layout(title: string, currentUser: string, body: string, flash = ''): string {
+function layout(title: string, currentUser: string, currentPath: string, body: string, flash = ''): string {
+  const chrome = renderAppChrome(currentUser, currentPath);
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -34,10 +37,7 @@ function layout(title: string, currentUser: string, body: string, flash = ''): s
     <title>${escapeHtml(title)}</title>
     <style>
       *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,sans-serif;background:#f8fafc;color:#0f172a}
-      header{position:sticky;top:0;background:rgba(255,255,255,.95);backdrop-filter:blur(10px);border-bottom:1px solid #e2e8f0}
-      .nav{max-width:1100px;margin:0 auto;padding:14px 16px;display:flex;justify-content:space-between;gap:16px;align-items:center}
-      .brand{font-weight:700;color:#0f172a;text-decoration:none}.links{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-      .links a,.links button{text-decoration:none;border:1px solid #cbd5e1;background:white;color:#334155;padding:10px 12px;border-radius:10px;font:inherit;cursor:pointer}
+      ${chrome.css}
       .wrap{max-width:1100px;margin:0 auto;padding:28px 16px 44px}.meta{color:#64748b;font-size:14px;margin:6px 0 0}
       h1{margin:0 0 8px;font-size:38px}.lead{color:#475569;max-width:760px;line-height:1.7}
       .grid{display:grid;grid-template-columns:360px minmax(0,1fr);gap:20px;align-items:start;margin-top:24px}
@@ -51,17 +51,7 @@ function layout(title: string, currentUser: string, body: string, flash = ''): s
     </style>
   </head>
   <body>
-    <header>
-      <div class="nav">
-        <a class="brand" href="/">Matrix Manager</a>
-        <div class="links">
-          <a href="/orgs">Organizations</a>
-          <a href="/people">Employees</a>
-          <a href="/canvas">Canvas</a>
-          <form method="post" action="/logout"><button type="submit">Log out</button></form>
-        </div>
-      </div>
-    </header>
+    ${chrome.html}
     <main class="wrap">
       ${flash ? `<div class="flash">${escapeHtml(flash)}</div>` : ''}
       ${body}
@@ -76,7 +66,7 @@ export function buildOrganizationsPage(currentUser: string, organizations: Organ
     ? organizations.map((org) => `<tr><td><strong>${escapeHtml(org.name)}</strong></td><td>${escapeHtml(org.description || '—')}</td><td>${org.child_organization_count ?? 0}</td></tr>`).join('')
     : '<tr><td colspan="3" class="empty">No organizations yet.</td></tr>';
 
-  return layout('Matrix Manager · Organizations', currentUser, `
+  return layout('Matrix Manager · Organizations', currentUser, '/orgs', `
     <h1>Organizations</h1>
     <p class="lead">Create the structural homes for teams and reporting lines. This page is backed by the new TypeScript API.</p>
     <div class="grid">
@@ -109,7 +99,7 @@ export function buildEmployeesPage(currentUser: string, employees: EmployeeView[
     ? employees.map((employee) => `<tr><td><strong>${escapeHtml(employee.name)}</strong></td><td>${escapeHtml(employee.organization_name || '—')}</td><td>${escapeHtml(employee.employee_type || '—')}</td><td>${escapeHtml(employee.manager_name || '—')}</td><td>${escapeHtml(employee.location || '—')}</td><td>${employee.capacity ?? 1}</td></tr>`).join('')
     : '<tr><td colspan="6" class="empty">No employees yet.</td></tr>';
 
-  return layout('Matrix Manager · Employees', currentUser, `
+  return layout('Matrix Manager · Employees', currentUser, '/people', `
     <h1>Employees</h1>
     <p class="lead">Add people to the model and place them inside organizations. This is the first real data-entry UI on the TypeScript backend.</p>
     <div class="grid">

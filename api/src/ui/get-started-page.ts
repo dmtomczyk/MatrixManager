@@ -1,3 +1,5 @@
+import { renderAppChrome } from './chrome.js';
+
 function escapeHtml(input: string): string {
   return input
     .replaceAll('&', '&amp;')
@@ -36,6 +38,7 @@ const setupItems = [
 ] as const;
 
 export function buildGetStartedPage(currentUser: string): string {
+  const chrome = renderAppChrome(currentUser, '/');
   const cards = setupItems.map((item) => `
     <a class="card" href="${item.href}">
       <h3>${escapeHtml(item.title)}</h3>
@@ -54,11 +57,7 @@ export function buildGetStartedPage(currentUser: string): string {
       :root { color-scheme: light; }
       * { box-sizing: border-box; }
       body { margin: 0; font-family: Inter, system-ui, sans-serif; background: #f8fafc; color: #0f172a; }
-      header { position: sticky; top: 0; background: rgba(255,255,255,.95); backdrop-filter: blur(10px); border-bottom: 1px solid #e2e8f0; }
-      .nav { max-width: 1100px; margin: 0 auto; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-      .brand { font-weight: 700; text-decoration: none; color: #0f172a; }
-      .links { display: flex; gap: 10px; flex-wrap: wrap; }
-      .links a, .logout button { text-decoration: none; border: 1px solid #cbd5e1; background: white; color: #334155; padding: 10px 12px; border-radius: 10px; font: inherit; cursor: pointer; }
+      ${chrome.css}
       .wrap { max-width: 1100px; margin: 0 auto; padding: 32px 16px 48px; }
       .eyebrow { display: inline-block; padding: 6px 10px; border-radius: 999px; background: #e2e8f0; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: #334155; }
       h1 { margin: 16px 0 12px; font-size: 48px; line-height: 1.05; max-width: 800px; }
@@ -75,17 +74,7 @@ export function buildGetStartedPage(currentUser: string): string {
     </style>
   </head>
   <body>
-    <header>
-      <div class="nav">
-        <a href="/" class="brand">Matrix Manager</a>
-        <div class="links">
-          <a href="/canvas">Canvas</a>
-          <a href="/dashboard">Dashboard</a>
-          <a href="/inbox">Inbox</a>
-          <form method="post" action="/logout" class="logout"><button type="submit">Log out</button></form>
-        </div>
-      </div>
-    </header>
+    ${chrome.html}
     <main class="wrap">
       <span class="eyebrow">Get Started</span>
       <h1>Build the planning model in the right order.</h1>
