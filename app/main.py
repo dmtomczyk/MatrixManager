@@ -1735,7 +1735,7 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 @app.middleware("http")
 async def require_login(request: Request, call_next):
-    public_paths = {"/login", "/health"}
+    public_paths = {"/login", "/logout", "/health"}
     if request.url.path in public_paths:
         return await call_next(request)
     if request.url.path.startswith("/static/"):
@@ -1744,7 +1744,7 @@ async def require_login(request: Request, call_next):
         return await call_next(request)
     if is_html_request(request):
         return RedirectResponse(url=f"/login?next={quote(str(request.url.path))}", status_code=302)
-    raise HTTPException(status_code=401, detail="Authentication required")
+    return JSONResponse(status_code=401, content={"detail": "Authentication required"})
 
 
 @app.middleware("http")
