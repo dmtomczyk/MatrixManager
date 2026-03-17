@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { SESSION_COOKIE_NAME, signSessionValue } from '../auth/session.js';
+import { authenticateUser } from '../features/admin/service.js';
 import { renderLoginError } from './pages.js';
 
 export const authRoutes: FastifyPluginAsync = async (app) => {
@@ -9,10 +10,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const password = String(body.password ?? '');
     const next = String(body.next ?? '/');
 
-    if (
-      username !== app.config.authUsername ||
-      password !== app.config.authPassword
-    ) {
+    if (!authenticateUser(username, password)) {
       reply.code(401);
       return reply.type('text/html; charset=utf-8').send(renderLoginError(app, 'Invalid username or password.', next));
     }

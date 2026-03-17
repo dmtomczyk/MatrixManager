@@ -25,7 +25,7 @@ function ensureParentDir(filePath: string) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
 }
 
-export class JsonStore<T extends JsonStoreShape> {
+export class JsonStore<T extends object> {
   constructor(private readonly filePath: string, private readonly initialState: T) {}
 
   read(): T {

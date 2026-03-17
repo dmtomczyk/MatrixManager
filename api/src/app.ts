@@ -44,7 +44,7 @@ export async function buildApp() {
       heading: 'Page not found',
       message: `No page exists at ${request.url}.`,
       currentUser: username,
-      currentPath: ['/', '/dashboard', '/canvas', '/orgs', '/people', '/planning', '/forecast', '/demands', '/staffing', '/job-codes'].includes(request.url) ? request.url : '/',
+      currentPath: ['/', '/dashboard', '/canvas', '/orgs', '/people', '/planning', '/forecast', '/demands', '/staffing', '/job-codes', '/inbox', '/account-settings', '/users', '/audit', '/runtime', '/db-management'].includes(request.url) ? request.url : '/',
       statusCode: 404
     });
   });
