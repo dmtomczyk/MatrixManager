@@ -3,11 +3,13 @@ import path from 'node:path';
 
 export interface JsonStoreShape {
   organizations: Array<object>;
+  jobCodes?: Array<object>;
   employees: Array<object>;
 }
 
 const defaultState: JsonStoreShape = {
   organizations: [],
+  jobCodes: [],
   employees: []
 };
 

@@ -6,6 +6,7 @@ export const workforceStore = new JsonStore<WorkforceState>(
   path.resolve(import.meta.dirname, '..', '..', '..', 'data', 'api-workforce.json'),
   {
     organizations: [],
+    jobCodes: [],
     employees: []
   }
 );
