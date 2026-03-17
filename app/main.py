@@ -1176,9 +1176,20 @@ def ui_react_asset_urls() -> dict[str, str]:
 
 def ui_react_head_markup() -> str:
     asset_urls = ui_react_asset_urls()
+    parts: list[str] = []
+    if asset_urls["dev_client_href"]:
+        parts.append(
+            '    <script type="module">\n'
+            '      import RefreshRuntime from "' + MATRIX_UI_DEV_URL + '/@react-refresh";\n'
+            '      RefreshRuntime.injectIntoGlobalHook(window);\n'
+            '      window.$RefreshReg$ = () => {};\n'
+            '      window.$RefreshSig$ = () => (type) => type;\n'
+            '      window.__vite_plugin_react_preamble_installed__ = true;\n'
+            '    </script>'
+        )
     if asset_urls["styles_href"]:
-        return f'    <link rel="stylesheet" href="{asset_urls["styles_href"]}" />\n'
-    return ""
+        parts.append(f'    <link rel="stylesheet" href="{asset_urls["styles_href"]}" />')
+    return ("\n".join(parts) + "\n") if parts else ""
 
 
 def ui_react_script_markup() -> str:
