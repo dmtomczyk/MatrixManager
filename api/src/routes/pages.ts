@@ -1,7 +1,9 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { getSessionUsername } from '../auth/session.js';
+import { createEmployee, createOrganization, listEmployees, listOrganizations } from '../features/workforce/service.js';
 import { buildGetStartedPage } from '../ui/get-started-page.js';
 import { buildLoginPage } from '../ui/login-page.js';
+import { buildEmployeesPage, buildOrganizationsPage } from '../ui/workforce-pages.js';
 
 function renderLogin(app: Parameters<FastifyPluginAsync>[0], error = '', next = '/') {
   return buildLoginPage({
@@ -39,6 +41,43 @@ export const pageRoutes: FastifyPluginAsync = async (app) => {
       : '/';
 
     return reply.type('text/html; charset=utf-8').send(renderLogin(app, '', next));
+  });
+
+  app.get('/orgs', async (request, reply) => {
+    const username = getSessionUsername(request);
+    if (!username) return reply.redirect('/login?next=%2Forgs');
+    return reply.type('text/html; charset=utf-8').send(buildOrganizationsPage(username, listOrganizations(), String((request.query as Record<string, unknown> | undefined)?.flash ?? '')));
+  });
+
+  app.post('/orgs/create', async (request, reply) => {
+    const username = getSessionUsername(request);
+    if (!username) return reply.redirect('/login?next=%2Forgs');
+    const body = (request.body ?? {}) as Record<string, unknown>;
+    createOrganization({
+      name: String(body.name ?? '').trim(),
+      description: String(body.description ?? '').trim() || null
+    });
+    return reply.redirect('/orgs?flash=' + encodeURIComponent('Organization created.'));
+  });
+
+  app.get('/people', async (request, reply) => {
+    const username = getSessionUsername(request);
+    if (!username) return reply.redirect('/login?next=%2Fpeople');
+    return reply.type('text/html; charset=utf-8').send(buildEmployeesPage(username, listEmployees(), listOrganizations(), String((request.query as Record<string, unknown> | undefined)?.flash ?? '')));
+  });
+
+  app.post('/people/create', async (request, reply) => {
+    const username = getSessionUsername(request);
+    if (!username) return reply.redirect('/login?next=%2Fpeople');
+    const body = (request.body ?? {}) as Record<string, unknown>;
+    createEmployee({
+      name: String(body.name ?? '').trim(),
+      organization_id: Number(body.organization_id),
+      employee_type: String(body.employee_type ?? 'IC').trim() || 'IC',
+      location: String(body.location ?? '').trim() || null,
+      capacity: Number(body.capacity || 1)
+    });
+    return reply.redirect('/people?flash=' + encodeURIComponent('Employee created.'));
   });
 
   app.get('/session', async (request, reply) => {
