@@ -43,6 +43,7 @@ function renderReactAuthedPage(app: Parameters<FastifyPluginAsync>[0], page: 'ca
     page,
     title,
     uiDevUrl: app.config.uiDevUrl,
+    useDevServer: app.config.uiUseDevServer,
     props: { currentUser: username, currentPath, flash },
   });
 }

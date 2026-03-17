@@ -1,7 +1,9 @@
+import path from 'node:path';
 import Fastify from 'fastify';
 import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import formbody from '@fastify/formbody';
+import fastifyStatic from '@fastify/static';
 import { getSessionUsername } from './auth/session.js';
 import { getConfig } from './config.js';
 import { routes } from './routes/index.js';
@@ -23,6 +25,11 @@ export async function buildApp() {
   });
 
   await app.register(formbody);
+
+  await app.register(fastifyStatic, {
+    root: path.resolve(import.meta.dirname, '..', '..', 'app', 'static'),
+    prefix: '/static/'
+  });
 
   app.decorate('config', config);
 
