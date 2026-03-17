@@ -32,7 +32,7 @@ const settingsSchema = z.object({
   authSecret: z.string().default('replace-with-a-long-random-secret'),
   baseUrl: z.string().default('http://127.0.0.1:8000'),
   uiDevUrl: z.string().default('http://127.0.0.1:4173'),
-  uiUseDevServer: z.boolean().default(false),
+  uiUseDevServer: z.boolean().default(true),
   githubRepoUrl: z.string().default('https://github.com/openclaw/openclaw'),
   logoHref: z.string().default('/static/images/matrix-manager-favicon.svg'),
   installMode: z.enum(['sqlite', 'postgresql']).default('sqlite'),
@@ -62,7 +62,9 @@ export function getConfig(): AppConfig {
     authSecret: process.env.MATRIX_AUTH_SECRET,
     baseUrl: process.env.MATRIX_BASE_URL,
     uiDevUrl: process.env.MATRIX_UI_DEV_URL ?? 'http://127.0.0.1:4173',
-    uiUseDevServer: ['1', 'true', 'yes', 'on'].includes(String(process.env.MATRIX_UI_USE_DEV_SERVER ?? '').toLowerCase()),
+    uiUseDevServer: process.env.MATRIX_UI_USE_DEV_SERVER != null
+      ? ['1', 'true', 'yes', 'on'].includes(String(process.env.MATRIX_UI_USE_DEV_SERVER).toLowerCase())
+      : String(process.env.MATRIX_ENV ?? 'development').toLowerCase() !== 'production',
     githubRepoUrl: process.env.MATRIX_GITHUB_REPO_URL,
     logoHref: process.env.MATRIX_LOGO_HREF,
     installMode: process.env.MATRIX_INSTALL_MODE,
