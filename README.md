@@ -74,16 +74,10 @@ For local development, the TypeScript stack uses the repo-local TS persistence f
 
 ### Legacy reference path
 
-The old Python backend is still available temporarily for comparison/reference only:
+The old Python backend is no longer part of the normal local development flow.
+If you still need to inspect the remaining legacy implementation files during cleanup, treat them as reference material only.
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-npm run dev:legacy
-```
-
-See [`LEGACY.md`](./LEGACY.md) for the deprecation status.
+See [`LEGACY.md`](./LEGACY.md) for the current deprecation/removal status.
 
 ## What the app includes
 

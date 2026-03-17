@@ -63,11 +63,11 @@ export default function AppShell({ currentUser, currentPath, children }: AppShel
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex w-full max-w-[1100px] items-center justify-between gap-4 px-4 py-3">
           <div className="flex min-w-0 items-center gap-3">
-            <a href="/" className="inline-flex shrink-0 items-center gap-2.5 rounded-xl px-2.5 py-2 text-slate-950 transition hover:bg-slate-50">
+            <a href="/" className="inline-flex shrink-0 items-center gap-[10px] rounded-xl px-[10px] py-2 text-slate-950 transition hover:bg-slate-50">
               <img src="/static/images/matrix-manager-favicon.svg" alt="" className="h-7 w-7 rounded-lg border border-slate-200 bg-white p-1" />
-              <span className="flex flex-col leading-none">
-                <span className="text-sm font-semibold tracking-tight text-slate-950">Matrix Manager</span>
-                <span className="mt-0.5 text-[11px] uppercase tracking-[0.12em] text-slate-400 max-sm:hidden">Planning Workspace</span>
+              <span className="flex flex-col leading-[1]">
+                <span className="text-[14px] font-bold tracking-[-0.01em] text-slate-950">Matrix Manager</span>
+                <span className="mt-[2px] text-[11px] uppercase tracking-[0.08em] text-slate-400 max-[900px]:hidden">Planning Workspace</span>
               </span>
             </a>
             <nav className="hidden items-center gap-1 md:flex">

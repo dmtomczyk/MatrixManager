@@ -12,11 +12,7 @@ Use:
 
 ## Legacy path
 
-The old Python backend is still present temporarily for reference and comparison.
-
-Use:
-
-- `npm run dev:legacy` → legacy Python API + Vite UI
+The old Python backend is still present temporarily for reference and comparison in source form, but it is no longer exposed as a normal local dev script.
 
 ## Why this file exists
 
