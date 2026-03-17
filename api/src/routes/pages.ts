@@ -33,12 +33,20 @@ import {
 import { addAuditEntry, clearAuditLog, createDbConnection, createUser, deleteDbConnection, deleteInboxItem, deleteUser, getAccountSettings, getRuntimeOverview, isAdminUser, listAuditEntries, listDbConnections, listInboxItems, listUsers, markInboxItemRead, updateAccountSettings, updateDbConnection, updateUser, wipeDataStore } from '../features/admin/service.js';
 import { buildGetStartedPage } from '../ui/get-started-page.js';
 import { buildLoginPage } from '../ui/login-page.js';
-import { renderAppChrome } from '../ui/chrome.js';
 import { buildAssignmentsPage, buildDashboardPage, buildDemandsPage, buildEmployeesPage, buildForecastPage, buildJobCodesPage, buildOrganizationsPage, buildProjectsPage } from '../ui/workforce-pages.js';
 import { buildAccountSettingsPage, buildAuditPage, buildDbManagementPage, buildInboxPage, buildRuntimePage, buildUsersPage } from '../ui/admin-pages.js';
+import { buildReactPage } from '../ui/react-shell.js';
 
 function renderLogin(app: Parameters<FastifyPluginAsync>[0], error = '', next = '/') { return buildLoginPage({ error, next, logoHref: app.config.logoHref, githubUrl: app.config.githubRepoUrl }); }
 function redirectWithFlash(reply: FastifyReply, path: string, message: string) { return reply.redirect(path + '?flash=' + encodeURIComponent(message)); }
+function renderReactAuthedPage(app: Parameters<FastifyPluginAsync>[0], page: 'canvas' | 'dashboard' | 'forecast', title: string, username: string, currentPath: '/canvas' | '/dashboard' | '/forecast', flash = '') {
+  return buildReactPage({
+    page,
+    title,
+    uiDevUrl: app.config.uiDevUrl,
+    props: { currentUser: username, currentPath, flash },
+  });
+}
 function asBody(body: unknown): Record<string, unknown> { return (body ?? {}) as Record<string, unknown>; }
 function checkboxValue(value: unknown): boolean { return value === 'on' || value === 'true' || value === true; }
 function numberOrNull(value: unknown) { return value === '' || value == null ? null : Number(value); }
@@ -50,7 +58,7 @@ function findById<T extends { id: number }>(items: T[], id: number) { return ite
 
 export const pageRoutes: FastifyPluginAsync = async (app) => {
   app.get('/', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2F'); return reply.type('text/html; charset=utf-8').send(buildGetStartedPage(username)); });
-  app.get('/canvas', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fcanvas'); const chrome = renderAppChrome(username, '/canvas'); const uiDevUrl = app.config.uiDevUrl.replace(/\/$/, ''); const bootPayload = JSON.stringify({ currentUser: username, currentPath: '/canvas' }).replaceAll('<', '\u003c'); return reply.type('text/html; charset=utf-8').send(`<!doctype html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>Matrix Manager · Canvas</title><style>*{box-sizing:border-box}body{font-family:Inter,system-ui,sans-serif;background:#f8fafc;color:#0f172a;margin:0}${chrome.css}#root{min-height:100vh}.notice{max-width:1100px;margin:16px auto 0;padding:0 16px;color:#64748b;font-size:14px}</style><script type="module">import RefreshRuntime from "${uiDevUrl}/@react-refresh";RefreshRuntime.injectIntoGlobalHook(window);window.$RefreshReg$=()=>{};window.$RefreshSig$=()=>(type)=>type;window.__vite_plugin_react_preamble_installed__=true;</script><script type="module" src="${uiDevUrl}/@vite/client"></script></head><body>${chrome.html}<div class="notice">Canvas is using the React UI against the TypeScript auth flow.</div><div id="root" data-page="canvas"></div><script id="mm-react-props" type="application/json">${bootPayload}</script><script type="module" src="${uiDevUrl}/src/main.tsx"></script></body></html>`); });
+  app.get('/canvas', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fcanvas'); return reply.type('text/html; charset=utf-8').send(renderReactAuthedPage(app, 'canvas', 'Matrix Manager · Canvas', username, '/canvas', String((request.query as Record<string, unknown> | undefined)?.flash ?? ''))); });
   app.get('/login', async (request, reply) => { if (getSessionUsername(request)) return reply.redirect('/'); const next = typeof request.query === 'object' && request.query && 'next' in request.query ? String((request.query as Record<string, unknown>).next ?? '/') : '/'; return reply.type('text/html; charset=utf-8').send(renderLogin(app, '', next)); });
 
   app.get('/orgs', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Forgs'); return reply.type('text/html; charset=utf-8').send(buildOrganizationsPage(username, listOrganizations(), String((request.query as Record<string, unknown> | undefined)?.flash ?? ''))); });
