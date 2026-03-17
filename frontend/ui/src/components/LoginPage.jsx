@@ -6,10 +6,10 @@ import { Label } from './ui/label';
 
 export default function LoginPage({ error = '', next = '/', logoHref = '', githubUrl = '' }) {
   return (
-    <main className="mx-auto grid min-h-[calc(100vh-12rem)] w-full max-w-6xl grid-cols-1 items-center gap-6 px-4 py-8 lg:grid-cols-[1.15fr_0.85fr]">
-      <Card className="border-slate-200/90 bg-white/90 backdrop-blur-sm">
+    <main className="ops-page grid min-h-[calc(100vh-12rem)] items-center gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+      <Card className="ops-hero-card">
         <CardHeader className="pb-4">
-          <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary">Operations planning</p>
+          <p className="ops-kicker">Operations planning</p>
           <CardTitle className="max-w-lg text-4xl tracking-tight text-slate-950">Staff planning without the spreadsheet sprawl.</CardTitle>
           <CardDescription className="max-w-xl text-base leading-7">
             Matrix Manager keeps organizations, people, projects, and assignments in one operating view so planning conversations stay grounded in the same data.
@@ -21,15 +21,15 @@ export default function LoginPage({ error = '', next = '/', logoHref = '', githu
             ['Projects', 'Track demand windows and staffing pressure over time.'],
             ['Assignments', 'Connect people to work with dates and allocation.'],
           ].map(([title, copy]) => (
-            <div key={title} className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+            <div key={title} className="ops-soft-card p-4">
               <h3 className="mb-2 text-sm font-semibold text-slate-950">{title}</h3>
-              <p className="text-sm leading-6 text-slate-600">{copy}</p>
+              <p className="ops-body">{copy}</p>
             </div>
           ))}
         </CardContent>
       </Card>
 
-      <Card className="border-slate-200/90 bg-white/95 backdrop-blur-sm">
+      <Card className="ops-hero-card bg-white/95">
         <CardHeader className="items-center text-center">
           {logoHref ? <img src={logoHref} alt="Matrix Management" className="mb-3 h-16 w-16" /> : null}
           <CardTitle className="text-3xl text-slate-950">Matrix Manager</CardTitle>
