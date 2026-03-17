@@ -8,10 +8,9 @@
     "test:e2e:ui": "playwright test --ui",
     "db:reset": "./.venv/bin/python scripts/reset_db.py",
     "db:seed": "./.venv/bin/python scripts/seed_sample_data.py",
-    "dev:api": "sh -c 'if [ -f .env ]; then exec ./.venv/bin/uvicorn app.main:app --env-file .env --host 127.0.0.1 --port 8000 --reload; else exec ./.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload; fi'",
+    "dev:api": "./.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload",
     "dev:ui": "vite --config frontend/ui/vite.config.mjs",
-    "dev:ui:wait": "sh -c 'until curl -fsS http://127.0.0.1:8000/health >/dev/null 2>&1; do sleep 0.25; done; vite --config frontend/ui/vite.config.mjs'",
-    "dev": "concurrently -k -n api,ui -c blue,magenta \"npm run dev:api\" \"npm run dev:ui:wait\"",
+    "dev": "concurrently -k -n api,ui -c blue,magenta \"npm run dev:api\" \"npm run dev:ui\"",
     "lint:ui": "eslint frontend/ui/src --ext .ts,.tsx,.js,.jsx",
     "typecheck:ui": "tsc --project frontend/ui/tsconfig.json",
     "build:ui": "vite build --config frontend/ui/vite.config.mjs"

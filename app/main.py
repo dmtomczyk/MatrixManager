@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any, Generator, List, Optional, Set
 from urllib.parse import quote, quote_plus
 
+from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
@@ -28,6 +29,7 @@ import sqlmodel
 
 BASE_DIR = Path(__file__).resolve().parent
 ROOT_DIR = BASE_DIR.parent
+load_dotenv(ROOT_DIR / ".env")
 DB_PATH = Path(os.getenv("MATRIX_SQLITE_PATH", str(ROOT_DIR / "matrix.db"))).expanduser()
 CONTROL_DB_PATH = Path(os.getenv("MATRIX_CONTROL_DB_PATH", str(ROOT_DIR / "matrixmanager_control.db"))).expanduser()
 STATIC_DIR = BASE_DIR / "static"
