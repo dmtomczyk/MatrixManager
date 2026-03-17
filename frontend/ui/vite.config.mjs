@@ -10,6 +10,9 @@ export default defineConfig({
   },
   plugins: [react()],
   root: resolve(process.cwd(), 'frontend/ui'),
+  css: {
+    postcss: resolve(process.cwd(), 'frontend/ui/postcss.config.cjs'),
+  },
   server: {
     host: '0.0.0.0',
     port: 4173,
