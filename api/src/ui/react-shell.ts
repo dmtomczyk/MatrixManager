@@ -56,6 +56,8 @@ export function buildReactPage(params: {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>${escapeHtml(title)}</title>
+    <link rel="icon" href="/static/images/matrix-manager-favicon.ico" sizes="any" />
+    <link rel="icon" type="image/svg+xml" href="/static/images/matrix-manager-favicon.svg" />
 ${headScripts}
   </head>
   <body>

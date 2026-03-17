@@ -26,6 +26,13 @@ const workforceLinks = [
   { href: '/job-codes', label: 'Job Codes' },
 ] as const;
 
+const adminLinks = [
+  { href: '/users', label: 'Users' },
+  { href: '/audit', label: 'Audit' },
+  { href: '/runtime', label: 'Runtime' },
+  { href: '/db-management', label: 'DB Management' },
+] as const;
+
 function LinkGroup({ label, links, currentPath }: { label: string; links: readonly { href: string; label: string }[]; currentPath: string }) {
   const isActive = links.some((link) => link.href === currentPath);
 
@@ -54,10 +61,14 @@ export default function AppShell({ currentUser, currentPath, children }: AppShel
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3">
-          <div className="flex items-center gap-2 md:gap-3">
-            <a href="/" className="text-sm font-semibold tracking-tight text-slate-950">
-              Matrix Manager
+        <div className="mx-auto flex w-full max-w-[1100px] items-center justify-between gap-4 px-4 py-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <a href="/" className="inline-flex shrink-0 items-center gap-2.5 rounded-xl px-2.5 py-2 text-slate-950 transition hover:bg-slate-50">
+              <img src="/static/images/matrix-manager-favicon.svg" alt="" className="h-7 w-7 rounded-lg border border-slate-200 bg-white p-1" />
+              <span className="flex flex-col leading-none">
+                <span className="text-sm font-semibold tracking-tight text-slate-950">Matrix Manager</span>
+                <span className="mt-0.5 text-[11px] uppercase tracking-[0.12em] text-slate-400 max-sm:hidden">Planning Workspace</span>
+              </span>
             </a>
             <nav className="hidden items-center gap-1 md:flex">
               {primaryLinks.map((link) => (
@@ -71,6 +82,7 @@ export default function AppShell({ currentUser, currentPath, children }: AppShel
               ))}
               <LinkGroup label="Planning" links={planningLinks} currentPath={currentPath} />
               <LinkGroup label="Workforce" links={workforceLinks} currentPath={currentPath} />
+              <LinkGroup label="Admin" links={adminLinks} currentPath={currentPath} />
             </nav>
           </div>
 
@@ -87,6 +99,10 @@ export default function AppShell({ currentUser, currentPath, children }: AppShel
             <div className="absolute right-0 top-full z-20 mt-2 min-w-52 rounded-lg border border-slate-200 bg-white p-2 shadow-lg">
               <a href="/inbox" className="block rounded-md px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-100">Inbox</a>
               <a href="/account-settings" className="block rounded-md px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-100">Account Settings</a>
+              <a href="/users" className="block rounded-md px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-100">Users</a>
+              <a href="/audit" className="block rounded-md px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-100">Audit</a>
+              <a href="/runtime" className="block rounded-md px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-100">Runtime</a>
+              <a href="/db-management" className="block rounded-md px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-100">DB Management</a>
               <div className="my-2 h-px bg-slate-200" />
               <form method="post" action="/logout">
                 <Button type="submit" variant="outline" className="w-full justify-center">Log out</Button>

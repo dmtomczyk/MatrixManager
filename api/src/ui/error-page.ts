@@ -28,6 +28,7 @@ export function buildErrorPage(params: {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>${escapeHtml(params.title)}</title>
+    ${chrome.head}
     <style>
       *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,sans-serif;background:#f8fafc;color:#0f172a}
       ${chrome.css}

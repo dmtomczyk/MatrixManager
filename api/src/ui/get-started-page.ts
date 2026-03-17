@@ -53,6 +53,7 @@ export function buildGetStartedPage(currentUser: string): string {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Matrix Manager</title>
+    ${chrome.head}
     <style>
       :root { color-scheme: light; }
       * { box-sizing: border-box; }

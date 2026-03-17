@@ -24,6 +24,8 @@ export function buildLoginPage(params: {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Matrix Manager · Login</title>
+    <link rel="icon" href="/static/images/matrix-manager-favicon.ico" sizes="any" />
+    <link rel="icon" type="image/svg+xml" href="/static/images/matrix-manager-favicon.svg" />
     <style>
       * { box-sizing: border-box; }
       body { margin: 0; font-family: Inter, system-ui, sans-serif; background: #f8fafc; color: #0f172a; }
