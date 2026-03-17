@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { getSessionUsername } from '../auth/session.js';
+import { buildGetStartedPage } from '../ui/get-started-page.js';
 import { buildReactPage } from '../ui/react-shell.js';
 
 function renderLogin(app: Parameters<FastifyPluginAsync>[0], error = '', next = '/') {
@@ -34,7 +35,7 @@ export const pageRoutes: FastifyPluginAsync = async (app) => {
     if (!username) {
       return reply.redirect('/login?next=%2F');
     }
-    return reply.type('text/html; charset=utf-8').send(renderAuthedPage(app, 'home', username, '/'));
+    return reply.type('text/html; charset=utf-8').send(buildGetStartedPage(username));
   });
 
   app.get('/canvas', async (request, reply) => {
