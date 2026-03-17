@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { getConfig } from '../../config.js';
 import { listEmployees, listOrganizations, listProjects, listAssignments, getDashboardData } from '../workforce/service.js';
+import { workforceStore } from '../workforce/store.js';
 import { adminStore, type AccountProfileRecord, type AuditEntryRecord, type DbConnectionRecord, type UserRecord } from './store.js';
 
 function nowIso() {
@@ -239,8 +240,8 @@ export function deleteDbConnection(id: number) {
 
 export function getRuntimeOverview() {
   const config = getConfig();
-  const dataPath = path.resolve(import.meta.dirname, '..', '..', '..', 'data', 'api-workforce.json');
-  const controlPath = path.resolve(import.meta.dirname, '..', '..', '..', 'data', 'api-admin.json');
+  const dataPath = path.resolve(config.tsDataDbPath);
+  const controlPath = path.resolve(config.tsControlDbPath);
   const organizations = listOrganizations();
   const employees = listEmployees();
   const projects = listProjects();
@@ -259,8 +260,8 @@ export function getRuntimeOverview() {
       recommended_actions: dbConnections.length ? [] : ['Create a DB connection profile if you want an admin-visible target list on /db-management.'],
       services: [
         { name: 'matrixmanager-api', status: 'ok', detail: 'Fastify TypeScript service responding.' },
-        { name: 'workforce-store', status: fs.existsSync(dataPath) ? 'ok' : 'warn', detail: dataPath },
-        { name: 'admin-store', status: fs.existsSync(controlPath) ? 'ok' : 'warn', detail: controlPath }
+        { name: 'workforce-store', status: fs.existsSync(dataPath) ? 'ok' : 'warn', detail: `${config.activeDbType}:${dataPath}` },
+        { name: 'admin-store', status: fs.existsSync(controlPath) ? 'ok' : 'warn', detail: `sqlite:${controlPath}` }
       ],
       installed_versions: [
         { name: 'node', value: process.version },
@@ -282,6 +283,5 @@ export function getRuntimeOverview() {
 }
 
 export function wipeDataStore() {
-  const workforcePath = path.resolve(import.meta.dirname, '..', '..', '..', 'data', 'api-workforce.json');
-  fs.writeFileSync(workforcePath, JSON.stringify({ organizations: [], jobCodes: [], employees: [], projects: [], demands: [], assignments: [], dashboard: {} }, null, 2));
+  workforceStore.write({ organizations: [], jobCodes: [], employees: [], projects: [], demands: [], assignments: [], dashboard: {} });
 }
