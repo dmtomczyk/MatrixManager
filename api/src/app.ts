@@ -24,6 +24,10 @@ export async function buildApp() {
 
   app.decorate('config', config);
 
+  app.get('/', async (_request, reply) => {
+    return reply.redirect('/login');
+  });
+
   app.get('/api-meta', async () => ({
     service: 'matrixmanager-api',
     runtime: 'node-typescript',

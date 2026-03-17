@@ -50,9 +50,9 @@ api/
 
 ## Phase 2: auth boundary
 
-- [ ] port `/login`, `/logout`, and session handling
+- [x] port `/login`, `/logout`, and basic session handling
 - [ ] port current-user boot props contract needed by the React UI
-- [ ] define cookie/session abstraction separate from route handlers
+- [x] define cookie/session abstraction separate from route handlers
 
 ## Phase 3: core domain APIs
 
