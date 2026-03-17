@@ -3,5 +3,7 @@
 node_modules/
 playwright-report/
 */__pycache__/
+.pytest_cache/
+*.pyc
 test-results/
 api/data/

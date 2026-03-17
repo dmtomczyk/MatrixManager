@@ -16,6 +16,7 @@
     "lint:ui": "eslint frontend/ui/src --ext .ts,.tsx,.js,.jsx",
     "typecheck:ui": "tsc --project frontend/ui/tsconfig.json",
     "typecheck:api": "npm --prefix api run typecheck",
+    "test:api": "npm --prefix api run test",
     "build:ui": "vite build --config frontend/ui/vite.config.mjs",
     "build:api": "npm --prefix api run build"
   },

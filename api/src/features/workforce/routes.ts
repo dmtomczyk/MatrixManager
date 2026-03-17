@@ -19,8 +19,10 @@ import {
   listAssignments,
   listDemands,
   listEmployees,
+  listEmployeeSchedule,
   listJobCodes,
   listOrganizations,
+  listProjectSchedule,
   listProjects,
   updateAssignment,
   updateDashboardTrackedEmployees,
@@ -59,6 +61,8 @@ export const workforceRoutes: FastifyPluginAsync = async (app) => {
   app.delete('/demands-api/:demandId', async (request, reply) => { const demandId = Number((request.params as { demandId: string }).demandId); const result = deleteDemand(demandId); if (!result.ok) { reply.code(result.status); return { detail: result.detail }; } reply.code(204); return null; });
 
   app.get('/assignments', async () => listAssignments());
+  app.get('/schedule/employee/:employeeId', async (request, reply) => { const employeeId = Number((request.params as { employeeId: string }).employeeId); const schedule = listEmployeeSchedule(employeeId); if (!schedule) { reply.code(404); return { detail: 'Employee not found' }; } return schedule; });
+  app.get('/schedule/project/:projectId', async (request, reply) => { const projectId = Number((request.params as { projectId: string }).projectId); const schedule = listProjectSchedule(projectId); if (!schedule) { reply.code(404); return { detail: 'Project not found' }; } return schedule; });
   app.post('/assignments', async (request, reply) => { try { const assignment = createAssignment(request.body); reply.code(201); return assignment; } catch (error) { const formatted = formatWorkforceError(error); reply.code(formatted.statusCode); return { detail: formatted.detail }; } });
   app.put('/assignments/:assignmentId', async (request, reply) => { try { const assignmentId = Number((request.params as { assignmentId: string }).assignmentId); const assignment = updateAssignment(assignmentId, request.body); if (!assignment) { reply.code(404); return { detail: 'Assignment not found' }; } return assignment; } catch (error) { const formatted = formatWorkforceError(error); reply.code(formatted.statusCode); return { detail: formatted.detail }; } });
   app.delete('/assignments/:assignmentId', async (request, reply) => { const assignmentId = Number((request.params as { assignmentId: string }).assignmentId); const result = deleteAssignment(assignmentId); if (!result.ok) { reply.code(result.status); return { detail: result.detail }; } reply.code(204); return null; });

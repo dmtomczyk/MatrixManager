@@ -31,7 +31,7 @@ Useful follow-up commands:
 ./uninstall.sh
 ```
 
-Note: this install/runtime path is still the **legacy packaging surface** and currently boots the legacy Python container runtime. The repo's primary development and test path is already TypeScript-first; see `docs/ts-first-runtime-and-test-audit-2026-03-17.md` for the current keep/port/delete plan.
+This install/runtime path now boots the shipped **TypeScript/Fastify container runtime** and persists the TS data/control SQLite files under `./data/`.
 
 If you want to inspect settings first, check:
 
@@ -91,8 +91,8 @@ See [`LEGACY.md`](./LEGACY.md) for the current deprecation/removal status, and `
 - audit log
 - database management UI
 - TypeScript API with SQLite-backed migrated persistence
-- Docker / docker-compose support (currently still aligned to the legacy runtime packaging path)
-- Playwright coverage for the TS-first dev stack
+- Docker / docker-compose support for the TypeScript/Fastify runtime
+- TypeScript-first automated coverage via Fastify injection + Playwright smoke coverage
 - legacy backend retained temporarily for staged cleanup
 
 ## Demo / screenshots
@@ -123,6 +123,7 @@ For a human-readable dependency inventory with rationale, production/dev split, 
 
 If you are opening this repo for the first time, start with either:
 
-- **Production-style install:** `./install.sh && ./start.sh` *(legacy packaging path pending TS runtime port)*
+- **Production-style install:** `./install.sh && ./start.sh`
 - **Source/dev install:** `npm install && (cd api && npm install) && npm run dev`
+- **TS API integration tests:** `npm run test:api`
 - **TS-first smoke test:** `npm run test:e2e:smoke`

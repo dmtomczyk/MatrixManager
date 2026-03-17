@@ -355,10 +355,10 @@ export function updateEmployee(id: number, input: unknown) {
 export function deleteEmployee(id: number) {
   const state = workforceStore.read();
   if (!state.employees.some((employee) => employee.id === id)) return { ok: false as const, status: 404, detail: 'Employee not found' };
-  if (state.assignments.some((assignment) => assignment.employee_id === id)) return { ok: false as const, status: 400, detail: 'Cannot delete employee with assignments' };
   workforceStore.write({
     ...state,
     employees: state.employees.filter((employee) => employee.id !== id).map((employee) => employee.manager_id === id ? { ...employee, manager_id: null } : employee),
+    assignments: state.assignments.filter((assignment) => assignment.employee_id !== id),
     dashboard: Object.fromEntries(Object.entries(state.dashboard).map(([username, value]) => [username, { tracked_employee_ids: value.tracked_employee_ids.filter((employeeId) => employeeId !== id) }]))
   });
   return { ok: true as const };
@@ -460,6 +460,24 @@ export function deleteDemand(id: number) {
 export function listAssignments() {
   const state = workforceStore.read();
   return state.assignments.slice().sort((a, b) => compareDateStrings(a.start_date, b.start_date) || a.id - b.id).map((assignment) => serializeAssignment(state, assignment));
+}
+
+export function listEmployeeSchedule(employeeId: number) {
+  const state = workforceStore.read();
+  if (!state.employees.some((employee) => employee.id === employeeId)) return null;
+  return state.assignments
+    .filter((assignment) => assignment.employee_id === employeeId)
+    .sort((a, b) => compareDateStrings(a.start_date, b.start_date) || a.id - b.id)
+    .map((assignment) => serializeAssignment(state, assignment));
+}
+
+export function listProjectSchedule(projectId: number) {
+  const state = workforceStore.read();
+  if (!state.projects.some((project) => project.id === projectId)) return null;
+  return state.assignments
+    .filter((assignment) => assignment.project_id === projectId)
+    .sort((a, b) => compareDateStrings(a.start_date, b.start_date) || a.id - b.id)
+    .map((assignment) => serializeAssignment(state, assignment));
 }
 
 export function createAssignment(input: unknown) {
