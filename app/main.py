@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import Any, Generator, List, Optional, Set
 from urllib.parse import quote, quote_plus
 
-from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
@@ -29,7 +28,26 @@ import sqlmodel
 
 BASE_DIR = Path(__file__).resolve().parent
 ROOT_DIR = BASE_DIR.parent
-load_dotenv(ROOT_DIR / ".env")
+
+
+def load_env_file(path: Path) -> None:
+    if not path.exists():
+        return
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+        if not key:
+            continue
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
+            value = value[1:-1]
+        os.environ.setdefault(key, value)
+
+
+load_env_file(ROOT_DIR / ".env")
 DB_PATH = Path(os.getenv("MATRIX_SQLITE_PATH", str(ROOT_DIR / "matrix.db"))).expanduser()
 CONTROL_DB_PATH = Path(os.getenv("MATRIX_CONTROL_DB_PATH", str(ROOT_DIR / "matrixmanager_control.db"))).expanduser()
 STATIC_DIR = BASE_DIR / "static"
