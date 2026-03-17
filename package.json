@@ -8,12 +8,16 @@
     "test:e2e:ui": "playwright test --ui",
     "db:reset": "./.venv/bin/python scripts/reset_db.py",
     "db:seed": "./.venv/bin/python scripts/seed_sample_data.py",
-    "dev:api": "./.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload",
+    "dev:api:legacy": "./.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload",
+    "dev:api:ts": "npm --prefix api run dev",
     "dev:ui": "vite --config frontend/ui/vite.config.mjs",
-    "dev": "concurrently -k -n api,ui -c blue,magenta \"npm run dev:api\" \"npm run dev:ui\"",
+    "dev": "concurrently -k -n api,ui -c blue,magenta \"npm run dev:api:legacy\" \"npm run dev:ui\"",
+    "dev:ts": "concurrently -k -n api,ui -c cyan,magenta \"npm run dev:api:ts\" \"npm run dev:ui\"",
     "lint:ui": "eslint frontend/ui/src --ext .ts,.tsx,.js,.jsx",
     "typecheck:ui": "tsc --project frontend/ui/tsconfig.json",
-    "build:ui": "vite build --config frontend/ui/vite.config.mjs"
+    "typecheck:api": "npm --prefix api run typecheck",
+    "build:ui": "vite build --config frontend/ui/vite.config.mjs",
+    "build:api": "npm --prefix api run build"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",
