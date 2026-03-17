@@ -1,6 +1,6 @@
 # MatrixManager TypeScript API
 
-This folder is the long-term replacement for the legacy Python backend.
+This folder is now the primary in-repo backend for MatrixManager.
 
 ## Goals
 
@@ -15,10 +15,10 @@ This folder is the long-term replacement for the legacy Python backend.
 - Zod for configuration validation
 - TypeScript + tsx for local dev
 
-## Migration stance
+## Current stance
 
-The legacy Python app remains in place while routes move over in slices.
-Do not pretend this folder is feature-complete yet.
+The TypeScript app is now the primary development/runtime path inside the repo.
+The legacy Python backend remains temporarily for comparison and staged cleanup only.
 
 ## Suggested migration order
 
@@ -35,6 +35,7 @@ Do not pretend this folder is feature-complete yet.
 
 From repo root:
 
+- `npm run dev`
 - `npm run dev:api:ts`
 - `npm run typecheck:api`
 - `npm run build:api`

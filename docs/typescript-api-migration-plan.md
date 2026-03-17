@@ -2,7 +2,7 @@
 
 ## Decision
 
-MatrixManager will migrate its backend from the current Python/FastAPI implementation to a TypeScript backend living in `api/` at the repository root.
+MatrixManager has migrated its primary in-repo backend path from the legacy Python/FastAPI implementation to a TypeScript backend living in `api/` at the repository root.
 
 ## Why
 
@@ -44,14 +44,14 @@ api/
 - [x] create `api/` TypeScript service skeleton
 - [x] add config loading + validation
 - [x] add health and runtime metadata routes
-- [ ] add package install in `api/`
-- [ ] choose persistence layer (recommended: Kysely or Drizzle)
+- [x] add package install in `api/`
+- [x] move migrated persistence to SQLite-backed TS stores
 - [ ] add test harness and route smoke tests
 
 ## Phase 2: auth boundary
 
 - [x] port `/login`, `/logout`, and basic session handling
-- [ ] port current-user boot props contract needed by the React UI
+- [x] port current-user boot props contract needed by the React UI
 - [x] define cookie/session abstraction separate from route handlers
 
 ## Phase 3: core domain APIs
@@ -67,13 +67,13 @@ Suggested order:
 
 ## Phase 4: operational/admin APIs
 
-- [ ] dashboard
-- [ ] inbox
-- [ ] audit log
-- [ ] runtime overview
-- [ ] DB connection management
-- [ ] account settings
-- [ ] users
+- [x] dashboard
+- [x] inbox
+- [x] audit log
+- [x] runtime overview
+- [x] DB connection management
+- [x] account settings
+- [x] users
 
 ## Route inventory from legacy Python backend
 
@@ -125,9 +125,9 @@ Suggested order:
 
 ## Root script strategy
 
-During migration, keep both worlds available:
+Current repo posture:
 
-- legacy Python backend for current feature completeness
-- TypeScript backend for forward migration work
+- TypeScript backend is the default development path
+- legacy Python backend remains available only through explicit legacy scripts for comparison/reference
 
-Do not switch the default app runtime until auth + core CRUD surfaces are ported.
+Next cleanup should continue shrinking the legacy surface area until removal is safe.

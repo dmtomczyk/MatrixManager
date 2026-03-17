@@ -17,7 +17,7 @@ module.exports = defineConfig({
     },
   },
   webServer: {
-    command: `rm -f matrix.db && MATRIX_AUTH_USERNAME=${authUser} MATRIX_AUTH_PASSWORD=${authPass} ./.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000`,
+    command: `MATRIX_AUTH_USERNAME=${authUser} MATRIX_AUTH_PASSWORD=${authPass} npm run dev`,
     url: 'http://127.0.0.1:8000',
     reuseExistingServer: false,
     timeout: 120000,
