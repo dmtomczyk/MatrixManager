@@ -42,6 +42,7 @@ POSTGRES_USER = os.getenv("POSTGRES_USER", "matrixmanager")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "")
 POSTGRES_SSLMODE = os.getenv("POSTGRES_SSLMODE", "prefer")
 MATRIXMANAGER_VERSION = os.getenv("MATRIXMANAGER_VERSION", "dev")
+MATRIX_UI_DEV_URL = os.getenv("MATRIX_UI_DEV_URL", "").strip().rstrip("/")
 
 DATABASE_URL = f"sqlite:///{DB_PATH}"
 CONTROL_DATABASE_URL = f"sqlite:///{CONTROL_DB_PATH}"
@@ -783,8 +784,6 @@ def render_app_nav(current_path: str, username: str) -> str:
 
 def build_login_page(error: str = "", next_path: str = "/") -> str:
     styles_href = static_asset_url("styles.css")
-    ui_styles_href = static_asset_url("ui-react/ui-react.css")
-    ui_script_href = static_asset_url("ui-react/ui-react.js")
     favicon_href = static_asset_url("images/matrix-manager-favicon.ico")
     logo_href = static_asset_url("images/matrix-manager-favicon.svg")
     safe_next = next_path if next_path.startswith("/") else "/"
@@ -802,12 +801,11 @@ def build_login_page(error: str = "", next_path: str = "/") -> str:
     <title>Matrix Manager · Login</title>
     <link rel=\"icon\" href=\"{favicon_href}\" sizes=\"any\" />
     <link rel=\"stylesheet\" href=\"{styles_href}\" />
-    <link rel=\"stylesheet\" href=\"{ui_styles_href}\" />
-  </head>
+{ui_react_head_markup()}  </head>
   <body class=\"login-page\">
     <div id=\"root\" data-page=\"login\"></div>
     <script id=\"mm-react-props\" type=\"application/json\">{boot_payload}</script>
-    <script type=\"module\" src=\"{ui_script_href}\"></script>
+{ui_react_script_markup()}
     {build_app_footer()}
   </body>
 </html>"""
@@ -1163,6 +1161,36 @@ def static_asset_url(relative_path: str) -> str:
     asset_path = STATIC_DIR / relative_path
     version = int(asset_path.stat().st_mtime) if asset_path.exists() else 0
     return f"/static/{relative_path}?v={version}"
+
+
+def ui_react_asset_urls() -> dict[str, str]:
+    if MATRIX_UI_DEV_URL:
+        return {
+            "styles_href": "",
+            "script_href": f"{MATRIX_UI_DEV_URL}/src/main.jsx",
+            "dev_client_href": f"{MATRIX_UI_DEV_URL}/@vite/client",
+        }
+    return {
+        "styles_href": static_asset_url("ui-react/ui-react.css"),
+        "script_href": static_asset_url("ui-react/ui-react.js"),
+        "dev_client_href": "",
+    }
+
+
+def ui_react_head_markup() -> str:
+    asset_urls = ui_react_asset_urls()
+    if asset_urls["styles_href"]:
+        return f'    <link rel="stylesheet" href="{asset_urls["styles_href"]}" />\n'
+    return ""
+
+
+def ui_react_script_markup() -> str:
+    asset_urls = ui_react_asset_urls()
+    tags = []
+    if asset_urls["dev_client_href"]:
+        tags.append(f'    <script type="module" src="{asset_urls["dev_client_href"]}"></script>')
+    tags.append(f'    <script type="module" src="{asset_urls["script_href"]}"></script>')
+    return "\n".join(tags)
 
 
 def get_request_username(request: Request) -> str:
@@ -2433,8 +2461,8 @@ def serve_home(request: Request) -> str:
         "home.html",
         {
             'href="/static/styles.css"': f'href="{static_asset_url("styles.css")}"',
-            'href="/static/ui-react/ui-react.css"': f'href="{static_asset_url("ui-react/ui-react.css")}"',
-            'src="/static/ui-react/ui-react.js"': f'src="{static_asset_url("ui-react/ui-react.js")}"',
+            '    <link rel="stylesheet" href="/static/ui-react/ui-react.css" />\n': ui_react_head_markup(),
+            '    <script type="module" src="/static/ui-react/ui-react.js"></script>': ui_react_script_markup(),
         },
         current_path=request.url.path,
         username=get_session_username(request.cookies.get(SESSION_COOKIE_NAME)),
@@ -2499,8 +2527,8 @@ def serve_canvas(request: Request) -> str:
         "canvas.html",
         {
             'href="/static/styles.css"': f'href="{static_asset_url("styles.css")}"',
-            'href="/static/ui-react/ui-react.css"': f'href="{static_asset_url("ui-react/ui-react.css")}"',
-            'src="/static/ui-react/ui-react.js"': f'src="{static_asset_url("ui-react/ui-react.js")}"',
+            '    <link rel="stylesheet" href="/static/ui-react/ui-react.css" />\n': ui_react_head_markup(),
+            '    <script type="module" src="/static/ui-react/ui-react.js"></script>': ui_react_script_markup(),
         },
         current_path=request.url.path,
         username=get_session_username(request.cookies.get(SESSION_COOKIE_NAME)),
