@@ -42,7 +42,10 @@ POSTGRES_USER = os.getenv("POSTGRES_USER", "matrixmanager")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "")
 POSTGRES_SSLMODE = os.getenv("POSTGRES_SSLMODE", "prefer")
 MATRIXMANAGER_VERSION = os.getenv("MATRIXMANAGER_VERSION", "dev")
+MATRIX_ENV = os.getenv("MATRIX_ENV", os.getenv("ENVIRONMENT", "")).strip().lower()
 MATRIX_UI_DEV_URL = os.getenv("MATRIX_UI_DEV_URL", "").strip().rstrip("/")
+if not MATRIX_UI_DEV_URL and MATRIX_ENV in {"dev", "development"}:
+    MATRIX_UI_DEV_URL = "http://127.0.0.1:4173"
 
 DATABASE_URL = f"sqlite:///{DB_PATH}"
 CONTROL_DATABASE_URL = f"sqlite:///{CONTROL_DB_PATH}"
