@@ -7,7 +7,8 @@ export default defineConfig({
   root: resolve(process.cwd(), 'frontend/ui'),
   server: {
     host: '0.0.0.0',
-    port: 5173,
+    port: 4173,
+    strictPort: true,
     proxy: {
       '/api': 'http://127.0.0.1:8000',
       '/login': 'http://127.0.0.1:8000',
