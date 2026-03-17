@@ -15,7 +15,6 @@ import {
   deleteProject,
   formatWorkforceError,
   getDashboardData,
-  getForecastData,
   listAssignments,
   listDemands,
   listEmployees,
@@ -33,13 +32,13 @@ import {
 import { addAuditEntry, clearAuditLog, createDbConnection, createUser, deleteDbConnection, deleteInboxItem, deleteUser, getAccountSettings, getRuntimeOverview, isAdminUser, listAuditEntries, listDbConnections, listInboxItems, listUsers, markInboxItemRead, updateAccountSettings, updateDbConnection, updateUser, wipeDataStore } from '../features/admin/service.js';
 import { buildGetStartedPage } from '../ui/get-started-page.js';
 import { buildLoginPage } from '../ui/login-page.js';
-import { buildAssignmentsPage, buildDemandsPage, buildEmployeesPage, buildForecastPage, buildJobCodesPage, buildOrganizationsPage, buildProjectsPage } from '../ui/workforce-pages.js';
+import { buildAssignmentsPage, buildDemandsPage, buildEmployeesPage, buildJobCodesPage, buildOrganizationsPage, buildProjectsPage } from '../ui/workforce-pages.js';
 import { buildAccountSettingsPage, buildAuditPage, buildDbManagementPage, buildInboxPage, buildRuntimePage, buildUsersPage } from '../ui/admin-pages.js';
 import { buildReactPage } from '../ui/react-shell.js';
 
 function renderLogin(app: Parameters<FastifyPluginAsync>[0], error = '', next = '/') { return buildLoginPage({ error, next, logoHref: app.config.logoHref, githubUrl: app.config.githubRepoUrl }); }
 function redirectWithFlash(reply: FastifyReply, path: string, message: string) { return reply.redirect(path + '?flash=' + encodeURIComponent(message)); }
-function renderReactAuthedPage(app: Parameters<FastifyPluginAsync>[0], page: 'canvas' | 'dashboard', title: string, username: string, currentPath: '/canvas' | '/dashboard', flash = '') {
+function renderReactAuthedPage(app: Parameters<FastifyPluginAsync>[0], page: 'canvas' | 'dashboard' | 'forecast', title: string, username: string, currentPath: '/canvas' | '/dashboard' | '/forecast', flash = '') {
   return buildReactPage({
     page,
     title,
@@ -94,7 +93,7 @@ export const pageRoutes: FastifyPluginAsync = async (app) => {
   app.get('/dashboard', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fdashboard'); return reply.type('text/html; charset=utf-8').send(renderReactAuthedPage(app, 'dashboard', 'Matrix Manager · Dashboard', username, '/dashboard', String((request.query as Record<string, unknown> | undefined)?.flash ?? ''))); });
   app.post('/dashboard/tracked/add', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fdashboard'); try { const employeeId = Number(asBody(request.body).employee_id); const current = getDashboardData(username); const next = updateDashboardTrackedEmployees(username, { employee_ids: [...new Set(current.tracked_employees.map((employee) => employee.id).concat(employeeId))] }); logAudit(username, 'update', 'dashboard_preferences', username, `Added employee ${employeeId} to tracked dashboard list`, current, next); return redirectWithFlash(reply, '/dashboard', 'Employee added to tracked list.'); } catch (error) { return redirectWithFlash(reply, '/dashboard', formatWorkforceError(error).detail); } });
   app.post('/dashboard/tracked/remove', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fdashboard'); try { const employeeId = Number(asBody(request.body).employee_id); const current = getDashboardData(username); const next = updateDashboardTrackedEmployees(username, { employee_ids: current.tracked_employees.map((employee) => employee.id).filter((id) => id !== employeeId) }); logAudit(username, 'update', 'dashboard_preferences', username, `Removed employee ${employeeId} from tracked dashboard list`, current, next); return redirectWithFlash(reply, '/dashboard', 'Employee removed from tracked list.'); } catch (error) { return redirectWithFlash(reply, '/dashboard', formatWorkforceError(error).detail); } });
-  app.get('/forecast', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fforecast'); return reply.type('text/html; charset=utf-8').send(buildForecastPage(username, getForecastData(), String((request.query as Record<string, unknown> | undefined)?.flash ?? ''))); });
+  app.get('/forecast', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Fforecast'); return reply.type('text/html; charset=utf-8').send(renderReactAuthedPage(app, 'forecast', 'Matrix Manager · Forecast', username, '/forecast', String((request.query as Record<string, unknown> | undefined)?.flash ?? ''))); });
 
   app.get('/inbox', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Finbox'); return reply.type('text/html; charset=utf-8').send(buildInboxPage(username, listInboxItems(username), String((request.query as Record<string, unknown> | undefined)?.flash ?? ''))); });
   app.post('/inbox/:itemId/read', async (request, reply) => { const username = getSessionUsername(request); if (!username) return reply.redirect('/login?next=%2Finbox'); const itemId = Number((request.params as { itemId: string }).itemId); markInboxItemRead(username, itemId); logAudit(username, 'read', 'inbox_item', itemId, `Marked inbox item ${itemId} read`); return redirectWithFlash(reply, '/inbox', 'Inbox item marked read.'); });

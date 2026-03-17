@@ -6,6 +6,7 @@ import LoginPage from './components/LoginPage';
 import GetStartedPage from './components/GetStartedPage';
 import CanvasPage from './components/CanvasPage';
 import DashboardPage from './components/DashboardPage';
+import ForecastPage from './components/ForecastPage';
 import AppShell from './components/AppShell';
 import { readBootPayload, type AuthenticatedPageProps, type LoginPageProps } from './lib/utils';
 import './styles.css';
@@ -35,6 +36,14 @@ function App() {
     return (
       <AppShell {...shellProps}>
         <DashboardPage {...authenticatedProps} currentUser={shellProps.currentUser} />
+      </AppShell>
+    );
+  }
+
+  if (page === 'forecast') {
+    return (
+      <AppShell {...shellProps}>
+        <ForecastPage {...authenticatedProps} currentUser={shellProps.currentUser} />
       </AppShell>
     );
   }
