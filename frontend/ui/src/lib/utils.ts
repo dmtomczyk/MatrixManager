@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-export type BootPage = 'login' | 'home' | 'canvas';
+export type BootPage = 'login' | 'home' | 'canvas' | 'dashboard';
 
 export interface LoginPageProps {
   error?: string;
@@ -13,6 +13,7 @@ export interface LoginPageProps {
 export interface AuthenticatedPageProps {
   currentUser?: string;
   currentPath?: string;
+  flash?: string;
 }
 
 export interface BootPayload {
@@ -38,7 +39,7 @@ export function readBootPayload(): BootPayload {
   }
 
   const pageAttr = root?.dataset.page;
-  const page: BootPage = pageAttr === 'login' || pageAttr === 'canvas' ? pageAttr : 'home';
+  const page: BootPage = pageAttr === 'login' || pageAttr === 'canvas' || pageAttr === 'dashboard' ? pageAttr : 'home';
 
   return {
     page,

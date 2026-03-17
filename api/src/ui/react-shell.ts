@@ -1,4 +1,4 @@
-type BootPage = 'login' | 'home' | 'canvas' | 'dashboard' | 'forecast';
+type BootPage = 'login' | 'home' | 'canvas' | 'dashboard';
 
 function escapeHtml(input: string): string {
   return input

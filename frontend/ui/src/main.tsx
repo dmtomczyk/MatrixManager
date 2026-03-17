@@ -5,6 +5,7 @@ import '@xyflow/react/dist/style.css';
 import LoginPage from './components/LoginPage';
 import GetStartedPage from './components/GetStartedPage';
 import CanvasPage from './components/CanvasPage';
+import DashboardPage from './components/DashboardPage';
 import AppShell from './components/AppShell';
 import { readBootPayload, type AuthenticatedPageProps, type LoginPageProps } from './lib/utils';
 import './styles.css';
@@ -26,6 +27,14 @@ function App() {
         <ReactFlowProvider>
           <CanvasPage />
         </ReactFlowProvider>
+      </AppShell>
+    );
+  }
+
+  if (page === 'dashboard') {
+    return (
+      <AppShell {...shellProps}>
+        <DashboardPage {...authenticatedProps} currentUser={shellProps.currentUser} />
       </AppShell>
     );
   }
