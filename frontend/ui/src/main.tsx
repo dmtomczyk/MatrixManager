@@ -1,29 +1,35 @@
-import React from 'react';
+import * as React from 'react';
 import ReactDOM from 'react-dom/client';
 import { ReactFlowProvider } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import LoginPage from './components/LoginPage';
 import GetStartedPage from './components/GetStartedPage';
 import CanvasPage from './components/CanvasPage';
-import { readBootPayload } from './lib/utils';
+import { readBootPayload, type LoginPageProps } from './lib/utils';
 import './styles.css';
 
 const { page, props } = readBootPayload();
 
-const App = () => {
-  if (page === 'login') return <LoginPage {...props} />;
+function App() {
+  if (page === 'login') return <LoginPage {...(props as LoginPageProps)} />;
   if (page === 'canvas') {
     return (
       <ReactFlowProvider>
-        <CanvasPage {...props} />
+        <CanvasPage />
       </ReactFlowProvider>
     );
   }
-  return <GetStartedPage {...props} />;
-};
+  return <GetStartedPage />;
+}
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+const rootElement = document.getElementById('root');
+
+if (!rootElement) {
+  throw new Error('Root element not found');
+}
+
+ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <App />
-  </React.StrictMode>
+  </React.StrictMode>,
 );

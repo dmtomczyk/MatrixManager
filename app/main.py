@@ -1167,7 +1167,7 @@ def ui_react_asset_urls() -> dict[str, str]:
     if MATRIX_UI_DEV_URL:
         return {
             "styles_href": "",
-            "script_href": f"{MATRIX_UI_DEV_URL}/src/main.jsx",
+            "script_href": f"{MATRIX_UI_DEV_URL}/src/main.tsx",
             "dev_client_href": f"{MATRIX_UI_DEV_URL}/@vite/client",
         }
     return {

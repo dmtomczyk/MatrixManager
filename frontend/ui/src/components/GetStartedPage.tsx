@@ -1,7 +1,17 @@
-import React from 'react';
+import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 
-const principles = [
+interface Principle {
+  title: string;
+  body: string;
+}
+
+interface QuickLink {
+  label: string;
+  href: string;
+}
+
+const principles: Principle[] = [
   {
     title: 'Organizations contain employees',
     body: 'An organization is the home structure for your people. Every employee belongs to one organization, even if they work across multiple projects.',
@@ -16,7 +26,7 @@ const principles = [
   },
 ];
 
-const steps = [
+const steps: string[] = [
   'Define an organization',
   'Set up job codes',
   'Create employees',
@@ -25,13 +35,16 @@ const steps = [
   'Review the outputs in Canvas and Forecast',
 ];
 
-const quickLinks = [
+const quickLinks: QuickLink[] = [
   { label: 'Organizations', href: '/orgs' },
   { label: 'Job Codes', href: '/job-codes' },
   { label: 'Employees', href: '/people' },
   { label: 'Projects', href: '/planning' },
   { label: 'Assignments', href: '/staffing' },
 ];
+
+const relationshipItems = ['Organizations', 'Employees', 'Managers', 'Projects', 'Assignments'] as const;
+const relationshipKinds = ['Foundation', 'People', 'Structure', 'Work', 'Execution'] as const;
 
 export default function GetStartedPage() {
   return (
@@ -62,13 +75,13 @@ export default function GetStartedPage() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap items-center gap-3">
-              {['Organizations', 'Employees', 'Managers', 'Projects', 'Assignments'].map((item, index, items) => (
+              {relationshipItems.map((item, index) => (
                 <React.Fragment key={item}>
                   <div className="ops-soft-card grid gap-1 px-4 py-3 shadow-sm">
                     <strong className="text-sm text-slate-950">{item}</strong>
-                    <span className="text-xs uppercase tracking-[0.12em] text-slate-500">{['Foundation', 'People', 'Structure', 'Work', 'Execution'][index]}</span>
+                    <span className="text-xs uppercase tracking-[0.12em] text-slate-500">{relationshipKinds[index]}</span>
                   </div>
-                  {index < items.length - 1 ? <span className="text-sm font-semibold text-slate-400">→</span> : null}
+                  {index < relationshipItems.length - 1 ? <span className="text-sm font-semibold text-slate-400">→</span> : null}
                 </React.Fragment>
               ))}
             </div>

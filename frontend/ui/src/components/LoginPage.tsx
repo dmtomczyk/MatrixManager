@@ -1,10 +1,11 @@
-import React from 'react';
+import * as React from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import type { LoginPageProps } from '../lib/utils';
 
-export default function LoginPage({ error = '', next = '/', logoHref = '', githubUrl = '' }) {
+export default function LoginPage({ error = '', next = '/', logoHref = '', githubUrl = '' }: LoginPageProps) {
   return (
     <main className="ops-page grid min-h-[calc(100vh-12rem)] items-center gap-6 lg:grid-cols-[1.15fr_0.85fr]">
       <Card className="ops-hero-card">

@@ -13,6 +13,7 @@
     "dev:ui": "vite --config frontend/ui/vite.config.mjs",
     "dev": "bash -lc 'trap \"kill 0\" EXIT; MATRIX_UI_DEV_URL=http://127.0.0.1:4173 ./.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload & ./node_modules/.bin/vite --config frontend/ui/vite.config.mjs & wait'",
     "dev:stop": "bash -lc 'pkill -f \"vite --config frontend/ui/vite.config.mjs\" || true; pkill -f \"uvicorn app.main:app\" || true; fuser -k 4173/tcp 2>/dev/null || true; fuser -k 8000/tcp 2>/dev/null || true'",
+    "typecheck:ui": "tsc --project frontend/ui/tsconfig.json",
     "build:ui": "vite build --config frontend/ui/vite.config.mjs"
   },
   "dependencies": {
@@ -23,6 +24,8 @@
   "devDependencies": {
     "@playwright/test": "^1.53.2",
     "@tailwindcss/postcss": "^4.2.1",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "^10.4.27",
     "class-variance-authority": "^0.7.1",
@@ -31,6 +34,7 @@
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.2.1",
     "tailwindcss-animate": "^1.0.7",
+    "typescript": "^5.9.3",
     "vite": "^5.4.19"
   }
 }
