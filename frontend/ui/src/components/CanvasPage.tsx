@@ -170,8 +170,10 @@ type CanvasNodeData = OrgNodeData | EmployeeNodeData | ProjectNodeData;
 type CanvasNode = Node<CanvasNodeData>;
 type CanvasEdge = Edge<EdgeData>;
 
+const apiBase = (globalThis as typeof globalThis & { __MM_API_BASE__?: string }).__MM_API_BASE__ || '';
+
 async function apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(url, {
+  const response = await fetch(`${apiBase}${url}`, {
     headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
     ...options,
   });
