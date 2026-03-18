@@ -438,8 +438,9 @@ export default function CanvasPage() {
   const [removeAssignmentState, setRemoveAssignmentState] = React.useState<RemoveAssignmentState>({ open: false, assignmentId: '' });
   const [projectTimeline, setProjectTimeline] = React.useState<Nullable<ProjectTimelineState>>(null);
   const [draggedEmployeeId, setDraggedEmployeeId] = React.useState<Nullable<number>>(null);
+  const [isFullscreen, setIsFullscreen] = React.useState(false);
   const flowWrapperRef = React.useRef<HTMLElement | null>(null);
-  useReactFlow();
+  const reactFlow = useReactFlow();
 
   const refresh = React.useCallback(async () => {
     setLoading(true);
@@ -475,6 +476,18 @@ export default function CanvasPage() {
     const id = window.setTimeout(() => setToast(''), 2400);
     return () => window.clearTimeout(id);
   }, [toast]);
+
+  React.useEffect(() => {
+    const updateFullscreenState = () => {
+      setIsFullscreen(document.fullscreenElement === flowWrapperRef.current);
+      window.setTimeout(() => {
+        reactFlow.fitView({ padding: 0.12, duration: 250 });
+      }, 30);
+    };
+
+    document.addEventListener('fullscreenchange', updateFullscreenState);
+    return () => document.removeEventListener('fullscreenchange', updateFullscreenState);
+  }, [reactFlow]);
 
   const openCreateProject = () => setProjectFormState({ open: true, projectId: null, values: { ...defaultProjectForm } });
 
@@ -742,6 +755,21 @@ export default function CanvasPage() {
     setProjectTimeline({ project, assignments });
   };
 
+  const toggleFullscreen = async () => {
+    const stage = flowWrapperRef.current;
+    if (!stage) return;
+
+    try {
+      if (document.fullscreenElement === stage) {
+        await document.exitFullscreen();
+      } else {
+        await stage.requestFullscreen();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to toggle fullscreen');
+    }
+  };
+
   const orgOptions = React.useMemo<OrgOption[]>(() => data.organizations.map((org) => ({ value: String(org.id), label: org.name })), [data.organizations]);
 
   const assignmentChoices = React.useMemo<AssignmentChoice[]>(
@@ -769,6 +797,7 @@ export default function CanvasPage() {
           <button type="button" className="ghost-button" onClick={() => setOrgFormOpen(true)}>Create New Org</button>
           <button type="button" className="ghost-button" onClick={openCreateProject}>Create Project</button>
           <button type="button" className="ghost-button" onClick={() => void refresh()}>Refresh</button>
+          <button type="button" className="ghost-button" onClick={() => void toggleFullscreen()}>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</button>
         </div>
       </div>
       {error ? <div className="canvas-react-banner is-error">{error}</div> : null}
@@ -838,7 +867,7 @@ export default function CanvasPage() {
             {!selectedEmployee && !selectedProject && !selectedEdge ? <p className="muted">Nothing selected.</p> : null}
           </section>
         </aside>
-        <section className={`canvas-react-stage${draggedEmployeeId ? ' is-drop-active' : ''}`} ref={flowWrapperRef as React.RefObject<HTMLElement>} onContextMenu={onContextMenu} onDragOver={onCanvasDragOver} onDrop={onCanvasDrop}>
+        <section className={`canvas-react-stage${draggedEmployeeId ? ' is-drop-active' : ''}${isFullscreen ? ' is-fullscreen' : ''}`} ref={flowWrapperRef as React.RefObject<HTMLElement>} onContextMenu={onContextMenu} onDragOver={onCanvasDragOver} onDrop={onCanvasDrop}>
           {loading ? <div className="canvas-react-loading">Loading canvas…</div> : null}
           <ReactFlow
             nodes={nodes as unknown as Node[]}
