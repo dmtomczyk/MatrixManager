@@ -19,15 +19,15 @@ If you want the fastest install path, use the included lifecycle scripts:
 ```bash
 cd matrixmanager
 ./install.sh
-./start.sh
+./manager.sh start
 ```
 
 Useful follow-up commands:
 
 ```bash
-./status.sh
-./stop.sh
-./reset.sh
+./manager.sh status
+./manager.sh stop
+./manager.sh reset
 ./uninstall.sh
 ```
 
@@ -123,7 +123,7 @@ For a human-readable dependency inventory with rationale, production/dev split, 
 
 If you are opening this repo for the first time, start with either:
 
-- **Production-style install:** `./install.sh && ./start.sh`
+- **Production-style install:** `./install.sh && ./manager.sh start`
 - **Source/dev install:** `npm install && (cd api && npm install) && npm run dev`
 - **TS API integration tests:** `npm run test:api`
 - **TS-first smoke test:** `npm run test:e2e:smoke`

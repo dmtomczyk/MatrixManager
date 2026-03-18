@@ -329,10 +329,10 @@ printf 'SQLite data dir: %s\n' "$DATA_SQLITE_DIR"
 printf 'App data dir: %s\n' "$DATA_APP_DIR"
 printf 'Backups dir: %s\n' "$DATA_BACKUPS_DIR"
 printf '\nUseful commands:\n'
-printf '  ./status.sh\n'
-printf '  ./start.sh\n'
-printf '  ./stop.sh\n'
-printf '  ./reset.sh\n'
+printf '  ./manager.sh status\n'
+printf '  ./manager.sh start\n'
+printf '  ./manager.sh stop\n'
+printf '  ./manager.sh reset\n'
 printf '  ./uninstall.sh\n'
 printf '  docker compose logs app --tail=100\n'
 if [[ "$INSTALL_MODE" == "postgresql" ]]; then
