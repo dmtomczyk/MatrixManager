@@ -1,4 +1,4 @@
-type BootPage = 'login' | 'getStarted' | 'canvas' | 'dashboard' | 'forecast' | 'orgs' | 'jobCodes' | 'employees' | 'projects' | 'demands' | 'assignments' | 'accountSettings' | 'inbox' | 'users' | 'audit' | 'runtime' | 'dbManagement';
+type BootPage = 'login' | 'getStarted' | 'roadmap' | 'canvas' | 'dashboard' | 'forecast' | 'orgs' | 'jobCodes' | 'employees' | 'projects' | 'demands' | 'assignments' | 'accountSettings' | 'inbox' | 'users' | 'audit' | 'runtime' | 'dbManagement';
 
 function escapeHtml(input: string): string {
   return input

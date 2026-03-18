@@ -42,13 +42,11 @@ interface DashboardPageProps {
 const apiBase = (globalThis as typeof globalThis & { __MM_API_BASE__?: string }).__MM_API_BASE__ || '';
 
 async function apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
+  const mergedHeaders = new Headers(options.headers || {});
+  if (!mergedHeaders.has('Content-Type')) mergedHeaders.set('Content-Type', 'application/json');
   const response = await fetch(`${apiBase}${url}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      'x-matrix-user': options.headers && 'x-matrix-user' in new Headers(options.headers) ? new Headers(options.headers).get('x-matrix-user') || '' : '',
-      ...(options.headers || {}),
-    },
     ...options,
+    headers: mergedHeaders,
   });
 
   if (!response.ok) {

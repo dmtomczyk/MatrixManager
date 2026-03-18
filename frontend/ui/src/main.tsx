@@ -4,6 +4,7 @@ import { ReactFlowProvider } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import LoginPage from './components/LoginPage';
 import GetStartedPage from './components/GetStartedPage';
+import RoadmapPage from './components/RoadmapPage';
 import CanvasPage from './components/CanvasPage';
 import DashboardPage from './components/DashboardPage';
 import ForecastPage from './components/ForecastPage';
@@ -64,6 +65,7 @@ function App() {
   if (page === 'dbManagement') return <AppShell {...shellProps}><DbManagementPage {...authenticatedProps} /></AppShell>;
 
   if (page === 'getStarted') return <AppShell {...shellProps}><GetStartedPage /></AppShell>;
+  if (page === 'roadmap') return <AppShell {...shellProps}><RoadmapPage /></AppShell>;
 
   return (
     <AppShell {...shellProps}>
