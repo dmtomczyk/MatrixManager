@@ -146,11 +146,11 @@ export default function DashboardPage({ currentUser, flash }: DashboardPageProps
     }
   };
 
-  if (loading && !data) return <main className="mx-auto flex min-h-[calc(100vh-8rem)] w-full max-w-6xl items-center justify-center px-4 py-10 text-slate-500">Loading dashboard…</main>;
-  if (!data) return <main className="mx-auto w-full max-w-6xl px-4 py-10"><div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700">{error || 'Dashboard unavailable.'}</div></main>;
+  if (loading && !data) return <main className="mx-auto flex min-h-[calc(100vh-8rem)] w-full max-w-[min(100%,calc(100vw-2rem))] items-center justify-center px-4 py-10 text-slate-500">Loading dashboard…</main>;
+  if (!data) return <main className="mx-auto w-full max-w-[min(100%,calc(100vw-2rem))] px-4 py-10"><div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700">{error || 'Dashboard unavailable.'}</div></main>;
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8">
+    <main className="mx-auto flex w-full max-w-[min(100%,calc(100vw-2rem))] flex-col gap-6 px-4 py-8">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h1 className="text-4xl font-semibold tracking-tight text-slate-950">{data.employee_name ? `${data.employee_name}'s dashboard` : 'Your dashboard'}</h1>

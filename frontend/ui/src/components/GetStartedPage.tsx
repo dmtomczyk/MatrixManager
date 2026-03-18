@@ -35,7 +35,7 @@ const notes = [
 
 export default function GetStartedPage() {
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8">
+    <main className="mx-auto flex w-full max-w-[min(100%,calc(100vw-2rem))] flex-col gap-6 px-4 py-8">
       <section className="space-y-4">
         <Badge variant="secondary" className="rounded-md px-3 py-1 text-[0.72rem] uppercase tracking-[0.18em] text-slate-700">
           Get Started

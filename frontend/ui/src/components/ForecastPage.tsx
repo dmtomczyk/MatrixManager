@@ -79,7 +79,7 @@ export default function ForecastPage({ currentUser, flash }: ForecastPageProps) 
   }), { demand: 0, assigned: 0, gap: 0, demandRows: 0, assignmentRows: 0 }), [projects]);
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8">
+    <main className="mx-auto flex w-full max-w-[min(100%,calc(100vw-2rem))] flex-col gap-6 px-4 py-8">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h1 className="text-4xl font-semibold tracking-tight text-slate-950">Forecast</h1>

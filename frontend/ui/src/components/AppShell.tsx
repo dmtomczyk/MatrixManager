@@ -58,12 +58,10 @@ function LinkGroup({ label, links, currentPath }: { label: string; links: readon
 }
 
 export default function AppShell({ currentUser, currentPath, children }: AppShellProps) {
-  const isCanvasRoute = currentPath === '/canvas';
-
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
-        <div className={`mx-auto flex w-full items-center justify-between gap-4 px-4 py-3 ${isCanvasRoute ? 'max-w-[min(100%,calc(100vw-1rem))]' : 'max-w-[1100px]'}`}>
+        <div className="mx-auto flex w-full max-w-[min(100%,calc(100vw-1rem))] items-center justify-between gap-4 px-4 py-3">
           <div className="flex min-w-0 items-center gap-3">
             <a href="/" className="inline-flex shrink-0 items-center gap-[10px] rounded-xl px-[10px] py-2 text-slate-950 transition hover:bg-slate-50">
               <img src="/static/images/matrix-manager-favicon.svg" alt="" className="h-7 w-7 rounded-lg border border-slate-200 bg-white p-1" />
