@@ -164,16 +164,17 @@ test('HTML surfaces and authenticated admin/runtime pages render from the TS app
 
   const people = await app.inject({ method: 'GET', url: '/people', headers: { cookie: authedCookie() } });
   assert.equal(people.statusCode, 200);
-  assert.match(people.body, /Organizations/);
-  assert.match(people.body, /Employees/);
-  assert.match(people.body, /Manager/);
-  assert.match(people.body, /Job Code/);
-  assert.match(people.body, /Engineer/);
+  assert.match(people.body, /data-page="employees"/);
+  assert.match(people.body, /Matrix Manager · Employees/);
+  assert.match(people.body, /"currentPath":"\/people"/);
+  assert.match(people.body, /ui-react\.js/);
 
   const planning = await app.inject({ method: 'GET', url: '/planning', headers: { cookie: authedCookie() } });
   assert.equal(planning.statusCode, 200);
-  assert.match(planning.body, /Projects/);
-  assert.match(planning.body, /Roadmap/);
+  assert.match(planning.body, /data-page="projects"/);
+  assert.match(planning.body, /Matrix Manager · Projects/);
+  assert.match(planning.body, /"currentPath":"\/planning"/);
+  assert.match(planning.body, /ui-react\.js/);
 
   const canvas = await app.inject({ method: 'GET', url: '/canvas', headers: { cookie: authedCookie() } });
   assert.equal(canvas.statusCode, 200);

@@ -8,6 +8,7 @@ import CanvasPage from './components/CanvasPage';
 import DashboardPage from './components/DashboardPage';
 import ForecastPage from './components/ForecastPage';
 import AppShell from './components/AppShell';
+import { OrganizationsPage, JobCodesPage, EmployeesPage, ProjectsPage, DemandsPage, AssignmentsPage } from './components/WorkforcePages';
 import { readBootPayload, type AuthenticatedPageProps, type LoginPageProps } from './lib/utils';
 import './styles.css';
 
@@ -47,6 +48,13 @@ function App() {
       </AppShell>
     );
   }
+
+  if (page === 'orgs') return <AppShell {...shellProps}><OrganizationsPage {...authenticatedProps} /></AppShell>;
+  if (page === 'jobCodes') return <AppShell {...shellProps}><JobCodesPage {...authenticatedProps} /></AppShell>;
+  if (page === 'employees') return <AppShell {...shellProps}><EmployeesPage {...authenticatedProps} /></AppShell>;
+  if (page === 'projects') return <AppShell {...shellProps}><ProjectsPage {...authenticatedProps} /></AppShell>;
+  if (page === 'demands') return <AppShell {...shellProps}><DemandsPage {...authenticatedProps} /></AppShell>;
+  if (page === 'assignments') return <AppShell {...shellProps}><AssignmentsPage {...authenticatedProps} /></AppShell>;
 
   return (
     <AppShell {...shellProps}>
