@@ -458,6 +458,7 @@ export default function CanvasPage() {
   const [removeAssignmentState, setRemoveAssignmentState] = React.useState<RemoveAssignmentState>({ open: false, assignmentId: '' });
   const [projectTimeline, setProjectTimeline] = React.useState<Nullable<ProjectTimelineState>>(null);
   const [draggedEmployeeId, setDraggedEmployeeId] = React.useState<Nullable<number>>(null);
+  const [draggedProjectId, setDraggedProjectId] = React.useState<Nullable<number>>(null);
   const [isFullscreen, setIsFullscreen] = React.useState(false);
   const [fullscreenEmployeesPanel, setFullscreenEmployeesPanel] = React.useState<FullscreenDockPanelState>(() => {
     const raw = globalThis.localStorage?.getItem('mm.canvas.fullscreenEmployeesPanel');
@@ -709,27 +710,30 @@ export default function CanvasPage() {
     setContextMenu({ x: event.clientX, y: event.clientY });
   };
 
-  const onEmployeeSidebarDragStart = (employeeId: number) => setDraggedEmployeeId(employeeId);
+  const onEmployeeSidebarDragStart = (employeeId: number) => { setDraggedProjectId(null); setDraggedEmployeeId(employeeId); };
   const onEmployeeSidebarDragEnd = () => setDraggedEmployeeId(null);
+  const onProjectSidebarDragStart = (projectId: number) => { setDraggedEmployeeId(null); setDraggedProjectId(projectId); };
+  const onProjectSidebarDragEnd = () => setDraggedProjectId(null);
 
   const onCanvasDragOver = React.useCallback((event: React.DragEvent<HTMLElement>) => {
-    if (!draggedEmployeeId) return;
+    if (!draggedEmployeeId && !draggedProjectId) return;
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
-  }, [draggedEmployeeId]);
+  }, [draggedEmployeeId, draggedProjectId]);
 
   const onCanvasDrop = React.useCallback((event: React.DragEvent<HTMLElement>) => {
-    if (!draggedEmployeeId) return;
+    if (!draggedEmployeeId && !draggedProjectId) return;
     event.preventDefault();
     const target = (event.target as HTMLElement).closest('.react-flow__node');
     if (!target) {
       setDraggedEmployeeId(null);
+      setDraggedProjectId(null);
       return;
     }
     const nodeId = target.getAttribute('data-id') || '';
-    if (nodeId.startsWith('project-')) {
+    if (draggedEmployeeId && nodeId.startsWith('project-')) {
       openCreateAssignment(draggedEmployeeId, Number(nodeId.replace('project-', '')));
-    } else if (nodeId.startsWith('org-')) {
+    } else if (draggedEmployeeId && nodeId.startsWith('org-')) {
       const orgId = Number(nodeId.replace('org-', ''));
       void apiFetch(`/employees/${draggedEmployeeId}`, { method: 'PUT', body: JSON.stringify({ organization_id: orgId }) })
         .then(() => {
@@ -739,9 +743,12 @@ export default function CanvasPage() {
           return refresh();
         })
         .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Request failed'));
+    } else if (draggedProjectId && nodeId.startsWith('employee-')) {
+      openCreateAssignment(Number(nodeId.replace('employee-', '')), draggedProjectId);
     }
     setDraggedEmployeeId(null);
-  }, [draggedEmployeeId, data, openCreateAssignment, refresh]);
+    setDraggedProjectId(null);
+  }, [draggedEmployeeId, draggedProjectId, data, openCreateAssignment, refresh]);
 
   const submitOrgForm = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -991,6 +998,9 @@ export default function CanvasPage() {
         <button
           key={project.id}
           type="button"
+          draggable
+          onDragStart={() => onProjectSidebarDragStart(project.id)}
+          onDragEnd={onProjectSidebarDragEnd}
           className={`canvas-react-resource${selectedNodeId === `project-${project.id}` ? ' is-selected' : ''}`}
           onClick={() => {
             setSelectedEdge(null);
@@ -1097,7 +1107,7 @@ export default function CanvasPage() {
           </section>
         </aside>
         {!isSidebarCollapsed ? <div className="canvas-react-resizer" onPointerDown={startSidebarResize} role="separator" aria-orientation="vertical" aria-label="Resize sidebar" /> : null}
-        <section className={`canvas-react-stage${draggedEmployeeId ? ' is-drop-active' : ''}${isFullscreen ? ' is-fullscreen' : ''}`} ref={flowWrapperRef as React.RefObject<HTMLElement>} onContextMenu={onContextMenu} onDragOver={onCanvasDragOver} onDrop={onCanvasDrop}>
+        <section className={`canvas-react-stage${draggedEmployeeId || draggedProjectId ? ' is-drop-active' : ''}${isFullscreen ? ' is-fullscreen' : ''}`} ref={flowWrapperRef as React.RefObject<HTMLElement>} onContextMenu={onContextMenu} onDragOver={onCanvasDragOver} onDrop={onCanvasDrop}>
           {loading ? <div className="canvas-react-loading">Loading canvas…</div> : null}
           <ReactFlow
             nodes={nodes as unknown as Node[]}
