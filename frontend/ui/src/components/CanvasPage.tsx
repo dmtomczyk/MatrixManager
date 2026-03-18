@@ -1003,6 +1003,18 @@ export default function CanvasPage() {
     </div>
   );
 
+  const employeesPanelStyle = fullscreenEmployeesPanel.dock === 'float'
+    ? { left: `${fullscreenEmployeesPanel.x}px`, top: `${fullscreenEmployeesPanel.y}px`, width: `${fullscreenEmployeesPanel.width}px`, height: `calc(100vh - ${fullscreenEmployeesPanel.y}px - 16px)` }
+    : fullscreenEmployeesPanel.dock === 'left'
+      ? { left: '1rem', top: '1rem', bottom: '1rem', width: `${fullscreenEmployeesPanel.width}px` }
+      : { right: '1rem', top: '1rem', bottom: '1rem', width: `${fullscreenEmployeesPanel.width}px` };
+
+  const projectsPanelStyle = fullscreenProjectsPanel.dock === 'float'
+    ? { left: `${fullscreenProjectsPanel.x}px`, top: `${fullscreenProjectsPanel.y}px`, width: `${fullscreenProjectsPanel.width}px`, height: `calc(100vh - ${fullscreenProjectsPanel.y}px - 16px)` }
+    : fullscreenProjectsPanel.dock === 'right'
+      ? { right: '1rem', top: '1rem', bottom: '1rem', width: `${fullscreenProjectsPanel.width}px` }
+      : { left: '1rem', top: '1rem', bottom: '1rem', width: `${fullscreenProjectsPanel.width}px` };
+
   return (
     <main className={`canvas-react-shell${isFullscreen ? ' is-fullscreen-mode' : ''}`} ref={canvasShellRef as React.RefObject<HTMLElement>}>
       <div className="canvas-react-toolbar">
@@ -1131,7 +1143,7 @@ export default function CanvasPage() {
             <>
               {fullscreenPanelMode === 'dual' ? (
                 <>
-                  <div className={`canvas-react-float-panel ${fullscreenEmployeesPanel.dock !== 'float' ? `is-docked-${fullscreenEmployeesPanel.dock}` : ''} ${fullscreenEmployeesPanel.minimized ? 'is-minimized' : ''}`} style={fullscreenEmployeesPanel.dock === 'float' ? { left: `${fullscreenEmployeesPanel.x}px`, top: `${fullscreenEmployeesPanel.y}px`, width: `${fullscreenEmployeesPanel.width}px` } : { width: `${fullscreenEmployeesPanel.width}px` }}>
+                  <div className={`canvas-react-float-panel ${fullscreenEmployeesPanel.dock !== 'float' ? `is-docked-${fullscreenEmployeesPanel.dock}` : ''} ${fullscreenEmployeesPanel.minimized ? 'is-minimized' : ''}`} style={employeesPanelStyle}>
                     <div className="canvas-react-float-panel-header" onPointerDown={(event) => startFloatingPanelDrag('employees', event)}>
                       <strong>Employees</strong>
                       <div className="canvas-react-float-panel-actions">
@@ -1142,7 +1154,7 @@ export default function CanvasPage() {
                     {!fullscreenEmployeesPanel.minimized ? <div className="canvas-react-float-panel-body">{renderEmployeesList()}</div> : null}
                     {fullscreenEmployeesPanel.dock === 'float' && !fullscreenEmployeesPanel.minimized ? <div className="canvas-react-float-panel-resize" onPointerDown={(event) => startFloatingPanelResize('employees', event)} /> : null}
                   </div>
-                  <div className={`canvas-react-float-panel ${fullscreenProjectsPanel.dock !== 'float' ? `is-docked-${fullscreenProjectsPanel.dock}` : ''} ${fullscreenProjectsPanel.minimized ? 'is-minimized' : ''}`} style={fullscreenProjectsPanel.dock === 'float' ? { left: `${fullscreenProjectsPanel.x}px`, top: `${fullscreenProjectsPanel.y}px`, width: `${fullscreenProjectsPanel.width}px` } : { width: `${fullscreenProjectsPanel.width}px` }}>
+                  <div className={`canvas-react-float-panel ${fullscreenProjectsPanel.dock !== 'float' ? `is-docked-${fullscreenProjectsPanel.dock}` : ''} ${fullscreenProjectsPanel.minimized ? 'is-minimized' : ''}`} style={projectsPanelStyle}>
                     <div className="canvas-react-float-panel-header" onPointerDown={(event) => startFloatingPanelDrag('projects', event)}>
                       <strong>Projects</strong>
                       <div className="canvas-react-float-panel-actions">

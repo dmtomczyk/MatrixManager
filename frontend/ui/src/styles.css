@@ -302,18 +302,22 @@
   background: rgba(255,255,255,0.98);
   box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .canvas-react-float-panel.is-docked-left {
   left: 1rem;
   top: 1rem;
   bottom: 1rem;
+  height: calc(100vh - 2rem);
 }
 
 .canvas-react-float-panel.is-docked-right {
   right: 1rem;
   top: 1rem;
   bottom: 1rem;
+  height: calc(100vh - 2rem);
 }
 
 .canvas-react-float-panel.is-minimized {
@@ -338,7 +342,8 @@
 
 .canvas-react-float-panel-body {
   padding: 0.85rem;
-  max-height: calc(100vh - 6rem);
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: auto;
 }
 
