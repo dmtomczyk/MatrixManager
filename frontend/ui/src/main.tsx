@@ -9,6 +9,7 @@ import DashboardPage from './components/DashboardPage';
 import ForecastPage from './components/ForecastPage';
 import AppShell from './components/AppShell';
 import { OrganizationsPage, JobCodesPage, EmployeesPage, ProjectsPage, DemandsPage, AssignmentsPage } from './components/WorkforcePages';
+import { AccountSettingsPage, InboxPage, UsersPage, AuditPage, RuntimePage, DbManagementPage } from './components/AdminPages';
 import { readBootPayload, type AuthenticatedPageProps, type LoginPageProps } from './lib/utils';
 import './styles.css';
 
@@ -55,6 +56,12 @@ function App() {
   if (page === 'projects') return <AppShell {...shellProps}><ProjectsPage {...authenticatedProps} /></AppShell>;
   if (page === 'demands') return <AppShell {...shellProps}><DemandsPage {...authenticatedProps} /></AppShell>;
   if (page === 'assignments') return <AppShell {...shellProps}><AssignmentsPage {...authenticatedProps} /></AppShell>;
+  if (page === 'accountSettings') return <AppShell {...shellProps}><AccountSettingsPage {...authenticatedProps} /></AppShell>;
+  if (page === 'inbox') return <AppShell {...shellProps}><InboxPage {...authenticatedProps} /></AppShell>;
+  if (page === 'users') return <AppShell {...shellProps}><UsersPage {...authenticatedProps} /></AppShell>;
+  if (page === 'audit') return <AppShell {...shellProps}><AuditPage {...authenticatedProps} /></AppShell>;
+  if (page === 'runtime') return <AppShell {...shellProps}><RuntimePage {...authenticatedProps} /></AppShell>;
+  if (page === 'dbManagement') return <AppShell {...shellProps}><DbManagementPage {...authenticatedProps} /></AppShell>;
 
   return (
     <AppShell {...shellProps}>
