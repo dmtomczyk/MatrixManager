@@ -166,6 +166,11 @@ interface ContextMenuState {
   y: number;
 }
 
+interface GraphMetrics {
+  laneWidth: number;
+  projectStartX: number;
+}
+
 type CanvasNodeData = OrgNodeData | EmployeeNodeData | ProjectNodeData;
 type CanvasNode = Node<CanvasNodeData>;
 type CanvasEdge = Edge<EdgeData>;
@@ -276,20 +281,21 @@ function buildGraph({
   assignments,
   selectedNodeId,
   orgFilter,
-}: CanvasData & { selectedNodeId: string; orgFilter: string }): { nodes: CanvasNode[]; edges: CanvasEdge[] } {
+}: CanvasData & { selectedNodeId: string; orgFilter: string }): { nodes: CanvasNode[]; edges: CanvasEdge[]; metrics: GraphMetrics } {
   const nodes: CanvasNode[] = [];
   const edges: CanvasEdge[] = [];
-  const orgLaneWidth = 700;
-  const orgLanePaddingX = 22;
-  const orgLanePaddingTop = 72;
-  const employeeDepthX = 170;
-  const employeeWidth = 150;
-  const projectStartX = 860;
-  const projectWidth = 240;
-  const laneTop = 60;
-  const laneGap = 48;
-  const employeeGapY = 78;
-  const projectGapY = 170;
+  const densityScale = organizations.length > 3 || employees.length > 16 ? 0.9 : 1;
+  const orgLaneWidth = Math.round(620 * densityScale);
+  const orgLanePaddingX = 18;
+  const orgLanePaddingTop = 60;
+  const employeeDepthX = Math.round(148 * densityScale);
+  const employeeWidth = Math.round(136 * densityScale);
+  const projectWidth = Math.round(220 * densityScale);
+  const projectStartX = orgLaneWidth + 148;
+  const laneTop = 44;
+  const laneGap = 30;
+  const employeeGapY = Math.round(66 * densityScale);
+  const projectGapY = Math.round(148 * densityScale);
   const employeeById = new Map<number, Employee>(employees.map((employee) => [employee.id, employee]));
   const visibleOrganizations = organizations.filter((org) => !orgFilter || String(org.id) === String(orgFilter));
 
@@ -412,7 +418,7 @@ function buildGraph({
     });
   });
 
-  return { nodes, edges };
+  return { nodes, edges, metrics: { laneWidth: orgLaneWidth, projectStartX } };
 }
 
 const defaultProjectForm: ProjectFormValues = { name: '', description: '', start_date: '', end_date: '' };
@@ -439,8 +445,11 @@ export default function CanvasPage() {
   const [projectTimeline, setProjectTimeline] = React.useState<Nullable<ProjectTimelineState>>(null);
   const [draggedEmployeeId, setDraggedEmployeeId] = React.useState<Nullable<number>>(null);
   const [isFullscreen, setIsFullscreen] = React.useState(false);
+  const [sidebarWidth, setSidebarWidth] = React.useState(320);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
   const flowWrapperRef = React.useRef<HTMLElement | null>(null);
   const reactFlow = useReactFlow();
+  const resizeStateRef = React.useRef<{ startX: number; startWidth: number } | null>(null);
 
   const refresh = React.useCallback(async () => {
     setLoading(true);
@@ -466,10 +475,21 @@ export default function CanvasPage() {
 
   const graph = React.useMemo(() => buildGraph({ ...data, selectedNodeId, orgFilter }), [data, selectedNodeId, orgFilter]);
 
+  const fitCanvas = React.useCallback((duration = 250) => {
+    window.setTimeout(() => {
+      reactFlow.fitView({ padding: 0.08, duration, maxZoom: 1.15 });
+    }, 30);
+  }, [reactFlow]);
+
   React.useEffect(() => {
     setNodes(graph.nodes);
     setEdges(graph.edges);
   }, [graph, setEdges, setNodes]);
+
+  React.useEffect(() => {
+    if (loading) return;
+    fitCanvas(300);
+  }, [graph, loading, fitCanvas]);
 
   React.useEffect(() => {
     if (!toast) return undefined;
@@ -770,6 +790,32 @@ export default function CanvasPage() {
     }
   };
 
+  const startSidebarResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (isSidebarCollapsed) return;
+    resizeStateRef.current = { startX: event.clientX, startWidth: sidebarWidth };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  React.useEffect(() => {
+    const onPointerMove = (event: PointerEvent) => {
+      const state = resizeStateRef.current;
+      if (!state) return;
+      const nextWidth = Math.min(520, Math.max(240, state.startWidth + (event.clientX - state.startX)));
+      setSidebarWidth(nextWidth);
+    };
+
+    const onPointerUp = () => {
+      resizeStateRef.current = null;
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+    };
+  }, []);
+
   const orgOptions = React.useMemo<OrgOption[]>(() => data.organizations.map((org) => ({ value: String(org.id), label: org.name })), [data.organizations]);
 
   const assignmentChoices = React.useMemo<AssignmentChoice[]>(
@@ -797,13 +843,15 @@ export default function CanvasPage() {
           <button type="button" className="ghost-button" onClick={() => setOrgFormOpen(true)}>Create New Org</button>
           <button type="button" className="ghost-button" onClick={openCreateProject}>Create Project</button>
           <button type="button" className="ghost-button" onClick={() => void refresh()}>Refresh</button>
+          <button type="button" className="ghost-button" onClick={() => fitCanvas()}>Fit Canvas</button>
+          <button type="button" className="ghost-button" onClick={() => setIsSidebarCollapsed((prev) => !prev)}>{isSidebarCollapsed ? 'Show Sidebar' : 'Hide Sidebar'}</button>
           <button type="button" className="ghost-button" onClick={() => void toggleFullscreen()}>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</button>
         </div>
       </div>
       {error ? <div className="canvas-react-banner is-error">{error}</div> : null}
       {toast ? <div className="canvas-react-banner is-toast">{toast}</div> : null}
-      <div className="canvas-react-layout">
-        <aside className="canvas-react-sidebar">
+      <div className={`canvas-react-layout${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`} style={{ ['--canvas-sidebar-width' as string]: `${sidebarWidth}px` }}>
+        <aside className={`canvas-react-sidebar${isSidebarCollapsed ? ' is-collapsed' : ''}`}>
           <section className="canvas-react-sidecard">
             <div className="section-head">
               <h3>Employees</h3>
@@ -867,6 +915,7 @@ export default function CanvasPage() {
             {!selectedEmployee && !selectedProject && !selectedEdge ? <p className="muted">Nothing selected.</p> : null}
           </section>
         </aside>
+        {!isSidebarCollapsed ? <div className="canvas-react-resizer" onPointerDown={startSidebarResize} role="separator" aria-orientation="vertical" aria-label="Resize sidebar" /> : null}
         <section className={`canvas-react-stage${draggedEmployeeId ? ' is-drop-active' : ''}${isFullscreen ? ' is-fullscreen' : ''}`} ref={flowWrapperRef as React.RefObject<HTMLElement>} onContextMenu={onContextMenu} onDragOver={onCanvasDragOver} onDrop={onCanvasDrop}>
           {loading ? <div className="canvas-react-loading">Loading canvas…</div> : null}
           <ReactFlow

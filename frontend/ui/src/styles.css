@@ -109,17 +109,40 @@
 }
 
 .canvas-react-layout {
+  --canvas-sidebar-width: 320px;
   display: grid;
-  grid-template-columns: clamp(280px, 22vw, 360px) minmax(0, 1fr);
-  gap: 1rem;
+  grid-template-columns: minmax(0, var(--canvas-sidebar-width)) 10px minmax(0, 1fr);
+  gap: 0.9rem;
   min-height: 0;
   flex: 1 1 auto;
+}
+
+.canvas-react-layout.is-sidebar-collapsed {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .canvas-react-sidebar {
   display: grid;
   gap: 1rem;
   align-content: start;
+  min-width: 0;
+}
+
+.canvas-react-sidebar.is-collapsed {
+  display: none;
+}
+
+.canvas-react-resizer {
+  width: 10px;
+  border-radius: 999px;
+  cursor: col-resize;
+  background: linear-gradient(180deg, rgba(148,163,184,0.18), rgba(148,163,184,0.38), rgba(148,163,184,0.18));
+  align-self: stretch;
+  transition: background 140ms ease;
+}
+
+.canvas-react-resizer:hover {
+  background: linear-gradient(180deg, rgba(37,99,235,0.22), rgba(37,99,235,0.42), rgba(37,99,235,0.22));
 }
 
 .canvas-react-sidecard,
@@ -164,8 +187,8 @@
 
 .canvas-react-resource-list {
   display: grid;
-  gap: 0.5rem;
-  max-height: 28rem;
+  gap: 0.45rem;
+  max-height: 32rem;
   overflow: auto;
   padding-right: 0.25rem;
 }
@@ -219,7 +242,7 @@
 
 .canvas-react-stage {
   position: relative;
-  min-height: max(42rem, calc(100vh - 12.5rem));
+  min-height: max(44rem, calc(100vh - 11.75rem));
   overflow: hidden;
   border-radius: 1rem;
   background: #fff;
@@ -440,26 +463,26 @@
 
 .rf-card-employee,
 .rf-card-project {
-  min-width: 140px;
-  padding: 0.5rem 0.6rem;
+  min-width: 128px;
+  padding: 0.42rem 0.55rem;
 }
 
 .rf-card-org {
-  min-width: 240px;
+  min-width: 220px;
   height: 100%;
-  padding: 0.7rem 0.8rem;
+  padding: 0.62rem 0.72rem;
   background: linear-gradient(180deg, #ffffff, #fafbfd);
 }
 
 .rf-card-title {
-  font-size: 0.84rem;
+  font-size: 0.8rem;
   font-weight: 800;
   letter-spacing: -0.01em;
   color: #0f172a;
 }
 
 .rf-card-meta {
-  font-size: 0.7rem;
+  font-size: 0.66rem;
   line-height: 1.35;
   color: #475569;
 }
@@ -532,6 +555,10 @@
 @media (max-width: 1100px) {
   .canvas-react-layout {
     grid-template-columns: 1fr;
+  }
+
+  .canvas-react-resizer {
+    display: none;
   }
 
   .canvas-react-sidebar {
