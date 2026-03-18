@@ -2,7 +2,7 @@
 
 **Plan workforce capacity and allocations across flexible hierarchies — focused on staffing and timephasing human capital, not detailed project planning.**
 
-MatrixManager is a staffing and resource-planning web app for tracking organizations, employees, projects, and time-phased assignments. The primary in-repo development stack is now a TypeScript API plus React/Vite UI, with the legacy Python/FastAPI backend retained temporarily for reference during staged cleanup.
+MatrixManager is a staffing and resource-planning web app for tracking organizations, employees, projects, and time-phased assignments. The primary in-repo development stack is now a TypeScript API plus React/Vite UI. The remaining legacy Python/FastAPI backend is retained only as a temporary reference during staged cleanup.
 
 ## Table of contents
 
@@ -93,7 +93,7 @@ See [`LEGACY.md`](./LEGACY.md) for the current deprecation/removal status, and `
 - TypeScript API with SQLite-backed migrated persistence
 - Docker / docker-compose support for the TypeScript/Fastify runtime
 - TypeScript-first automated coverage via Fastify injection + Playwright smoke coverage
-- legacy backend retained temporarily for staged cleanup
+- remaining legacy Python backend retained temporarily for staged cleanup
 
 ## Demo / screenshots
 

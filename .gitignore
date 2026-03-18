@@ -7,3 +7,4 @@ playwright-report/
 *.pyc
 test-results/
 api/data/
+api/dist/

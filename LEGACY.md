@@ -18,11 +18,13 @@ The old Python backend is still present temporarily for reference and comparison
 
 The repository has completed enough parity work that the legacy stack should no longer be treated as the default center of gravity.
 
-The Python backend remains in-repo only to support:
+The remaining Python backend code remains in-repo only to support:
 
 - behavior comparison during cleanup
 - edge-case reference while finishing deprecation
 - staged removal instead of risky one-shot deletion
+
+The old static multi-page `legacy-app/` bundle has been removed.
 
 ## Rule of thumb
 
