@@ -1,4 +1,7 @@
 import * as React from 'react';
+import { Button } from './ui/button';
+import { Select } from './ui/select';
+import { Textarea } from './ui/textarea';
 import {
   Background,
   Controls,
@@ -865,19 +868,19 @@ export default function CanvasPage() {
         <div className="canvas-react-actions">
           <label className="canvas-react-inline-filter">
             Organization
-            <select value={orgFilter} onChange={(event) => setOrgFilter(event.target.value)}>
+            <Select value={orgFilter} onChange={(event) => setOrgFilter(event.target.value)}>
               <option value="">All</option>
               {orgOptions.map((option) => (
                 <option key={option.value} value={option.value}>{option.label}</option>
               ))}
-            </select>
+            </Select>
           </label>
-          <button type="button" className="ghost-button" onClick={() => setOrgFormOpen(true)}>Create New Org</button>
-          <button type="button" className="ghost-button" onClick={openCreateProject}>Create Project</button>
-          <button type="button" className="ghost-button" onClick={() => void refresh()}>Refresh</button>
-          <button type="button" className="ghost-button" onClick={() => fitCanvas()}>Fit Canvas</button>
-          <button type="button" className="ghost-button" onClick={() => setIsSidebarCollapsed((prev) => !prev)}>{isSidebarCollapsed ? 'Show Sidebar' : 'Hide Sidebar'}</button>
-          <button type="button" className="ghost-button" onClick={() => void toggleFullscreen()}>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</button>
+          <Button type="button" variant="outline" size="sm" onClick={() => setOrgFormOpen(true)}>Create New Org</Button>
+          <Button type="button" variant="outline" size="sm" onClick={openCreateProject}>Create Project</Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => void refresh()}>Refresh</Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => fitCanvas()}>Fit Canvas</Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => setIsSidebarCollapsed((prev) => !prev)}>{isSidebarCollapsed ? 'Show Sidebar' : 'Hide Sidebar'}</Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => void toggleFullscreen()}>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</Button>
         </div>
       </div>
       {error ? <div className="canvas-react-banner is-error">{error}</div> : null}
@@ -945,8 +948,8 @@ export default function CanvasPage() {
                 <span>{selectedEmployee.organization_name || 'No organization'}</span>
                 <span>{selectedEmployee.role || selectedEmployee.employee_type || 'Employee'}</span>
                 <div className="canvas-react-inspector-actions">
-                  <button type="button" className="ghost-button" onClick={() => openEditEmployee(selectedEmployee.id)}>Edit Employee</button>
-                  <button type="button" className="ghost-button" onClick={() => openCreateAssignment(selectedEmployee.id, '')}>Add Assignment</button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => openEditEmployee(selectedEmployee.id)}>Edit Employee</Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => openCreateAssignment(selectedEmployee.id, '')}>Add Assignment</Button>
                 </div>
               </div>
             ) : null}
@@ -956,16 +959,16 @@ export default function CanvasPage() {
                 <span>{formatDate(selectedProject.start_date)} → {formatDate(selectedProject.end_date)}</span>
                 <span>{data.assignments.filter((asg) => asg.project_id === selectedProject.id).length} assignments · {formatPct(data.assignments.filter((asg) => asg.project_id === selectedProject.id).reduce((sum, asg) => sum + (asg.allocation || 0), 0))} active</span>
                 <div className="canvas-react-inspector-actions">
-                  <button type="button" className="ghost-button" onClick={() => openEditProject(selectedProject.id)}>Edit Project</button>
-                  <button type="button" className="ghost-button" onClick={() => openProjectTimeline(selectedProject)}>Show Details</button>
-                  <button type="button" className="ghost-button" onClick={() => openCreateAssignment('', selectedProject.id)}>Add Assignment</button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => openEditProject(selectedProject.id)}>Edit Project</Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => openProjectTimeline(selectedProject)}>Show Details</Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => openCreateAssignment('', selectedProject.id)}>Add Assignment</Button>
                 </div>
               </div>
             ) : null}
             {selectedEdge ? (
               <div className="canvas-react-inspector">
                 <strong>{selectedEdge.data?.relation === 'assignment' ? 'Assignment edge' : 'Manager edge'}</strong>
-                {selectedEdge.data?.relation === 'assignment' ? <button type="button" className="ghost-button" onClick={() => setRemoveAssignmentState({ open: true, assignmentId: String(selectedEdge.data?.assignmentId || '') })}>Remove Assignment</button> : null}
+                {selectedEdge.data?.relation === 'assignment' ? <Button type="button" variant="outline" size="sm" onClick={() => setRemoveAssignmentState({ open: true, assignmentId: String(selectedEdge.data?.assignmentId || '') })}>Remove Assignment</Button> : null}
               </div>
             ) : null}
             {!selectedEmployee && !selectedProject && !selectedEdge ? <p className="muted">Nothing selected.</p> : null}
@@ -1004,14 +1007,14 @@ export default function CanvasPage() {
           </ReactFlow>
           {contextMenu ? (
             <div className="canvas-react-context-menu" style={{ left: contextMenu.x, top: contextMenu.y }}>
-              <button type="button" onClick={() => { setContextMenu(null); setOrgFormOpen(true); }}>Create New Org</button>
-              <button type="button" onClick={() => { setContextMenu(null); openCreateProject(); }}>Create Project</button>
-              <button type="button" onClick={() => { setContextMenu(null); openEditProject(); }}>Edit Project</button>
+              <Button type="button" variant="ghost" size="sm" className="w-full justify-start" onClick={() => { setContextMenu(null); setOrgFormOpen(true); }}>Create New Org</Button>
+              <Button type="button" variant="ghost" size="sm" className="w-full justify-start" onClick={() => { setContextMenu(null); openCreateProject(); }}>Create Project</Button>
+              <Button type="button" variant="ghost" size="sm" className="w-full justify-start" onClick={() => { setContextMenu(null); openEditProject(); }}>Edit Project</Button>
               <hr />
-              <button type="button" onClick={() => { setContextMenu(null); openCreateAssignment(); }}>Add Assignment</button>
-              <button type="button" onClick={() => { setContextMenu(null); setRemoveAssignmentState({ open: true, assignmentId: assignmentChoices[0]?.id ? String(assignmentChoices[0].id) : '' }); }}>Remove Assignment</button>
+              <Button type="button" variant="ghost" size="sm" className="w-full justify-start" onClick={() => { setContextMenu(null); openCreateAssignment(); }}>Add Assignment</Button>
+              <Button type="button" variant="ghost" size="sm" className="w-full justify-start" onClick={() => { setContextMenu(null); setRemoveAssignmentState({ open: true, assignmentId: assignmentChoices[0]?.id ? String(assignmentChoices[0].id) : '' }); }}>Remove Assignment</Button>
               <hr />
-              <button type="button" onClick={() => { setContextMenu(null); openEditEmployee(); }}>Edit Employee</button>
+              <Button type="button" variant="ghost" size="sm" className="w-full justify-start" onClick={() => { setContextMenu(null); openEditEmployee(); }}>Edit Employee</Button>
             </div>
           ) : null}
         </section>
@@ -1022,10 +1025,10 @@ export default function CanvasPage() {
             <h3>Create organization</h3>
             <form onSubmit={submitOrgForm} className="canvas-react-form">
               <label>Name<input value={orgForm.name} onChange={(event) => setOrgForm((prev) => ({ ...prev, name: event.target.value }))} required /></label>
-              <label>Description<textarea rows={3} value={orgForm.description} onChange={(event) => setOrgForm((prev) => ({ ...prev, description: event.target.value }))} /></label>
+              <label>Description<Textarea rows={3} value={orgForm.description} onChange={(event) => setOrgForm((prev) => ({ ...prev, description: event.target.value }))} /></label>
               <div className="canvas-react-form-actions">
-                <button type="button" className="ghost-button" onClick={() => setOrgFormOpen(false)}>Cancel</button>
-                <button type="submit">Create organization</button>
+                <Button type="button" variant="outline" size="sm" onClick={() => setOrgFormOpen(false)}>Cancel</Button>
+                <Button type="submit" size="sm">Create organization</Button>
               </div>
             </form>
           </div>
@@ -1037,12 +1040,12 @@ export default function CanvasPage() {
             <h3>{projectFormState.projectId ? 'Edit project' : 'Create project'}</h3>
             <form onSubmit={submitProjectForm} className="canvas-react-form">
               <label>Name<input value={projectFormState.values.name} onChange={(event) => setProjectFormState((prev) => ({ ...prev, values: { ...prev.values, name: event.target.value } }))} required /></label>
-              <label>Description<textarea rows={3} value={projectFormState.values.description} onChange={(event) => setProjectFormState((prev) => ({ ...prev, values: { ...prev.values, description: event.target.value } }))} /></label>
+              <label>Description<Textarea rows={3} value={projectFormState.values.description} onChange={(event) => setProjectFormState((prev) => ({ ...prev, values: { ...prev.values, description: event.target.value } }))} /></label>
               <label>Start Date<input type="date" value={projectFormState.values.start_date} onChange={(event) => setProjectFormState((prev) => ({ ...prev, values: { ...prev.values, start_date: event.target.value } }))} /></label>
               <label>End Date<input type="date" value={projectFormState.values.end_date} onChange={(event) => setProjectFormState((prev) => ({ ...prev, values: { ...prev.values, end_date: event.target.value } }))} /></label>
               <div className="canvas-react-form-actions">
-                <button type="button" className="ghost-button" onClick={() => setProjectFormState({ open: false, projectId: null, values: defaultProjectForm })}>Cancel</button>
-                <button type="submit">{projectFormState.projectId ? 'Save Changes' : 'Create Project'}</button>
+                <Button type="button" variant="outline" size="sm" onClick={() => setProjectFormState({ open: false, projectId: null, values: defaultProjectForm })}>Cancel</Button>
+                <Button type="submit" size="sm">{projectFormState.projectId ? 'Save Changes' : 'Create Project'}</Button>
               </div>
             </form>
           </div>
@@ -1055,13 +1058,13 @@ export default function CanvasPage() {
             <form onSubmit={submitEmployeeForm} className="canvas-react-form">
               <label>Name<input value={employeeFormState.values.name} onChange={(event) => setEmployeeFormState((prev) => ({ ...prev, values: { ...prev.values, name: event.target.value } }))} required /></label>
               <label>Role<input value={employeeFormState.values.role} onChange={(event) => setEmployeeFormState((prev) => ({ ...prev, values: { ...prev.values, role: event.target.value } }))} /></label>
-              <label>Type<select value={employeeFormState.values.employee_type} onChange={(event) => setEmployeeFormState((prev) => ({ ...prev, values: { ...prev.values, employee_type: event.target.value } }))}><option value="IC">IC</option><option value="L">L</option></select></label>
-              <label>Manager<select value={employeeFormState.values.manager_id} onChange={(event) => setEmployeeFormState((prev) => ({ ...prev, values: { ...prev.values, manager_id: event.target.value } }))}><option value="">No manager</option>{data.employees.filter((employee) => employee.id !== employeeFormState.employeeId).map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>)}</select></label>
+              <label>Type<Select value={employeeFormState.values.employee_type} onChange={(event) => setEmployeeFormState((prev) => ({ ...prev, values: { ...prev.values, employee_type: event.target.value } }))}><option value="IC">IC</option><option value="L">L</option></Select></label>
+              <label>Manager<Select value={employeeFormState.values.manager_id} onChange={(event) => setEmployeeFormState((prev) => ({ ...prev, values: { ...prev.values, manager_id: event.target.value } }))}><option value="">No manager</option>{data.employees.filter((employee) => employee.id !== employeeFormState.employeeId).map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>)}</Select></label>
               <label>Location<input value={employeeFormState.values.location} onChange={(event) => setEmployeeFormState((prev) => ({ ...prev, values: { ...prev.values, location: event.target.value } }))} /></label>
               <label>Capacity<input type="number" min="0.1" step="0.1" value={employeeFormState.values.capacity} onChange={(event) => setEmployeeFormState((prev) => ({ ...prev, values: { ...prev.values, capacity: event.target.value } }))} /></label>
               <div className="canvas-react-form-actions">
-                <button type="button" className="ghost-button" onClick={() => setEmployeeFormState({ open: false, employeeId: null, values: defaultEmployeeForm })}>Cancel</button>
-                <button type="submit">Save Employee</button>
+                <Button type="button" variant="outline" size="sm" onClick={() => setEmployeeFormState({ open: false, employeeId: null, values: defaultEmployeeForm })}>Cancel</Button>
+                <Button type="submit" size="sm">Save Employee</Button>
               </div>
             </form>
           </div>
@@ -1072,15 +1075,15 @@ export default function CanvasPage() {
           <div className="canvas-react-modal" onClick={(event) => event.stopPropagation()}>
             <h3>Create assignment</h3>
             <form onSubmit={submitAssignmentForm} className="canvas-react-form">
-              <label>Employee<select value={assignmentFormState.values.employee_id} onChange={(event) => setAssignmentFormState((prev) => ({ ...prev, values: { ...prev.values, employee_id: event.target.value } }))}>{data.employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>)}</select></label>
-              <label>Project<select value={assignmentFormState.values.project_id} onChange={(event) => setAssignmentFormState((prev) => ({ ...prev, values: { ...prev.values, project_id: event.target.value } }))}>{data.projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
+              <label>Employee<Select value={assignmentFormState.values.employee_id} onChange={(event) => setAssignmentFormState((prev) => ({ ...prev, values: { ...prev.values, employee_id: event.target.value } }))}>{data.employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>)}</Select></label>
+              <label>Project<Select value={assignmentFormState.values.project_id} onChange={(event) => setAssignmentFormState((prev) => ({ ...prev, values: { ...prev.values, project_id: event.target.value } }))}>{data.projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</Select></label>
               <label>Start Date<input type="date" value={assignmentFormState.values.start_date} onChange={(event) => setAssignmentFormState((prev) => ({ ...prev, values: { ...prev.values, start_date: event.target.value } }))} required /></label>
               <label>End Date<input type="date" value={assignmentFormState.values.end_date} onChange={(event) => setAssignmentFormState((prev) => ({ ...prev, values: { ...prev.values, end_date: event.target.value } }))} required /></label>
               <label>Allocation (%)<input type="number" min="1" max="100" value={assignmentFormState.values.allocation} onChange={(event) => setAssignmentFormState((prev) => ({ ...prev, values: { ...prev.values, allocation: event.target.value } }))} required /></label>
-              <label>Notes<textarea rows={3} value={assignmentFormState.values.notes} onChange={(event) => setAssignmentFormState((prev) => ({ ...prev, values: { ...prev.values, notes: event.target.value } }))} /></label>
+              <label>Notes<Textarea rows={3} value={assignmentFormState.values.notes} onChange={(event) => setAssignmentFormState((prev) => ({ ...prev, values: { ...prev.values, notes: event.target.value } }))} /></label>
               <div className="canvas-react-form-actions">
-                <button type="button" className="ghost-button" onClick={() => setAssignmentFormState({ open: false, values: defaultAssignmentForm })}>Cancel</button>
-                <button type="submit">Create Assignment</button>
+                <Button type="button" variant="outline" size="sm" onClick={() => setAssignmentFormState({ open: false, values: defaultAssignmentForm })}>Cancel</Button>
+                <Button type="submit" size="sm">Create Assignment</Button>
               </div>
             </form>
           </div>
@@ -1091,10 +1094,10 @@ export default function CanvasPage() {
           <div className="canvas-react-modal" onClick={(event) => event.stopPropagation()}>
             <h3>Remove assignment</h3>
             <div className="canvas-react-form">
-              <label>Assignment<select value={removeAssignmentState.assignmentId} onChange={(event) => setRemoveAssignmentState({ open: true, assignmentId: event.target.value })}><option value="">Select assignment…</option>{assignmentChoices.map((assignment) => <option key={assignment.id} value={assignment.id}>{assignment.label}</option>)}</select></label>
+              <label>Assignment<Select value={removeAssignmentState.assignmentId} onChange={(event) => setRemoveAssignmentState({ open: true, assignmentId: event.target.value })}><option value="">Select assignment…</option>{assignmentChoices.map((assignment) => <option key={assignment.id} value={assignment.id}>{assignment.label}</option>)}</Select></label>
               <div className="canvas-react-form-actions">
-                <button type="button" className="ghost-button" onClick={() => setRemoveAssignmentState({ open: false, assignmentId: '' })}>Cancel</button>
-                <button type="button" className="danger-button" disabled={!removeAssignmentState.assignmentId} onClick={() => void deleteSelectedAssignment(Number(removeAssignmentState.assignmentId))}>Remove Assignment</button>
+                <Button type="button" variant="outline" size="sm" onClick={() => setRemoveAssignmentState({ open: false, assignmentId: '' })}>Cancel</Button>
+                <Button type="button" variant="destructive" size="sm" disabled={!removeAssignmentState.assignmentId} onClick={() => void deleteSelectedAssignment(Number(removeAssignmentState.assignmentId))}>Remove Assignment</Button>
               </div>
             </div>
           </div>
@@ -1136,8 +1139,8 @@ export default function CanvasPage() {
               </div>
             </div>
             <div className="canvas-react-form-actions">
-              <button type="button" className="ghost-button" onClick={() => { setProjectTimeline(null); openEditProject(projectTimeline.project.id); }}>Edit Project</button>
-              <button type="button" className="ghost-button" onClick={() => setProjectTimeline(null)}>Close</button>
+              <Button type="button" variant="outline" size="sm" onClick={() => { setProjectTimeline(null); openEditProject(projectTimeline.project.id); }}>Edit Project</Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => setProjectTimeline(null)}>Close</Button>
             </div>
           </div>
         </div>

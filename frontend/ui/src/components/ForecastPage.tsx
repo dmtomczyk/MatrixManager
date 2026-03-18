@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { Button } from './ui/button';
 
 interface ForecastProjectView {
   id: number;
@@ -85,9 +86,9 @@ export default function ForecastPage({ currentUser, flash }: ForecastPageProps) 
           <h1 className="text-4xl font-semibold tracking-tight text-slate-950">Forecast</h1>
           <p className="mt-2 max-w-3xl text-slate-600">Portfolio-level demand versus assignment rollups are back in React, still powered by the current TypeScript service and SQLite-backed persistence.</p>
         </div>
-        <button type="button" className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50" onClick={() => void load()}>
+        <Button type="button" variant="outline" onClick={() => void load()}>
           Refresh
-        </button>
+        </Button>
       </div>
 
       {error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700">{error}</div> : null}

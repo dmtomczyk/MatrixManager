@@ -1,4 +1,6 @@
 import * as React from 'react';
+import { Button } from './ui/button';
+import { Select } from './ui/select';
 
 interface EmployeeView {
   id: number;
@@ -93,9 +95,9 @@ function EmployeeCard({ employee, removable, onRemove }: { employee: EmployeeVie
       <div className="mt-2 text-sm text-slate-500">Active allocation {fmtPct(employee.active_allocation_percent)} of {fmtPct(employee.capacity_percent)} · {employee.active_assignment_count ?? 0} assignment(s)</div>
       <div className={`mt-3 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${statusClasses(employee.load_status)}`}>{employee.load_status || 'available'}</div>
       {removable ? (
-        <button type="button" className="mt-4 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50" onClick={() => onRemove?.(employee.id)}>
+        <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => onRemove?.(employee.id)}>
           Stop tracking
-        </button>
+        </Button>
       ) : null}
     </article>
   );
@@ -156,9 +158,9 @@ export default function DashboardPage({ currentUser, flash }: DashboardPageProps
           <h1 className="text-4xl font-semibold tracking-tight text-slate-950">{data.employee_name ? `${data.employee_name}'s dashboard` : 'Your dashboard'}</h1>
           <p className="mt-2 max-w-3xl text-slate-600">Quick-reference team utilization and tracked staffing rows, now back in React while staying on the current TypeScript persistence and auth shell.</p>
         </div>
-        <button type="button" className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50" onClick={() => void load()}>
+        <Button type="button" variant="outline" onClick={() => void load()}>
           Refresh
-        </button>
+        </Button>
       </div>
 
       {error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700">{error}</div> : null}
@@ -177,12 +179,11 @@ export default function DashboardPage({ currentUser, flash }: DashboardPageProps
             <h2 className="text-xl font-semibold text-slate-950">Track employee</h2>
             <p className="mt-1 text-sm text-slate-500">Persist tracked people through the TypeScript dashboard preferences store.</p>
             <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-              <select className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900" value={selectedEmployeeId} onChange={(event) => setSelectedEmployeeId(event.target.value)} disabled={!data.available_tracking_candidates.length}>
+              <Select className="min-w-0 flex-1" value={selectedEmployeeId} onChange={(event) => setSelectedEmployeeId(event.target.value)} disabled={!data.available_tracking_candidates.length}>
                 {data.available_tracking_candidates.length ? data.available_tracking_candidates.map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>) : <option value="">No additional employees available</option>}
-              </select>
-              <button
+              </Select>
+              <Button
                 type="button"
-                className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
                 disabled={!selectedEmployeeId}
                 onClick={() => {
                   const employeeId = Number(selectedEmployeeId);
@@ -191,7 +192,7 @@ export default function DashboardPage({ currentUser, flash }: DashboardPageProps
                 }}
               >
                 Track employee
-              </button>
+              </Button>
             </div>
           </section>
 
