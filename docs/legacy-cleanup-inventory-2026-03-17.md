@@ -63,10 +63,7 @@ Why keep for now:
 - `Dockerfile`
 - `docker-compose.yml`
 - `install.sh`
-- `start.sh`
-- `stop.sh`
-- `status.sh`
-- `reset.sh`
+- `manager.sh`
 - `uninstall.sh`
 - `scripts/lifecycle-common.sh`
 
@@ -75,7 +72,6 @@ Why keep for now:
 - deleting them before deciding the production/runtime transition plan would be reckless
 
 ### Legacy/backend dependency documentation
-- `dependencies.md`
 - requirements docs under `requirements/`
 
 Why keep for now:
@@ -158,4 +154,4 @@ Do **not** remove the legacy backend implementation, Python utility scripts, or 
 - TS-native test coverage is stronger
 - deployment/runtime strategy is explicitly moved off the Python backend
 
-See also: `docs/ts-first-runtime-and-test-audit-2026-03-17.md` for the concrete keep/port/delete classification and Python-test replacement strategy.
+This inventory should be kept in sync with future legacy removal passes.

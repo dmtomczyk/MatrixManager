@@ -10,7 +10,6 @@ MatrixManager is a staffing and resource-planning web app for tracking organizat
 - [Build from source](#build-from-source)
 - [What the app includes](#what-the-app-includes)
 - [Demo / screenshots](#demo--screenshots)
-- [Dependency manifest](#dependency-manifest)
 
 ## Production install
 
@@ -79,7 +78,7 @@ For local development, the TypeScript stack uses the repo-local TS persistence f
 The old Python backend is no longer part of the normal local development flow.
 If you still need to inspect the remaining legacy implementation files during cleanup, treat them as reference material only.
 
-See [`LEGACY.md`](./LEGACY.md) for the current deprecation/removal status, and `docs/ts-first-runtime-and-test-audit-2026-03-17.md` for the runtime/test migration audit.
+See [`LEGACY.md`](./LEGACY.md) for the current deprecation/removal status.
 
 ## What the app includes
 
@@ -112,12 +111,6 @@ If you are evaluating the app quickly, these are the best places to start after 
 - `/db-management`
 
 > Screenshots can be added later, but this is the current demo path through the app.
-
-## Dependency manifest
-
-For a human-readable dependency inventory with rationale, production/dev split, runtime-mode notes, and an easy dependency tree, see:
-
-- [`dependencies.md`](./dependencies.md)
 
 ---
 
