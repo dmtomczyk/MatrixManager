@@ -115,7 +115,10 @@ export default function AppShell({ currentUser, currentPath, children }: AppShel
       {children}
 
       <div className="pointer-events-none fixed inset-x-0 bottom-4 z-20 flex justify-center px-4">
-        <a href="/roadmap" className={`pointer-events-auto rounded-full border border-slate-200 bg-white/95 px-4 py-2 text-sm text-slate-600 shadow-sm backdrop-blur transition hover:text-slate-900 ${currentPath === '/roadmap' ? 'font-medium text-slate-900' : ''}`}>Roadmap</a>
+        <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-slate-200 bg-white/95 px-2 py-2 text-sm text-slate-600 shadow-sm backdrop-blur">
+          <a href="/roadmap" className={`rounded-full px-3 py-1.5 transition hover:bg-slate-100 hover:text-slate-900 ${currentPath === '/roadmap' ? 'font-medium text-slate-900' : ''}`}>Roadmap</a>
+          <a href="https://github.com/dmtomczyk/matrixmanager" target="_blank" rel="noreferrer" className="rounded-full px-3 py-1.5 transition hover:bg-slate-100 hover:text-slate-900">GitHub</a>
+        </div>
       </div>
     </div>
   );
