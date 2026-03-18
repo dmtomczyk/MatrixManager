@@ -114,15 +114,9 @@ export default function AppShell({ currentUser, currentPath, children }: AppShel
 
       {children}
 
-      <footer className="border-t border-slate-200 bg-white/80">
-        <div className="mx-auto flex w-full max-w-[min(100%,calc(100vw-1rem))] flex-col gap-3 px-4 py-4 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-          <div>Matrix Manager · React workspace</div>
-          <div className="flex flex-wrap items-center gap-4">
-            <a href="/roadmap" className={`transition hover:text-slate-900 ${currentPath === '/roadmap' ? 'font-medium text-slate-900' : ''}`}>Roadmap</a>
-            <a href="/runtime" className="transition hover:text-slate-900">Runtime</a>
-          </div>
-        </div>
-      </footer>
+      <div className="pointer-events-none fixed inset-x-0 bottom-4 z-20 flex justify-center px-4">
+        <a href="/roadmap" className={`pointer-events-auto rounded-full border border-slate-200 bg-white/95 px-4 py-2 text-sm text-slate-600 shadow-sm backdrop-blur transition hover:text-slate-900 ${currentPath === '/roadmap' ? 'font-medium text-slate-900' : ''}`}>Roadmap</a>
+      </div>
     </div>
   );
 }
