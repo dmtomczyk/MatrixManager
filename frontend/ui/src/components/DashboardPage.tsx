@@ -1,6 +1,8 @@
 import * as React from 'react';
 import { Button } from './ui/button';
 import { Select } from './ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Badge } from './ui/badge';
 
 interface EmployeeView {
   id: number;
@@ -80,10 +82,12 @@ function statusClasses(status?: string | null): string {
 
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="text-sm font-medium text-slate-500">{label}</div>
-      <div className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">{value}</div>
-    </div>
+    <Card className="border-slate-200 shadow-sm">
+      <CardHeader className="space-y-1 pb-2">
+        <CardDescription className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{label}</CardDescription>
+        <CardTitle className="text-2xl text-slate-950">{value}</CardTitle>
+      </CardHeader>
+    </Card>
   );
 }
 
@@ -109,6 +113,7 @@ export default function DashboardPage({ currentUser, flash }: DashboardPageProps
   const [error, setError] = React.useState('');
   const [toast, setToast] = React.useState(flash || '');
   const [selectedEmployeeId, setSelectedEmployeeId] = React.useState('');
+  const [trackingBusy, setTrackingBusy] = React.useState(false);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -116,7 +121,10 @@ export default function DashboardPage({ currentUser, flash }: DashboardPageProps
     try {
       const result = await apiFetch<DashboardData>('/dashboard-api', { headers: { 'x-matrix-user': currentUser } });
       setData(result);
-      setSelectedEmployeeId((prev) => prev || String(result.available_tracking_candidates[0]?.id || ''));
+      setSelectedEmployeeId((prev) => {
+        if (prev && result.available_tracking_candidates.some((employee) => String(employee.id) === prev)) return prev;
+        return String(result.available_tracking_candidates[0]?.id || '');
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Request failed');
     } finally {
@@ -135,6 +143,8 @@ export default function DashboardPage({ currentUser, flash }: DashboardPageProps
   }, [toast]);
 
   const updateTrackedEmployees = async (employeeIds: number[], successMessage: string) => {
+    setTrackingBusy(true);
+    setError('');
     try {
       await apiFetch('/dashboard-api/tracked-employees', {
         method: 'PUT',
@@ -145,11 +155,16 @@ export default function DashboardPage({ currentUser, flash }: DashboardPageProps
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Request failed');
+    } finally {
+      setTrackingBusy(false);
     }
   };
 
   if (loading && !data) return <main className="mx-auto flex min-h-[calc(100vh-8rem)] w-full max-w-[min(100%,calc(100vw-2rem))] items-center justify-center px-4 py-10 text-slate-500">Loading dashboard…</main>;
   if (!data) return <main className="mx-auto w-full max-w-[min(100%,calc(100vw-2rem))] px-4 py-10"><div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700">{error || 'Dashboard unavailable.'}</div></main>;
+
+  const canTrack = Boolean(selectedEmployeeId) && !trackingBusy && data.available_tracking_candidates.length > 0;
+  const selectedCandidate = data.available_tracking_candidates.find((employee) => String(employee.id) === selectedEmployeeId) || null;
 
   return (
     <main className="mx-auto flex w-full max-w-[min(100%,calc(100vw-2rem))] flex-col gap-6 px-4 py-8">
@@ -175,26 +190,41 @@ export default function DashboardPage({ currentUser, flash }: DashboardPageProps
 
       <section className="grid gap-6 xl:grid-cols-[1.05fr,1fr]">
         <div className="space-y-6">
-          <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-xl font-semibold text-slate-950">Track employee</h2>
-            <p className="mt-1 text-sm text-slate-500">Persist tracked people through the TypeScript dashboard preferences store.</p>
-            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-              <Select className="min-w-0 flex-1" value={selectedEmployeeId} onChange={(event) => setSelectedEmployeeId(event.target.value)} disabled={!data.available_tracking_candidates.length}>
-                {data.available_tracking_candidates.length ? data.available_tracking_candidates.map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>) : <option value="">No additional employees available</option>}
-              </Select>
-              <Button
-                type="button"
-                disabled={!selectedEmployeeId}
-                onClick={() => {
-                  const employeeId = Number(selectedEmployeeId);
-                  const nextIds = [...new Set(data.tracked_employees.map((employee) => employee.id).concat(employeeId))];
-                  void updateTrackedEmployees(nextIds, 'Employee added to tracked list.');
-                }}
-              >
-                Track employee
-              </Button>
-            </div>
-          </section>
+          <Card className="border-slate-200 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl text-slate-950">Track employee</CardTitle>
+              <CardDescription>Persist tracked people through the TypeScript dashboard preferences store.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <Select className="min-w-0 flex-1" value={selectedEmployeeId} onChange={(event) => setSelectedEmployeeId(event.target.value)} disabled={!data.available_tracking_candidates.length || trackingBusy}>
+                  {data.available_tracking_candidates.length ? data.available_tracking_candidates.map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>) : <option value="">No additional employees available</option>}
+                </Select>
+                <Button
+                  type="button"
+                  disabled={!canTrack}
+                  onClick={() => {
+                    const employeeId = Number(selectedEmployeeId);
+                    if (!employeeId) return;
+                    const nextIds = [...new Set(data.tracked_employees.map((employee) => employee.id).concat(employeeId))];
+                    void updateTrackedEmployees(nextIds, 'Employee added to tracked list.');
+                  }}
+                >
+                  {trackingBusy ? 'Tracking…' : 'Track employee'}
+                </Button>
+              </div>
+
+              {!data.available_tracking_candidates.length ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                  Everyone available to this dashboard is already being tracked.
+                </div>
+              ) : selectedCandidate ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                  <span className="font-medium text-slate-900">Next up:</span> {selectedCandidate.name} · {selectedCandidate.organization_name || 'No organization'} · {fmtPct(selectedCandidate.active_allocation_percent)} active allocation
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
 
           <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="text-xl font-semibold text-slate-950">Tracked employees</h2>
