@@ -8,3 +8,4 @@ playwright-report/
 test-results/
 api/data/
 api/dist/
+app/static/ui-react/

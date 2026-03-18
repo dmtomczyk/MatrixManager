@@ -516,7 +516,7 @@ export default function CanvasPage() {
     });
   };
 
-  const openCreateAssignment = (employeeId: number | string = '', projectId: number | string = '') => {
+  const openCreateAssignment = React.useCallback((employeeId: number | string = '', projectId: number | string = '') => {
     const fallbackEmployeeId = selectedNodeId.startsWith('employee-') ? Number(selectedNodeId.replace('employee-', '')) : '';
     const fallbackProjectId = selectedNodeId.startsWith('project-') ? Number(selectedNodeId.replace('project-', '')) : '';
     setAssignmentFormState({
@@ -527,7 +527,7 @@ export default function CanvasPage() {
         project_id: projectId || fallbackProjectId,
       },
     });
-  };
+  }, [selectedNodeId]);
 
   const selectedEmployee = selectedNodeId.startsWith('employee-')
     ? data.employees.find((employee) => employee.id === Number(selectedNodeId.replace('employee-', ''))) ?? null
@@ -558,7 +558,7 @@ export default function CanvasPage() {
         }
       }
     },
-    [refresh],
+    [openCreateAssignment, refresh],
   );
 
   const onNodeDragStop = React.useCallback(async (_event: React.MouseEvent, node: CanvasNode) => {
@@ -594,7 +594,7 @@ export default function CanvasPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Request failed');
     }
-  }, [data, nodes, refresh]);
+  }, [data, nodes, openCreateAssignment, refresh]);
 
   const onNodeClick: NodeMouseHandler = (_event, node) => {
     setSelectedEdge(null);
@@ -649,7 +649,7 @@ export default function CanvasPage() {
         .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Request failed'));
     }
     setDraggedEmployeeId(null);
-  }, [draggedEmployeeId, data, refresh]);
+  }, [draggedEmployeeId, data, openCreateAssignment, refresh]);
 
   const submitOrgForm = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
