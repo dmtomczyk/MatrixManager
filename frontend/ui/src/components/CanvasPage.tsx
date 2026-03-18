@@ -161,6 +161,8 @@ interface FullscreenDockPanelState {
   dock: 'left' | 'right' | 'float';
   x: number;
   y: number;
+  width: number;
+  tab: 'employees' | 'projects';
 }
 
 interface AssignmentChoice {
@@ -457,8 +459,17 @@ export default function CanvasPage() {
   const [projectTimeline, setProjectTimeline] = React.useState<Nullable<ProjectTimelineState>>(null);
   const [draggedEmployeeId, setDraggedEmployeeId] = React.useState<Nullable<number>>(null);
   const [isFullscreen, setIsFullscreen] = React.useState(false);
-  const [fullscreenEmployeesPanel, setFullscreenEmployeesPanel] = React.useState<FullscreenDockPanelState>({ minimized: false, dock: 'left', x: 24, y: 120 });
-  const [fullscreenProjectsPanel, setFullscreenProjectsPanel] = React.useState<FullscreenDockPanelState>({ minimized: false, dock: 'right', x: 0, y: 120 });
+  const [fullscreenEmployeesPanel, setFullscreenEmployeesPanel] = React.useState<FullscreenDockPanelState>(() => {
+    const raw = globalThis.localStorage?.getItem('mm.canvas.fullscreenEmployeesPanel');
+    if (!raw) return { minimized: false, dock: 'left', x: 24, y: 120, width: 340, tab: 'employees' };
+    try { return { tab: 'employees', width: 340, x: 24, y: 120, minimized: false, dock: 'left', ...JSON.parse(raw) } as FullscreenDockPanelState; } catch { return { minimized: false, dock: 'left', x: 24, y: 120, width: 340, tab: 'employees' }; }
+  });
+  const [fullscreenProjectsPanel, setFullscreenProjectsPanel] = React.useState<FullscreenDockPanelState>(() => {
+    const raw = globalThis.localStorage?.getItem('mm.canvas.fullscreenProjectsPanel');
+    if (!raw) return { minimized: false, dock: 'right', x: 0, y: 120, width: 340, tab: 'projects' };
+    try { return { tab: 'projects', width: 340, x: 0, y: 120, minimized: false, dock: 'right', ...JSON.parse(raw) } as FullscreenDockPanelState; } catch { return { minimized: false, dock: 'right', x: 0, y: 120, width: 340, tab: 'projects' }; }
+  });
+  const [fullscreenPanelMode, setFullscreenPanelMode] = React.useState<'dual' | 'tabs'>(() => (globalThis.localStorage?.getItem('mm.canvas.fullscreenPanelMode') === 'tabs' ? 'tabs' : 'dual'));
   const [sidebarWidth, setSidebarWidth] = React.useState(() => {
     const stored = globalThis.localStorage?.getItem('mm.canvas.sidebarWidth');
     const parsed = stored ? Number(stored) : 320;
@@ -469,7 +480,8 @@ export default function CanvasPage() {
   const flowWrapperRef = React.useRef<HTMLElement | null>(null);
   const reactFlow = useReactFlow();
   const resizeStateRef = React.useRef<{ startX: number; startWidth: number } | null>(null);
-  const floatingPanelDragRef = React.useRef<{ panel: 'employees' | 'projects'; startX: number; startY: number; originX: number; originY: number } | null>(null);
+  const floatingPanelDragRef = React.useRef<{ panel: 'employees' | 'projects'; offsetX: number; offsetY: number } | null>(null);
+  const floatingPanelResizeRef = React.useRef<{ panel: 'employees' | 'projects'; startX: number; startWidth: number } | null>(null);
 
   const refresh = React.useCallback(async () => {
     setLoading(true);
@@ -533,6 +545,28 @@ export default function CanvasPage() {
     document.body.classList.toggle('canvas-fullscreen-active', isFullscreen);
     return () => document.body.classList.remove('canvas-fullscreen-active');
   }, [isFullscreen]);
+
+  React.useEffect(() => {
+    globalThis.localStorage?.setItem('mm.canvas.fullscreenPanelMode', fullscreenPanelMode);
+  }, [fullscreenPanelMode]);
+
+  React.useEffect(() => {
+    globalThis.localStorage?.setItem('mm.canvas.fullscreenEmployeesPanel', JSON.stringify(fullscreenEmployeesPanel));
+  }, [fullscreenEmployeesPanel]);
+
+  React.useEffect(() => {
+    globalThis.localStorage?.setItem('mm.canvas.fullscreenProjectsPanel', JSON.stringify(fullscreenProjectsPanel));
+  }, [fullscreenProjectsPanel]);
+
+  React.useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && document.fullscreenElement === canvasShellRef.current) {
+        void document.exitFullscreen();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   const openCreateProject = () => setProjectFormState({ open: true, projectId: null, values: { ...defaultProjectForm } });
 
@@ -831,8 +865,28 @@ export default function CanvasPage() {
   };
 
   const startFloatingPanelDrag = (panel: 'employees' | 'projects', event: React.PointerEvent<HTMLDivElement>) => {
-    const state = panel === 'employees' ? fullscreenEmployeesPanel : fullscreenProjectsPanel;
-    floatingPanelDragRef.current = { panel, startX: event.clientX, startY: event.clientY, originX: state.x, originY: state.y };
+    const panelElement = event.currentTarget.closest('.canvas-react-float-panel') as HTMLElement | null;
+    const rect = panelElement?.getBoundingClientRect();
+    if (!rect) return;
+
+    if (panel === 'employees') {
+      setFullscreenEmployeesPanel((prev) => ({ ...prev, dock: 'float', x: rect.left, y: rect.top }));
+    } else {
+      setFullscreenProjectsPanel((prev) => ({ ...prev, dock: 'float', x: rect.left, y: rect.top }));
+    }
+
+    floatingPanelDragRef.current = {
+      panel,
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const startFloatingPanelResize = (panel: 'employees' | 'projects', event: React.PointerEvent<HTMLDivElement>) => {
+    event.stopPropagation();
+    const currentWidth = panel === 'employees' ? fullscreenEmployeesPanel.width : fullscreenProjectsPanel.width;
+    floatingPanelResizeRef.current = { panel, startX: event.clientX, startWidth: currentWidth };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
 
@@ -853,10 +907,21 @@ export default function CanvasPage() {
         return;
       }
 
+      const panelResize = floatingPanelResizeRef.current;
+      if (panelResize) {
+        const nextWidth = Math.min(560, Math.max(280, panelResize.startWidth + (event.clientX - panelResize.startX)));
+        if (panelResize.panel === 'employees') {
+          setFullscreenEmployeesPanel((prev) => ({ ...prev, width: nextWidth }));
+        } else {
+          setFullscreenProjectsPanel((prev) => ({ ...prev, width: nextWidth }));
+        }
+        return;
+      }
+
       const floatingState = floatingPanelDragRef.current;
       if (!floatingState) return;
-      const nextX = floatingState.originX + (event.clientX - floatingState.startX);
-      const nextY = floatingState.originY + (event.clientY - floatingState.startY);
+      const nextX = Math.max(12, event.clientX - floatingState.offsetX);
+      const nextY = Math.max(12, event.clientY - floatingState.offsetY);
       if (floatingState.panel === 'employees') {
         setFullscreenEmployeesPanel((prev) => ({ ...prev, dock: 'float', x: nextX, y: nextY }));
       } else {
@@ -867,6 +932,7 @@ export default function CanvasPage() {
     const onPointerUp = () => {
       resizeStateRef.current = null;
       floatingPanelDragRef.current = null;
+      floatingPanelResizeRef.current = null;
     };
 
     window.addEventListener('pointermove', onPointerMove);
@@ -1063,29 +1129,47 @@ export default function CanvasPage() {
 
           {isFullscreen ? (
             <>
-              <div className={`canvas-react-float-panel ${fullscreenEmployeesPanel.dock !== 'float' ? `is-docked-${fullscreenEmployeesPanel.dock}` : ''} ${fullscreenEmployeesPanel.minimized ? 'is-minimized' : ''}`} style={fullscreenEmployeesPanel.dock === 'float' ? { left: `${fullscreenEmployeesPanel.x}px`, top: `${fullscreenEmployeesPanel.y}px` } : undefined}>
-                <div className="canvas-react-float-panel-header" onPointerDown={(event) => startFloatingPanelDrag('employees', event)}>
-                  <strong>Employees</strong>
-                  <div className="canvas-react-float-panel-actions">
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setFullscreenEmployeesPanel((prev) => ({ ...prev, dock: prev.dock === 'left' ? 'float' : 'left' }))}>{fullscreenEmployeesPanel.dock === 'left' ? 'Float' : 'Dock Left'}</Button>
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setFullscreenEmployeesPanel((prev) => ({ ...prev, minimized: !prev.minimized }))}>{fullscreenEmployeesPanel.minimized ? 'Open' : 'Minimize'}</Button>
+              {fullscreenPanelMode === 'dual' ? (
+                <>
+                  <div className={`canvas-react-float-panel ${fullscreenEmployeesPanel.dock !== 'float' ? `is-docked-${fullscreenEmployeesPanel.dock}` : ''} ${fullscreenEmployeesPanel.minimized ? 'is-minimized' : ''}`} style={fullscreenEmployeesPanel.dock === 'float' ? { left: `${fullscreenEmployeesPanel.x}px`, top: `${fullscreenEmployeesPanel.y}px`, width: `${fullscreenEmployeesPanel.width}px` } : { width: `${fullscreenEmployeesPanel.width}px` }}>
+                    <div className="canvas-react-float-panel-header" onPointerDown={(event) => startFloatingPanelDrag('employees', event)}>
+                      <strong>Employees</strong>
+                      <div className="canvas-react-float-panel-actions">
+                        <Button type="button" variant="ghost" size="sm" onPointerDown={(event) => event.stopPropagation()} onClick={() => setFullscreenEmployeesPanel((prev) => ({ ...prev, dock: prev.dock === 'left' ? 'float' : 'left' }))}>{fullscreenEmployeesPanel.dock === 'left' ? 'Float' : 'Dock Left'}</Button>
+                        <Button type="button" variant="ghost" size="sm" onPointerDown={(event) => event.stopPropagation()} onClick={() => setFullscreenEmployeesPanel((prev) => ({ ...prev, minimized: !prev.minimized }))}>{fullscreenEmployeesPanel.minimized ? 'Open' : 'Minimize'}</Button>
+                      </div>
+                    </div>
+                    {!fullscreenEmployeesPanel.minimized ? <div className="canvas-react-float-panel-body">{renderEmployeesList()}</div> : null}
+                    {fullscreenEmployeesPanel.dock === 'float' && !fullscreenEmployeesPanel.minimized ? <div className="canvas-react-float-panel-resize" onPointerDown={(event) => startFloatingPanelResize('employees', event)} /> : null}
                   </div>
-                </div>
-                {!fullscreenEmployeesPanel.minimized ? <div className="canvas-react-float-panel-body">{renderEmployeesList()}</div> : null}
-              </div>
-              <div className={`canvas-react-float-panel ${fullscreenProjectsPanel.dock !== 'float' ? `is-docked-${fullscreenProjectsPanel.dock}` : ''} ${fullscreenProjectsPanel.minimized ? 'is-minimized' : ''}`} style={fullscreenProjectsPanel.dock === 'float' ? { left: `${fullscreenProjectsPanel.x}px`, top: `${fullscreenProjectsPanel.y}px` } : undefined}>
-                <div className="canvas-react-float-panel-header" onPointerDown={(event) => startFloatingPanelDrag('projects', event)}>
-                  <strong>Projects</strong>
-                  <div className="canvas-react-float-panel-actions">
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setFullscreenProjectsPanel((prev) => ({ ...prev, dock: prev.dock === 'right' ? 'float' : 'right' }))}>{fullscreenProjectsPanel.dock === 'right' ? 'Float' : 'Dock Right'}</Button>
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setFullscreenProjectsPanel((prev) => ({ ...prev, minimized: !prev.minimized }))}>{fullscreenProjectsPanel.minimized ? 'Open' : 'Minimize'}</Button>
+                  <div className={`canvas-react-float-panel ${fullscreenProjectsPanel.dock !== 'float' ? `is-docked-${fullscreenProjectsPanel.dock}` : ''} ${fullscreenProjectsPanel.minimized ? 'is-minimized' : ''}`} style={fullscreenProjectsPanel.dock === 'float' ? { left: `${fullscreenProjectsPanel.x}px`, top: `${fullscreenProjectsPanel.y}px`, width: `${fullscreenProjectsPanel.width}px` } : { width: `${fullscreenProjectsPanel.width}px` }}>
+                    <div className="canvas-react-float-panel-header" onPointerDown={(event) => startFloatingPanelDrag('projects', event)}>
+                      <strong>Projects</strong>
+                      <div className="canvas-react-float-panel-actions">
+                        <Button type="button" variant="ghost" size="sm" onPointerDown={(event) => event.stopPropagation()} onClick={() => setFullscreenProjectsPanel((prev) => ({ ...prev, dock: prev.dock === 'right' ? 'float' : 'right' }))}>{fullscreenProjectsPanel.dock === 'right' ? 'Float' : 'Dock Right'}</Button>
+                        <Button type="button" variant="ghost" size="sm" onPointerDown={(event) => event.stopPropagation()} onClick={() => setFullscreenProjectsPanel((prev) => ({ ...prev, minimized: !prev.minimized }))}>{fullscreenProjectsPanel.minimized ? 'Open' : 'Minimize'}</Button>
+                      </div>
+                    </div>
+                    {!fullscreenProjectsPanel.minimized ? <div className="canvas-react-float-panel-body">{renderProjectsList()}</div> : null}
+                    {fullscreenProjectsPanel.dock === 'float' && !fullscreenProjectsPanel.minimized ? <div className="canvas-react-float-panel-resize" onPointerDown={(event) => startFloatingPanelResize('projects', event)} /> : null}
                   </div>
+                </>
+              ) : (
+                <div className="canvas-react-float-panel is-docked-left" style={{ width: '360px' }}>
+                  <div className="canvas-react-float-panel-header" onPointerDown={(event) => startFloatingPanelDrag(fullscreenEmployeesPanel.tab, event)}>
+                    <strong>{fullscreenEmployeesPanel.tab === 'employees' ? 'Employees' : 'Projects'}</strong>
+                    <div className="canvas-react-float-panel-actions">
+                      <Button type="button" variant="ghost" size="sm" onPointerDown={(event) => event.stopPropagation()} onClick={() => setFullscreenEmployeesPanel((prev) => ({ ...prev, tab: prev.tab === 'employees' ? 'projects' : 'employees' }))}>{fullscreenEmployeesPanel.tab === 'employees' ? 'Show Projects' : 'Show Employees'}</Button>
+                      <Button type="button" variant="ghost" size="sm" onPointerDown={(event) => event.stopPropagation()} onClick={() => setFullscreenPanelMode('dual')}>Dual</Button>
+                    </div>
+                  </div>
+                  <div className="canvas-react-float-panel-body">{fullscreenEmployeesPanel.tab === 'employees' ? renderEmployeesList() : renderProjectsList()}</div>
                 </div>
-                {!fullscreenProjectsPanel.minimized ? <div className="canvas-react-float-panel-body">{renderProjectsList()}</div> : null}
-              </div>
+              )}
               <div className="canvas-react-fullscreen-toolbar">
                 <Button type="button" variant="secondary" size="sm" onClick={() => void toggleFullscreen()}>Exit Fullscreen</Button>
                 <Button type="button" variant="outline" size="sm" onClick={() => fitCanvas()}>Fit Canvas</Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => setFullscreenPanelMode((prev) => prev === 'dual' ? 'tabs' : 'dual')}>{fullscreenPanelMode === 'dual' ? 'Tabs Mode' : 'Dual Panels'}</Button>
               </div>
             </>
           ) : null}

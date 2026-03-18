@@ -342,6 +342,15 @@
   overflow: auto;
 }
 
+.canvas-react-float-panel-resize {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 14px;
+  height: 100%;
+  cursor: ew-resize;
+}
+
 .canvas-react-fullscreen-toolbar {
   position: absolute;
   top: 1rem;
