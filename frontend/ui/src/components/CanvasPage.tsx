@@ -865,6 +865,9 @@ export default function CanvasPage() {
   };
 
   const startFloatingPanelDrag = (panel: 'employees' | 'projects', event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+
     const panelElement = event.currentTarget.closest('.canvas-react-float-panel') as HTMLElement | null;
     const rect = panelElement?.getBoundingClientRect();
     if (!rect) return;

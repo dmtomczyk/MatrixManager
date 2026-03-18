@@ -305,6 +305,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  user-select: none;
 }
 
 .canvas-react-float-panel.is-docked-left {
@@ -335,12 +336,14 @@
   border-bottom: 1px solid hsl(var(--border));
   cursor: grab;
   user-select: none;
+  -webkit-user-select: none;
   touch-action: none;
 }
 
 .canvas-react-float-panel-actions {
   display: flex;
   gap: 0.35rem;
+  user-select: none;
 }
 
 .canvas-react-float-panel-body {
