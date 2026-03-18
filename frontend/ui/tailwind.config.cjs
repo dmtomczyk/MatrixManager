@@ -1,5 +1,4 @@
 const path = require('node:path');
-const tailwindcssAnimate = require('tailwindcss-animate');
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
@@ -62,5 +61,5 @@ module.exports = {
       },
     },
   },
-  plugins: [tailwindcssAnimate],
+  plugins: [],
 };

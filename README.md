@@ -30,7 +30,10 @@ Useful follow-up commands:
 ./uninstall.sh
 ```
 
-This install/runtime path now boots the shipped **TypeScript/Fastify container runtime** and persists the TS data/control SQLite files under `./data/`.
+This install/runtime path now boots the shipped **TypeScript/Fastify container runtime** and persists the active SQLite files under `./data/`:
+
+- data DB: `./data/sqlite/matrixmanager-ts-data.sqlite`
+- control DB: `./data/app/matrixmanager-ts-control.sqlite`
 
 If you want to inspect settings first, check:
 
@@ -73,9 +76,6 @@ Copy `.env.example` to `.env` and edit it as needed.
 
 For local development, the TypeScript stack uses the repo-local TS persistence files by default and prefers the Vite frontend dev server in development mode.
 
-### Legacy reference path
-
-The old Python backend has been removed from the repository. The active development and runtime path is the TypeScript stack.
 
 ## What the app includes
 

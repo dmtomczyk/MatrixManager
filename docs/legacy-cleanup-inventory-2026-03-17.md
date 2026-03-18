@@ -20,4 +20,4 @@ The repository now centers on:
 
 ## Notes
 
-A small amount of compatibility naming may still exist in configuration and environment variables where changing names would create unnecessary migration risk. That compatibility surface does not imply the old Python runtime is still present.
+The repository has been normalized around the TypeScript runtime, including the active SQLite database naming used by the current API and install flow.
