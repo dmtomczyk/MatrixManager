@@ -27,7 +27,7 @@ const summaryItems = [
 
 export default function LoginPage({ error = '', next = '/', logoHref = '', githubUrl = '' }: LoginPageProps) {
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8">
+    <main className="mx-auto flex w-full max-w-[min(100%,calc(100vw-2rem))] flex-col gap-6 px-4 py-8">
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_380px] lg:items-start">
         <section className="space-y-6">
           <div className="space-y-4">

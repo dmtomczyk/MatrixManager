@@ -32,8 +32,8 @@ export function buildErrorPage(params: {
     <style>
       *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,sans-serif;background:#f8fafc;color:#0f172a}
       ${chrome.css}
-      .wrap{max-width:1100px;margin:0 auto;padding:32px 16px 48px}
-      .card{max-width:760px;background:white;border:1px solid #e2e8f0;border-radius:18px;padding:28px;box-shadow:0 10px 30px rgba(15,23,42,.05)}
+      .wrap{width:min(calc(100vw - 2rem),1600px);max-width:none;margin:0 auto;padding:32px 16px 48px}
+      .card{max-width:960px;background:white;border:1px solid #e2e8f0;border-radius:18px;padding:28px;box-shadow:0 10px 30px rgba(15,23,42,.05)}
       .status{display:inline-block;margin-bottom:14px;padding:6px 10px;border-radius:999px;background:#e2e8f0;color:#334155;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
       h1{margin:0 0 10px;font-size:40px;line-height:1.05}
       p{margin:0;color:#475569;line-height:1.7;font-size:17px}

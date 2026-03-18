@@ -149,6 +149,8 @@ interface RemoveAssignmentState {
 interface ProjectTimelineState {
   project: Project;
   assignments: Assignment[];
+  candidateEmployees: Employee[];
+  totalAllocation: number;
 }
 
 interface AssignmentChoice {
@@ -445,8 +447,12 @@ export default function CanvasPage() {
   const [projectTimeline, setProjectTimeline] = React.useState<Nullable<ProjectTimelineState>>(null);
   const [draggedEmployeeId, setDraggedEmployeeId] = React.useState<Nullable<number>>(null);
   const [isFullscreen, setIsFullscreen] = React.useState(false);
-  const [sidebarWidth, setSidebarWidth] = React.useState(320);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
+  const [sidebarWidth, setSidebarWidth] = React.useState(() => {
+    const stored = globalThis.localStorage?.getItem('mm.canvas.sidebarWidth');
+    const parsed = stored ? Number(stored) : 320;
+    return Number.isFinite(parsed) ? Math.min(520, Math.max(240, parsed)) : 320;
+  });
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(() => globalThis.localStorage?.getItem('mm.canvas.sidebarCollapsed') === '1');
   const flowWrapperRef = React.useRef<HTMLElement | null>(null);
   const reactFlow = useReactFlow();
   const resizeStateRef = React.useRef<{ startX: number; startWidth: number } | null>(null);
@@ -772,7 +778,16 @@ export default function CanvasPage() {
 
   const openProjectTimeline = (project: Project) => {
     const assignments = data.assignments.filter((asg) => asg.project_id === project.id);
-    setProjectTimeline({ project, assignments });
+    const assignedEmployeeIds = new Set(assignments.map((asg) => asg.employee_id));
+    const candidateEmployees = data.employees
+      .filter((employee) => !assignedEmployeeIds.has(employee.id))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    setProjectTimeline({
+      project,
+      assignments,
+      candidateEmployees,
+      totalAllocation: assignments.reduce((sum, asg) => sum + (asg.allocation || 0), 0),
+    });
   };
 
   const toggleFullscreen = async () => {
@@ -797,6 +812,14 @@ export default function CanvasPage() {
   };
 
   React.useEffect(() => {
+    globalThis.localStorage?.setItem('mm.canvas.sidebarWidth', String(sidebarWidth));
+  }, [sidebarWidth]);
+
+  React.useEffect(() => {
+    globalThis.localStorage?.setItem('mm.canvas.sidebarCollapsed', isSidebarCollapsed ? '1' : '0');
+  }, [isSidebarCollapsed]);
+
+  React.useEffect(() => {
     const onPointerMove = (event: PointerEvent) => {
       const state = resizeStateRef.current;
       if (!state) return;
@@ -817,6 +840,15 @@ export default function CanvasPage() {
   }, []);
 
   const orgOptions = React.useMemo<OrgOption[]>(() => data.organizations.map((org) => ({ value: String(org.id), label: org.name })), [data.organizations]);
+
+  const projectSummary = React.useMemo(() => data.projects.map((project) => {
+    const assignments = data.assignments.filter((asg) => asg.project_id === project.id);
+    return {
+      ...project,
+      assignmentCount: assignments.length,
+      totalAllocation: assignments.reduce((sum, asg) => sum + (asg.allocation || 0), 0),
+    };
+  }).sort((a, b) => b.totalAllocation - a.totalAllocation || a.name.localeCompare(b.name)), [data.projects, data.assignments]);
 
   const assignmentChoices = React.useMemo<AssignmentChoice[]>(
     () => data.assignments.map((asg) => ({ id: asg.id, label: `${data.employees.find((emp) => emp.id === asg.employee_id)?.name || 'Employee'} → ${data.projects.find((proj) => proj.id === asg.project_id)?.name || 'Project'}` })),
@@ -882,6 +914,28 @@ export default function CanvasPage() {
           </section>
           <section className="canvas-react-sidecard">
             <div className="section-head">
+              <h3>Projects</h3>
+              <p>Quick project load summary and shortcuts.</p>
+            </div>
+            <div className="canvas-react-resource-list">
+              {projectSummary.map((project) => (
+                <button
+                  key={project.id}
+                  type="button"
+                  className={`canvas-react-resource${selectedNodeId === `project-${project.id}` ? ' is-selected' : ''}`}
+                  onClick={() => {
+                    setSelectedEdge(null);
+                    setSelectedNodeId(`project-${project.id}`);
+                  }}
+                >
+                  <strong>{project.name}</strong>
+                  <span>{project.assignmentCount} assignment{project.assignmentCount === 1 ? '' : 's'} · {formatPct(project.totalAllocation)}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+          <section className="canvas-react-sidecard">
+            <div className="section-head">
               <h3>Inspector</h3>
               <p>Selected node or edge actions.</p>
             </div>
@@ -900,9 +954,11 @@ export default function CanvasPage() {
               <div className="canvas-react-inspector">
                 <strong>{selectedProject.name}</strong>
                 <span>{formatDate(selectedProject.start_date)} → {formatDate(selectedProject.end_date)}</span>
+                <span>{data.assignments.filter((asg) => asg.project_id === selectedProject.id).length} assignments · {formatPct(data.assignments.filter((asg) => asg.project_id === selectedProject.id).reduce((sum, asg) => sum + (asg.allocation || 0), 0))} active</span>
                 <div className="canvas-react-inspector-actions">
                   <button type="button" className="ghost-button" onClick={() => openEditProject(selectedProject.id)}>Edit Project</button>
                   <button type="button" className="ghost-button" onClick={() => openProjectTimeline(selectedProject)}>Show Details</button>
+                  <button type="button" className="ghost-button" onClick={() => openCreateAssignment('', selectedProject.id)}>Add Assignment</button>
                 </div>
               </div>
             ) : null}
@@ -930,7 +986,7 @@ export default function CanvasPage() {
             onEdgeClick={onEdgeClick}
             onPaneClick={onPaneClick}
             fitView
-            fitViewOptions={{ padding: 0.12 }}
+            fitViewOptions={{ padding: 0.08, maxZoom: 1.15 }}
             defaultEdgeOptions={{ type: 'bezier' }}
             connectionLineStyle={{ stroke: '#2563eb', strokeWidth: 3 }}
             snapToGrid
@@ -1048,6 +1104,11 @@ export default function CanvasPage() {
         <div className="canvas-react-modal-backdrop" onClick={() => setProjectTimeline(null)}>
           <div className="canvas-react-modal canvas-react-modal-wide" onClick={(event) => event.stopPropagation()}>
             <h3>{projectTimeline.project.name} details</h3>
+            <div className="canvas-react-project-summary">
+              <div><span className="muted">Dates</span><strong>{formatDate(projectTimeline.project.start_date)} → {formatDate(projectTimeline.project.end_date)}</strong></div>
+              <div><span className="muted">Assignments</span><strong>{projectTimeline.assignments.length}</strong></div>
+              <div><span className="muted">Active allocation</span><strong>{formatPct(projectTimeline.totalAllocation)}</strong></div>
+            </div>
             <div className="canvas-react-timeline-list">
               {projectTimeline.assignments.length ? projectTimeline.assignments.map((assignment) => {
                 const employee = data.employees.find((emp) => emp.id === assignment.employee_id);
@@ -1060,7 +1121,22 @@ export default function CanvasPage() {
                 );
               }) : <p className="muted">No assignments yet.</p>}
             </div>
+            <div className="canvas-react-sidecard" style={{ marginTop: '1rem', padding: '0.9rem 1rem' }}>
+              <div className="section-head">
+                <h3>Available people</h3>
+                <p>Quick add from the project details modal.</p>
+              </div>
+              <div className="canvas-react-resource-list">
+                {projectTimeline.candidateEmployees.length ? projectTimeline.candidateEmployees.slice(0, 8).map((employee) => (
+                  <button key={employee.id} type="button" className="canvas-react-resource" onClick={() => { setProjectTimeline(null); openCreateAssignment(employee.id, projectTimeline.project.id); }}>
+                    <strong>{employee.name}</strong>
+                    <span>{employee.organization_name || 'No org'} · {employee.role || employee.employee_type || 'Employee'}</span>
+                  </button>
+                )) : <p className="muted">Everyone is already assigned or no employees exist yet.</p>}
+              </div>
+            </div>
             <div className="canvas-react-form-actions">
+              <button type="button" className="ghost-button" onClick={() => { setProjectTimeline(null); openEditProject(projectTimeline.project.id); }}>Edit Project</button>
               <button type="button" className="ghost-button" onClick={() => setProjectTimeline(null)}>Close</button>
             </div>
           </div>

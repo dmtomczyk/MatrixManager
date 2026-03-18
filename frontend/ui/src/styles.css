@@ -437,6 +437,27 @@
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.11);
 }
 
+
+.canvas-react-project-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.canvas-react-project-summary > div {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.82rem;
+  background: #f8fafc;
+}
+
+.canvas-react-project-summary strong {
+  color: #0f172a;
+}
+
 .canvas-react-timeline-list {
   display: grid;
   gap: 0.65rem;
@@ -581,6 +602,10 @@
 
   .canvas-react-actions > * {
     flex: 1 1 auto;
+  }
+
+  .canvas-react-project-summary {
+    grid-template-columns: 1fr;
   }
 
   .canvas-react-timeline-item {
