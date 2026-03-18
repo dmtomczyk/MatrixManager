@@ -118,7 +118,7 @@ function CellMain({ title, subtitle, indentLevel = 0 }: { title: React.ReactNode
   return <div className="min-w-0" style={{ paddingLeft: indentLevel ? `${indentLevel * 18}px` : undefined }}><div className="truncate font-medium text-slate-950">{title}</div>{subtitle ? <div className="truncate text-xs text-slate-500">{subtitle}</div> : null}</div>;
 }
 
-function orderOrganizationsTree(items: Org[]) {
+function buildOrganizationsTree(items: Org[]) {
   const byParent = new Map<number | null, Org[]>();
   for (const item of items) {
     const key = item.parent_organization_id ?? null;
@@ -129,15 +129,23 @@ function orderOrganizationsTree(items: Org[]) {
   for (const group of byParent.values()) {
     group.sort((a, b) => a.name.localeCompare(b.name));
   }
+
   const ordered: Array<{ org: Org; depth: number }> = [];
-  const visit = (parentId: number | null, depth: number) => {
+  const descendantIds = new Map<number, number[]>();
+
+  const visit = (parentId: number | null, depth: number): number[] => {
+    const descendantsForParent: number[] = [];
     for (const org of byParent.get(parentId) ?? []) {
       ordered.push({ org, depth });
-      visit(org.id, depth + 1);
+      const childDescendants = visit(org.id, depth + 1);
+      descendantIds.set(org.id, childDescendants);
+      descendantsForParent.push(org.id, ...childDescendants);
     }
+    return descendantsForParent;
   };
+
   visit(null, 0);
-  return ordered;
+  return { ordered, descendantIds };
 }
 
 function EditorShell({ open, onToggle, onDelete, extraActions, children }: { open: boolean; onToggle: () => void; onDelete: () => void; extraActions?: React.ReactNode; children: React.ReactNode }) {
@@ -161,17 +169,27 @@ export function OrganizationsPage({ flash = '' }: PageProps) {
   const { data, loading, error, reload, setError } = useWorkspaceData();
   const [form, setForm] = React.useState({ name: '', description: '', parent_organization_id: '' });
   const stats = [{ label: 'Organizations', value: data.organizations.length }, { label: 'Child org links', value: data.organizations.reduce((sum, org) => sum + (org.child_organization_count ?? 0), 0) }, { label: 'People mapped', value: data.organizations.reduce((sum, org) => sum + (org.employee_count ?? 0), 0) }, { label: 'Avg people / org', value: data.organizations.length ? num(data.organizations.reduce((sum, org) => sum + (org.employee_count ?? 0), 0) / data.organizations.length) : '—' }];
-  const nestedOrganizations = React.useMemo(() => orderOrganizationsTree(data.organizations), [data.organizations]);
+  const tree = React.useMemo(() => buildOrganizationsTree(data.organizations), [data.organizations]);
+  const [expandedOrgIds, setExpandedOrgIds] = React.useState<number[]>([]);
+  const visibleOrganizations = React.useMemo(() => tree.ordered.filter(({ org, depth }) => {
+    if (depth === 0) return true;
+    let currentParentId = org.parent_organization_id ?? null;
+    while (currentParentId != null) {
+      if (!expandedOrgIds.includes(currentParentId)) return false;
+      currentParentId = data.organizations.find((candidate) => candidate.id === currentParentId)?.parent_organization_id ?? null;
+    }
+    return true;
+  }), [tree, expandedOrgIds, data.organizations]);
   if (loading) return <LoadingState />;
   if (error) return <ErrorState message={error} />;
-  return <PageFrame title="Organizations" description="Optimized for dense scanning: nested parent/child structure, compact metadata, and expand-to-edit when you need it." flash={flash} stats={stats}><TwoPanel form={<FormCard title="Create organization" description="Add new structural homes without burning table space."><form className="grid gap-4" onSubmit={async (e) => { e.preventDefault(); try { await sendJson('/organizations', 'POST', { ...form, parent_organization_id: form.parent_organization_id ? Number(form.parent_organization_id) : null }); setForm({ name: '', description: '', parent_organization_id: '' }); await reload(); } catch (err) { setError(err instanceof Error ? err.message : 'Failed'); } }}><div className="grid gap-2"><Label>Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></div><SelectField label="Parent organization" value={form.parent_organization_id} onChange={(value) => setForm({ ...form, parent_organization_id: value })} options={[{ value: '', label: 'Top-level organization' }, ...data.organizations.map((org) => ({ value: String(org.id), label: org.name }))]} required={false} /><div className="grid gap-2"><Label>Description</Label><Textarea className="min-h-24" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div><Button type="submit">Create organization</Button></form></FormCard>} table={<DataCard title="Organizations" description="Child teams render nested beneath their parents so the hierarchy is visible at a glance."><CompactTable minWidth="900px" headers={[{ label: 'Organization', className: 'w-[32%]' }, { label: 'Description', className: 'w-[30%]' }, { label: 'Children', className: 'w-[8%]' }, { label: 'People', className: 'w-[8%]' }, { label: 'Actions', className: 'w-[22%]' }]}>{nestedOrganizations.map(({ org, depth }) => <OrganizationRow key={org.id} org={org} depth={depth} allOrganizations={data.organizations} onCreateChild={(parentId) => setForm((prev) => ({ ...prev, parent_organization_id: String(parentId) }))} onReload={reload} onError={setError} />)}</CompactTable></DataCard>} /></PageFrame>;
+  return <PageFrame title="Organizations" description="Top-level orgs are shown first. Expand parents to reveal child teams and keep large hierarchies manageable." flash={flash} stats={stats}><TwoPanel form={<FormCard title="Create organization" description="Add new structural homes without burning table space."><form className="grid gap-4" onSubmit={async (e) => { e.preventDefault(); try { await sendJson('/organizations', 'POST', { ...form, parent_organization_id: form.parent_organization_id ? Number(form.parent_organization_id) : null }); setForm({ name: '', description: '', parent_organization_id: '' }); await reload(); } catch (err) { setError(err instanceof Error ? err.message : 'Failed'); } }}><div className="grid gap-2"><Label>Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></div><SelectField label="Parent organization" value={form.parent_organization_id} onChange={(value) => setForm({ ...form, parent_organization_id: value })} options={[{ value: '', label: 'Top-level organization' }, ...data.organizations.map((org) => ({ value: String(org.id), label: org.name }))]} required={false} /><div className="grid gap-2"><Label>Description</Label><Textarea className="min-h-24" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div><Button type="submit">Create organization</Button></form></FormCard>} table={<DataCard title="Organizations" description="Collapsed by default. Expand only the branches you want to inspect."><div className="mb-3 flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={() => setExpandedOrgIds(tree.ordered.filter(({ org }) => (org.child_organization_count ?? 0) > 0).map(({ org }) => org.id))}>Expand All</Button><Button size="sm" variant="outline" onClick={() => setExpandedOrgIds([])}>Collapse All</Button></div><CompactTable minWidth="900px" headers={[{ label: 'Organization', className: 'w-[32%]' }, { label: 'Description', className: 'w-[30%]' }, { label: 'Children', className: 'w-[8%]' }, { label: 'People', className: 'w-[8%]' }, { label: 'Actions', className: 'w-[22%]' }]}>{visibleOrganizations.map(({ org, depth }) => <OrganizationRow key={org.id} org={org} depth={depth} isExpanded={expandedOrgIds.includes(org.id)} canExpand={(org.child_organization_count ?? 0) > 0} onToggleExpand={() => setExpandedOrgIds((prev) => prev.includes(org.id) ? prev.filter((id) => id !== org.id) : [...prev, org.id])} allOrganizations={data.organizations} onCreateChild={(parentId) => { setForm((prev) => ({ ...prev, parent_organization_id: String(parentId) })); setExpandedOrgIds((prev) => prev.includes(parentId) ? prev : [...prev, parentId]); }} onReload={reload} onError={setError} />)}</CompactTable></DataCard>} /></PageFrame>;
 }
 
-function OrganizationRow({ org, depth, allOrganizations, onCreateChild, onReload, onError }: { org: Org; depth: number; allOrganizations: Org[]; onCreateChild: (parentId: number) => void; onReload: () => Promise<void>; onError: (value: string) => void }) {
+function OrganizationRow({ org, depth, isExpanded, canExpand, onToggleExpand, allOrganizations, onCreateChild, onReload, onError }: { org: Org; depth: number; isExpanded: boolean; canExpand: boolean; onToggleExpand: () => void; allOrganizations: Org[]; onCreateChild: (parentId: number) => void; onReload: () => Promise<void>; onError: (value: string) => void }) {
   const [open, setOpen] = React.useState(false);
   const [form, setForm] = React.useState({ name: org.name, description: org.description || '', parent_organization_id: String(org.parent_organization_id ?? '') });
   const validParents = allOrganizations.filter((candidate) => candidate.id !== org.id);
-  return <tr className="border-b border-slate-100 align-top"><td className="px-3 py-2.5"><CellMain title={depth ? `↳ ${org.name}` : org.name} subtitle={depth ? `${org.parent_organization_name || 'Parent'} · ID ${org.id}` : `ID ${org.id}`} indentLevel={depth} /></td><td className="px-3 py-2.5 text-sm text-slate-600">{org.description || '—'}</td><td className="px-3 py-2.5 text-sm text-slate-700">{org.child_organization_count ?? 0}</td><td className="px-3 py-2.5 text-sm text-slate-700">{org.employee_count ?? 0}</td><td className="px-3 py-2.5"><EditorShell extraActions={<Button size="sm" variant="outline" onClick={() => onCreateChild(org.id)}>Create Child Org</Button>} open={open} onToggle={() => setOpen((v) => !v)} onDelete={async () => { try { await sendJson(`/organizations/${org.id}`, 'DELETE'); await onReload(); } catch (err) { onError(err instanceof Error ? err.message : 'Failed'); } }}><div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(220px,1fr)_minmax(220px,1fr)_auto] xl:items-end"><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /><Select value={form.parent_organization_id} onChange={(e) => setForm({ ...form, parent_organization_id: e.target.value })}><option value="">Top-level organization</option>{validParents.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}</Select><Textarea className="min-h-20" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /><Button size="sm" onClick={async () => { try { await sendJson(`/organizations/${org.id}`, 'PUT', { ...form, parent_organization_id: form.parent_organization_id ? Number(form.parent_organization_id) : null }); await onReload(); setOpen(false); } catch (err) { onError(err instanceof Error ? err.message : 'Failed'); } }}>Save</Button></div></EditorShell></td></tr>;
+  return <tr className="border-b border-slate-100 align-top"><td className="px-3 py-2.5"><div className="flex items-start gap-2"><div className="pt-0.5" style={{ marginLeft: depth ? `${depth * 18}px` : undefined }}>{canExpand ? <Button type="button" size="sm" variant="ghost" className="h-7 px-2" onClick={onToggleExpand}>{isExpanded ? '−' : '+'}</Button> : <span className="inline-block h-7 w-7" />}</div><CellMain title={org.name} subtitle={depth ? `${org.parent_organization_name || 'Parent'} · ID ${org.id}` : `ID ${org.id}`} /></div></td><td className="px-3 py-2.5 text-sm text-slate-600">{org.description || '—'}</td><td className="px-3 py-2.5 text-sm text-slate-700">{org.child_organization_count ?? 0}</td><td className="px-3 py-2.5 text-sm text-slate-700">{org.employee_count ?? 0}</td><td className="px-3 py-2.5"><EditorShell extraActions={<Button size="sm" variant="outline" onClick={() => onCreateChild(org.id)}>Create Child Org</Button>} open={open} onToggle={() => setOpen((v) => !v)} onDelete={async () => { try { await sendJson(`/organizations/${org.id}`, 'DELETE'); await onReload(); } catch (err) { onError(err instanceof Error ? err.message : 'Failed'); } }}><div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(220px,1fr)_minmax(220px,1fr)_auto] xl:items-end"><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /><Select value={form.parent_organization_id} onChange={(e) => setForm({ ...form, parent_organization_id: e.target.value })}><option value="">Top-level organization</option>{validParents.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}</Select><Textarea className="min-h-20" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /><Button size="sm" onClick={async () => { try { await sendJson(`/organizations/${org.id}`, 'PUT', { ...form, parent_organization_id: form.parent_organization_id ? Number(form.parent_organization_id) : null }); await onReload(); setOpen(false); } catch (err) { onError(err instanceof Error ? err.message : 'Failed'); } }}>Save</Button></div></EditorShell></td></tr>;
 }
 
 export function JobCodesPage({ flash = '' }: PageProps) {
