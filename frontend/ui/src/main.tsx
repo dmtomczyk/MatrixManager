@@ -63,6 +63,8 @@ function App() {
   if (page === 'runtime') return <AppShell {...shellProps}><RuntimePage {...authenticatedProps} /></AppShell>;
   if (page === 'dbManagement') return <AppShell {...shellProps}><DbManagementPage {...authenticatedProps} /></AppShell>;
 
+  if (page === 'getStarted') return <AppShell {...shellProps}><GetStartedPage /></AppShell>;
+
   return (
     <AppShell {...shellProps}>
       <GetStartedPage />
