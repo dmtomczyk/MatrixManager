@@ -13,6 +13,5 @@ matrix.db
 matrixmanager_control.db
 alt-matrix.db
 playwright-report
-requirements/
 tests/
 e2e/

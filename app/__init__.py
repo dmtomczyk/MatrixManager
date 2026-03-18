@@ -1,1 +1,0 @@
-# MatrixManager app package

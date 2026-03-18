@@ -1,33 +1,20 @@
 # LEGACY.md
 
-Legacy Python/FastAPI stack status for MatrixManager.
+Legacy removal status for MatrixManager.
 
 ## Current default
 
-The TypeScript stack is now the primary development path.
+The TypeScript stack is the active development and runtime path.
 
 Use:
 
 - `npm run dev` → TypeScript API + Vite UI
 
-## Legacy path
+## Removed legacy surface
 
-The old Python backend is still present temporarily for reference and comparison in source form, but it is no longer exposed as a normal local dev script.
-
-## Why this file exists
-
-The repository has completed enough parity work that the legacy stack should no longer be treated as the default center of gravity.
-
-The remaining Python backend code remains in-repo only to support:
-
-- behavior comparison during cleanup
-- edge-case reference while finishing deprecation
-- staged removal instead of risky one-shot deletion
-
-The old static multi-page `legacy-app/` bundle has been removed.
+The old Python/FastAPI backend source and the old static multi-page legacy UI bundle have been removed from the repository.
 
 ## Rule of thumb
 
 - build new behavior in the TypeScript stack
-- do not add new features to the legacy backend
-- remove legacy-only paths once confidence is high and any remaining reference value is gone
+- keep docs and tooling aligned to the TypeScript runtime
