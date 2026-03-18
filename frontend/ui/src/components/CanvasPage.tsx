@@ -880,14 +880,12 @@ export default function CanvasPage() {
       offsetX: event.clientX - rect.left,
       offsetY: event.clientY - rect.top,
     };
-    event.currentTarget.setPointerCapture(event.pointerId);
   };
 
   const startFloatingPanelResize = (panel: 'employees' | 'projects', event: React.PointerEvent<HTMLDivElement>) => {
     event.stopPropagation();
     const currentWidth = panel === 'employees' ? fullscreenEmployeesPanel.width : fullscreenProjectsPanel.width;
     floatingPanelResizeRef.current = { panel, startX: event.clientX, startWidth: currentWidth };
-    event.currentTarget.setPointerCapture(event.pointerId);
   };
 
   React.useEffect(() => {
