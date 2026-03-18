@@ -44,7 +44,7 @@ export function renderAppChrome(currentUser: string, currentPath: string) {
     head: '<link rel="icon" href="/static/images/matrix-manager-favicon.ico" sizes="any" /><link rel="icon" type="image/svg+xml" href="/static/images/matrix-manager-favicon.svg" />',
     css: `
       .app-header{position:sticky;top:0;z-index:30;border-bottom:1px solid #e2e8f0;background:rgba(255,255,255,.95);backdrop-filter:blur(10px)}
-      .app-header-inner{max-width:1100px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+      .app-header-inner{width:min(calc(100vw - 1rem),1600px);max-width:none;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:16px}
       .app-nav{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%}
       .app-nav-main{display:flex;align-items:center;gap:14px;min-width:0}.brand-link{display:inline-flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;text-decoration:none;color:#0f172a;flex-shrink:0}.brand-link:hover{background:#f8fafc}.brand-logo{width:28px;height:28px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;padding:4px}.brand-copy{display:flex;flex-direction:column;line-height:1}.brand-title{font-size:14px;font-weight:700;letter-spacing:-0.01em}.brand-subtitle{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;margin-top:2px}.nav-links{display:flex;align-items:center;gap:8px}.nav-links-mobile{display:none;flex-direction:column;align-items:stretch}
       .nav-link,.nav-dropdown-trigger,.nav-dropdown-link,.account-menu-link,.logout-button,.hamburger-trigger{appearance:none;border:0;background:none;text-decoration:none;color:#475569;font:inherit;cursor:pointer}

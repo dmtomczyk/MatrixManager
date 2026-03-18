@@ -59,7 +59,7 @@ export function buildGetStartedPage(currentUser: string): string {
       * { box-sizing: border-box; }
       body { margin: 0; font-family: Inter, system-ui, sans-serif; background: #f8fafc; color: #0f172a; }
       ${chrome.css}
-      .wrap { width: min(calc(100vw - 2rem), 1600px); max-width: none; margin: 0 auto; padding: 32px 16px 48px; }
+      .wrap { width: min(calc(100vw - 1rem), 1600px); max-width: none; margin: 0 auto; padding: 32px 16px 48px; }
       .eyebrow { display: inline-block; padding: 6px 10px; border-radius: 999px; background: #e2e8f0; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: #334155; }
       h1 { margin: 16px 0 12px; font-size: 48px; line-height: 1.05; max-width: 800px; }
       .lead { max-width: 760px; color: #475569; font-size: 18px; line-height: 1.7; }
