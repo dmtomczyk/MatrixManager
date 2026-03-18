@@ -64,9 +64,9 @@ export default function AppShell({ currentUser, currentPath, children }: AppShel
         <div className="mx-auto flex w-full max-w-[min(100%,calc(100vw-1rem))] items-center justify-between gap-4 px-4 py-3">
           <div className="flex min-w-0 items-center gap-3">
             <a href="/" className="inline-flex shrink-0 items-center gap-[10px] rounded-xl px-[10px] py-2 text-slate-950 transition hover:bg-slate-50">
-              <img src="/static/images/matrix-manager-favicon.svg" alt="" className="h-7 w-7 rounded-lg border border-slate-200 bg-white p-1" />
+              <img src="/static/images/matrix-manager-favicon.svg" alt="" className="h-8 w-8 rounded-lg border border-slate-200 bg-white p-1" />
               <span className="flex flex-col leading-[1]">
-                <span className="text-[14px] font-bold tracking-[-0.01em] text-slate-950">Matrix Manager</span>
+                <span className="text-[15px] font-bold tracking-[-0.01em] text-slate-950">Matrix Manager</span>
                 <span className="mt-[2px] text-[11px] uppercase tracking-[0.08em] text-slate-400 max-[900px]:hidden">Planning Workspace</span>
               </span>
             </a>
